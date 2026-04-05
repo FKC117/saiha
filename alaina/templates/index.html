@@ -1050,41 +1050,60 @@
         
         for (const [index, art] of metadata.artifacts.entries()) {
           if (art.type === 'chart') {
-            const chartId = 'chart-' + Math.random().toString(36).substr(2, 9);
+            // 1. Generate Stable Deterministic ID
+            const stableId = art.result_id ? `chart-${art.result_id}` : `chart-temp-${Math.random().toString(36).substr(2, 5)}`;
+            const chartId = `${stableId}-${index}`;
+            
             blocksContainer.insertAdjacentHTML('beforeend', `
-                            <div class="rich-block chart-block">
-                                <div class="block-header">
-                                    <div class="block-title-group">
-                                        <i data-lucide="bar-chart" class="block-icon" size="14"></i>
-                                        <span class="block-title">${art.title || "Visualization"}</span>
-                                    </div>
-                                </div>
-                                <div id="${chartId}" class="chart-container"></div>
-                            </div>
-                        `);
-            const chartMeta = art.metadata || {};
-            new ApexCharts(document.querySelector("#" + chartId), {
-              chart: { type: chartMeta.type || 'bar', height: 250, toolbar: { show: false }, background: 'transparent' },
-              theme: { mode: 'dark', palette: 'palette1' },
-              series: chartMeta.series || [],
-              xaxis: { categories: chartMeta.categories || [] },
-              colors: ['#8B5CF6', '#6366F1', '#A78BFA'],
-              grid: { borderColor: 'rgba(255,255,255,0.05)' }
-            }).render();
+              <div class="rich-block chart-block" style="background: rgba(24, 24, 27, 0.4); backdrop-filter: blur(10px); color: white;">
+                <div class="block-header" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                  <div class="block-title-group">
+                    <i data-lucide="line-chart" class="block-icon" size="14" style="color: #8B5CF6;"></i>
+                    <span class="block-title" style="font-weight: 500; font-size: 13px;">${art.title || "Data Analysis"}</span>
+                  </div>
+                </div>
+                <div id="${chartId}" class="chart-container" style="height: 320px; width: 100%; padding: 16px;">
+                  <div class="chart-loader" style="height: 100%; display: flex; align-items: center; justify-content: center; color: #71717a; font-size: 12px;">
+                    Initializing Chart Engine...
+                  </div>
+                </div>
+              </div>
+            `);
+
+            // 2. Threshold-based Resurrection (Lazy Loading)
+            let chartData = art.metadata;
+            if (!chartData && art.result_id) {
+              try {
+                const response = await fetch(`/api/analysis-result/${art.result_id}/`);
+                const result = await response.json();
+                chartData = result.data;
+              } catch (e) { 
+                console.error("Failed to resurrect chart:", e);
+              }
+            }
+
+            // 3. Initialize via ChartManager
+            if (chartData && chartData.type) {
+              const el = document.getElementById(chartId);
+              if (el) ChatChartManager.initChart(chartId, el, chartData.type, chartData);
+            }
           } else if (art.type === 'plot') {
             const plotData = art.metadata;
             if (plotData && plotData.base64) {
               blocksContainer.insertAdjacentHTML('beforeend', `
-                            <div class="rich-block chart-block">
-                                <div class="block-header">
-                                    <div class="block-title-group">
-                                        <i data-lucide="image" class="block-icon" size="14"></i>
-                                        <span class="block-title">${art.title || "Plot Result"}</span>
-                                    </div>
-                                </div>
-                                <div style="padding: 12px; background: white;"><img src="data:image/png;base64,${plotData.base64}" style="max-width: 100%; height: auto; border-radius: 4px;"></div>
-                            </div>
-                        `);
+                <div class="rich-block plot-block" style="background: #18181b; border: 1px solid #27272a; border-radius: 12px; overflow: hidden;">
+                  <div class="block-header" style="background: #27272a; padding: 10px 16px;">
+                    <div class="block-title-group">
+                      <i data-lucide="image" class="block-icon" size="14"></i>
+                      <span class="block-title">${art.title || "Static Visualization"}</span>
+                    </div>
+                  </div>
+                  <div class="photo-frame" style="padding: 20px; background: white; display: flex; justify-content: center;">
+                    <img src="data:image/png;base64,${plotData.base64}" 
+                         style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
+                  </div>
+                </div>
+              `);
             }
           } else if (art.type === 'table') {
             blocksContainer.insertAdjacentHTML('beforeend', `

@@ -1,4 +1,3 @@
-# d:/quantly/quanta/quantalytics/ai_agents/tools/wilcoxon_signed_rank_test_tool.py
 
 import pandas as pd
 import numpy as np

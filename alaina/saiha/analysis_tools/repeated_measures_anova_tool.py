@@ -1,4 +1,3 @@
-# d:/quantly/quanta/quantalytics/ai_agents/tools/repeated_measures_anova_tool.py
 
 import pandas as pd
 import numpy as np

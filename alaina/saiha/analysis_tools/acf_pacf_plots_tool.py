@@ -1,4 +1,3 @@
-# d:/quantly/quanta/quantalytics/ai_agents/tools/acf_pacf_plots_tool.py
 
 import pandas as pd
 import numpy as np

@@ -1,4 +1,3 @@
-# d:/quantly/quanta/quantalytics/utils/plot_utils.py
 
 import matplotlib
 import matplotlib.pyplot as plt

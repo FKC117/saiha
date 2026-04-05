@@ -1,4 +1,3 @@
-# d:/quantly/quanta/quantalytics/ai_agents/tools/kruskal_wallis_test_tool.py
 
 import pandas as pd
 import numpy as np

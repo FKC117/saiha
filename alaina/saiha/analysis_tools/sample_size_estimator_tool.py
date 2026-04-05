@@ -1,4 +1,3 @@
-# d:/quantly/quanta/quantalytics/ai_agents/tools/sample_size_estimator_tool.py
 
 from statsmodels.stats.power import TTestIndPower, TTestPower, FTestAnovaPower, GofChisquarePower
 from typing import Any, Dict, List

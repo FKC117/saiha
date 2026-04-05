@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -15,6 +16,8 @@ from .agents.analysis_agent import get_analysis_agent
 from .reporting.report_builder import ReportBuilder
 from .reporting.pptx_exporter import PPTXExporter
 from .reporting.docx_exporter import DOCXExporter
+
+logger = logging.getLogger(__name__)
 
 @login_required
 def index(request):
@@ -127,9 +130,10 @@ def upload_dataset(request):
 
 @csrf_exempt
 @login_required
-def api_quanta_chat(request):
+def api_chat_analysis(request):
     """
-    Placeholder for the Quanta Chat API.
+    The Centralized Analytical Chat API for ChatFlow.
+    Dispatched via the AnalysisAgent.
     """
     if request.method == 'POST':
         try:

@@ -8,18 +8,8 @@ from django.core.exceptions import ValidationError
 from .tool_parameters import ToolParameterSet
 from .parameter_validator import ParameterValidator, ValidationError as ParameterValidationError
 
-# Performance helpers (opt-in, safe imports)
-try:
-    from quantalytics.performance import AdvancedCache, request_timer_context, collect_process_stats
-except Exception:  # pragma: no cover - optional runtime deps
-    AdvancedCache = None  # type: ignore
-    request_timer_context = None  # type: ignore
-    collect_process_stats = None  # type: ignore
-
-logger = logging.getLogger(__name__)
-
-# module-level cache to reduce repeated dataset loads across tools in the same process
-_GLOBAL_CACHE = AdvancedCache() if AdvancedCache is not None else None
+# Global cache disabled (Legacy performance module removed)
+_GLOBAL_CACHE = None
 
 class BaseAnalysisTool(ABC):
     """

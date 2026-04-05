@@ -1,6 +1,8 @@
 import logging
 import pandas as pd
 from django.conf import settings
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from alaina.celery import app
 from .base import BaseAnalysisTask
 from ..models import AnalysisSession, AnalysisResult, Dataset
@@ -8,6 +10,27 @@ from ..analysis_tools.registry import tool_registry
 from ..agents.interpretation_agent import interpretation_agent
 
 logger = logging.getLogger(__name__)
+
+def send_ws_notification(message, status="info", task_id=None, session_id=None):
+    """
+    Helper to send real-time notification via Channels.
+    Wrapped in try-except to prevent UI/Network issues from crashing Celery tasks.
+    """
+    try:
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            async_to_sync(channel_layer.group_send)(
+                "analysis_notifications",
+                {
+                    "type": "send_notification",
+                    "message": message,
+                    "status": status,
+                    "task_id": str(task_id) if task_id else None,
+                    "session_id": str(session_id) if session_id else None
+                }
+            )
+    except Exception as e:
+        logger.warning(f"Could not send WebSocket notification: {e}")
 
 @app.task(base=BaseAnalysisTask, bind=True, name="saiha.celery_tasks.execute_analysis_task")
 def execute_analysis_task(self, session_id: str, tool_name: str, params: dict, 
@@ -18,6 +41,14 @@ def execute_analysis_task(self, session_id: str, tool_name: str, params: dict,
     and triggers the InterpretationAgent.
     """
     try:
+        # 0. Notify Started
+        send_ws_notification(
+            f"Starting {tool_name} analysis...", 
+            status="running", 
+            task_id=self.request.id,
+            session_id=session_id
+        )
+
         # 1. Fetch Context (Pass-by-Reference)
         session = AnalysisSession.objects.get(id=session_id)
         dataset = session.dataset
@@ -76,6 +107,14 @@ def execute_analysis_task(self, session_id: str, tool_name: str, params: dict,
         # 6. Trigger Interpreter (Post-Execution Analysis)
         # Interpreter runs in the same worker/thread for now (simple chaining)
         interpretation_agent.interpret_result(str(result_record.id))
+
+        # 7. Notify Success
+        send_ws_notification(
+            f"{tool_name} analysis complete.", 
+            status="success", 
+            task_id=self.request.id,
+            session_id=session_id
+        )
 
         return {
             "result_id": str(result_record.id),

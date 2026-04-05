@@ -1,4 +1,3 @@
-# d:/quantly/quanta/quantalytics/ai_agents/tools/mann_whitney_u_test_tool.py
 
 import pandas as pd
 import numpy as np

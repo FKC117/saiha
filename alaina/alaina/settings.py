@@ -23,6 +23,7 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 # Application definition
 
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -47,6 +48,7 @@ INSTALLED_APPS = [
 
     # Async
     "django_celery_results",
+    "channels",
 ]
 
 MIDDLEWARE = [
@@ -274,5 +276,17 @@ import sys
 IS_WINDOWS = sys.platform.startswith('win')
 CELERY_WORKER_POOL = 'solo' if IS_WINDOWS else 'prefork'
 
-# Celery Result Settings
-CELERY_RESULT_EXTENDED = True # Store task args, kwargs, and other metadata
+# ==============================================================================
+# ASYNC & WEBSOCKET INFRASTRUCTURE (CHANNELS)
+# ==============================================================================
+ASGI_APPLICATION = "alaina.asgi.application"
+
+# Use Redis for Channels (Matches Celery infrastructure)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [os.getenv('REDIS_URL', 'redis://localhost:6379/0')],
+        },
+    },
+}

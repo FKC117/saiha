@@ -1,4 +1,3 @@
-# d:/quantly/quanta/quantalytics/ai_agents/tools/linear_regression_tool.py
 
 import pandas as pd
 import statsmodels.api as sm

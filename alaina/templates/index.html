@@ -711,8 +711,9 @@
           class="conv-item {% if current_session and current_session.id == session.id %}active{% endif %}"
           style="text-decoration: none;">
           <i data-lucide="message-square" size="15"></i>
-          <span class="conv-title">{% if session.session_name %}{{ session.session_name|truncatechars:20 }}{% elif
-            session.dataset %}{{ session.dataset.name|truncatechars:20 }}{% else %}New Analysis{% endif %}</span>
+          <span class="conv-title">
+            {% if session.session_name %}{{ session.session_name|truncatechars:22 }}{% elif session.dataset %}{{ session.dataset.name|truncatechars:22 }}{% else %}Analytical Session{% endif %}
+          </span>
         </a>
         {% empty %}
         <div style="padding: 1rem; color: #a1a1aa; font-size: 12px; text-align: center;">No chat history yet.</div>
@@ -1198,9 +1199,13 @@
       scrollToBottom();
 
       try {
-        const response = await fetch('/api/quanta-chat/', {
+        const response = await fetch('/api/chat-analysis/', {
           method: 'POST',
-          body: JSON.stringify({ message }),
+          body: JSON.stringify({ 
+            message,
+            session_id: formData.get('session_id'),
+            dataset_id: formData.get('dataset_id')
+          }),
           headers: {
             'Content-Type': 'application/json',
             'X-CSRFToken': formData.get('csrfmiddlewaretoken')

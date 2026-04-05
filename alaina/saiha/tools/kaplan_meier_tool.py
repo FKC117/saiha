@@ -1,4 +1,3 @@
-# d:/quantly/quanta/quantalytics/ai_agents/tools/kaplan_meier_tool.py
 
 import pandas as pd
 import numpy as np

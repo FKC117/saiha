@@ -1,4 +1,3 @@
-# d:/quantly/quanta/quantalytics/ai_agents/tools/data_quality_tool.py
 
 import pandas as pd
 import numpy as np

@@ -5,7 +5,7 @@ from .analysis_planner import analysis_planner
 from .param_corrector import ParamCorrector
 from .interpretation_agent import interpretation_agent
 from ..analysis_tools.registry import tool_registry
-from ..celery_tasks.analysis_tasks import execute_analysis_task
+from ..celery_tasks.analysis_tasks import execute_analysis_task, send_ws_notification
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +41,14 @@ class AnalysisAgent:
         # 3. Hybrid Correction Layer
         corrector = ParamCorrector(column_names)
         task_ids = []
+
+        # Notify UI about planned tasks
+        if intents:
+            send_ws_notification(
+                f"Planned {len(intents)} analytical steps. Dispatching now...",
+                status="dispatched",
+                session_id=str(self.session.id)
+            )
 
         for intent in intents:
             tool_name = intent.get('tool')

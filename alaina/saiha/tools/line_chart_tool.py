@@ -1,4 +1,3 @@
-# d:/quantly/quanta/quantalytics/ai_agents/tools/line_chart_tool.py
 
 import pandas as pd
 import matplotlib

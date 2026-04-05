@@ -1,0 +1,39 @@
+<div class="rich-block chart-block">
+  <div class="block-header">
+    <div class="block-title-group">
+      <i data-lucide="bar-chart-2" class="block-icon" size="14"></i>
+      <span class="block-label">Chart</span>
+      <span style="color: var(--zinc-700);">·</span>
+      <span class="block-title">{{ title }}</span>
+    </div>
+    <div class="block-actions">
+      <button class="block-btn" hx-get="/export/chart/" hx-swap="none">
+        <i data-lucide="download" size="12"></i>
+        Export
+      </button>
+    </div>
+  </div>
+  <div class="chart-container">
+    <svg viewBox="0 0 520 280" class="w-full" style="max-height: 280px; width: 100%;">
+      <!-- Grid Lines -->
+      <line x1="50" y1="20" x2="50" y2="230" stroke="#3f3f46" stroke-width="1.5" />
+      <line x1="50" y1="230" x2="500" y2="230" stroke="#3f3f46" stroke-width="1.5" />
+      
+      <!-- Dummy Bars -->
+      <rect x="70" y="100" width="30" height="130" rx="4" fill="var(--brand-500)" opacity="0.8" />
+      <rect x="120" y="60" width="30" height="170" rx="4" fill="var(--brand-500)" opacity="0.8" />
+      <rect x="170" y="140" width="30" height="90" rx="4" fill="var(--brand-500)" opacity="0.8" />
+      <rect x="220" y="80" width="30" height="150" rx="4" fill="var(--brand-500)" opacity="0.8" />
+      <rect x="270" y="40" width="30" height="190" rx="4" fill="var(--brand-500)" opacity="0.8" />
+      <rect x="320" y="110" width="30" height="120" rx="4" fill="var(--brand-500)" opacity="0.8" />
+      
+      <!-- Labels -->
+      <text x="85" y="250" text-anchor="middle" fill="#71717a" font-size="10">Jan</text>
+      <text x="135" y="250" text-anchor="middle" fill="#71717a" font-size="10">Feb</text>
+      <text x="185" y="250" text-anchor="middle" fill="#71717a" font-size="10">Mar</text>
+      <text x="235" y="250" text-anchor="middle" fill="#71717a" font-size="10">Apr</text>
+      <text x="285" y="250" text-anchor="middle" fill="#71717a" font-size="10">May</text>
+      <text x="335" y="250" text-anchor="middle" fill="#71717a" font-size="10">Jun</text>
+    </svg>
+  </div>
+</div>

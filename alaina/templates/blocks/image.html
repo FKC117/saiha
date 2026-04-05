@@ -1,0 +1,23 @@
+<div class="rich-block image-block">
+  <div class="block-header">
+    <div class="block-title-group">
+      <i data-lucide="images" class="block-icon" size="14"></i>
+      <span class="block-label">Gallery</span>
+      <span style="color: var(--zinc-700);">·</span>
+      <span class="block-title">{{ title }}</span>
+    </div>
+    <div class="block-actions">
+      <button class="block-btn" hx-get="/export/gallery/" hx-swap="none">
+        <i data-lucide="download" size="12"></i>
+        Export
+      </button>
+    </div>
+  </div>
+  <div class="image-grid">
+    {% for img in images %}
+    <div class="gallery-item">
+      <img src="{{ img.src }}" alt="{{ img.alt }}">
+    </div>
+    {% endfor %}
+  </div>
+</div>

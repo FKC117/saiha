@@ -1,0 +1,307 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Databases — {{ site_settings.site_name|default:"ChatFlow" }}</title>
+  {% if site_settings.favicon %}
+  <link rel="icon" type="image/x-icon" href="{{ site_settings.favicon.url }}">
+  {% endif %}
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --zinc-950: #09090b;
+      --zinc-900: #18181b;
+      --zinc-800: #27272a;
+      --zinc-700: #3f3f46;
+      --zinc-500: #71717a;
+      --zinc-400: #a1a1aa;
+      --zinc-300: #d4d4d8;
+      --zinc-200: #e4e4e7;
+      --zinc-100: #f4f4f5;
+      --primary-color: #8B5CF6;
+      --danger-color: #f87171;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'DM Sans', sans-serif; }
+    body { background-color: var(--zinc-950); color: var(--zinc-100); min-height: 100vh; }
+
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 60px 20px;
+    }
+
+    .header-section {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 40px;
+    }
+
+    .header-content h1 {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+
+    .header-content p {
+      color: var(--zinc-400);
+      font-size: 15px;
+    }
+
+    .back-link {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--zinc-400);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 16px;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover { color: white; }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .stat-card {
+      background: rgba(24, 24, 27, 0.4);
+      border: 1px solid var(--zinc-800);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .stat-label { color: var(--zinc-500); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+    .stat-value { font-size: 24px; font-weight: 700; color: white; }
+
+    /* Table Styles */
+    .table-card {
+      background: rgba(24, 24, 27, 0.4);
+      border: 1px solid var(--zinc-800);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    .table-wrapper { overflow-x: auto; }
+
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+
+    th {
+      padding: 16px 24px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--zinc-500);
+      border-bottom: 1px solid var(--zinc-800);
+      background: rgba(255,255,255,0.02);
+    }
+
+    td {
+      padding: 20px 24px;
+      font-size: 14px;
+      color: var(--zinc-300);
+      border-bottom: 1px solid rgba(82, 82, 91, 0.2);
+      vertical-align: middle;
+    }
+
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.01); }
+
+    .dataset-name-cell { display: flex; align-items: center; gap: 12px; }
+    .icon-box {
+      width: 40px;
+      height: 40px;
+      background: rgba(139, 92, 246, 0.1);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary-color);
+    }
+
+    .badge {
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .badge-parquet { background: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); }
+    .badge-csv { background: rgba(161, 161, 170, 0.2); color: #d4d4d8; border: 1px solid rgba(161, 161, 170, 0.3); }
+
+    .action-group { display: flex; gap: 12px; }
+
+    .btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .btn-analyze { background: var(--primary-color); color: white; border: none; }
+    .btn-analyze:hover { background: var(--primary-hover); transform: translateY(-1px); }
+
+    .btn-delete { background: transparent; color: var(--danger-color); border: 1px solid rgba(248, 113, 113, 0.2); }
+    .btn-delete:hover { background: rgba(248, 113, 113, 0.1); border-color: var(--danger-color); }
+
+    .empty-state {
+      padding: 80px 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    /* Transitions */
+    .dataset-row.htmx-swapping { opacity: 0; transform: scale(0.95); transition: all 0.4s ease; }
+  </style>
+</head>
+
+<body>
+  <div class="dashboard-container">
+    <a href="{% url 'saiha:index' %}" class="back-link">
+      <i data-lucide="arrow-left" size="16"></i>
+      Back to Analysis
+    </a>
+
+    <div class="header-section">
+      <div class="header-content">
+        <h1>Database Explorer</h1>
+        <p>Manage your uploaded data structures and analysis assets.</p>
+      </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-label">Total Datasets</span>
+        <span class="stat-value">{{ datasets|length }}</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Active Sessions</span>
+        <span class="stat-value">--</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-label">Storage Format</span>
+        <span class="stat-value">Parquet-Optimized</span>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Dataset Information</th>
+              <th>Schema</th>
+              <th>Storage</th>
+              <th>Upload Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="dataset-body">
+            {% for ds in datasets %}
+            <tr class="dataset-row" id="ds-{{ ds.id }}">
+              <td>
+                <div class="dataset-name-cell">
+                  <div class="icon-box">
+                    <i data-lucide="database" size="20"></i>
+                  </div>
+                  <div>
+                    <a href="{% url 'saiha:dataset_detail' ds.id %}" style="text-decoration: none; font-weight: 600; color: white;" class="hover:text-primary">
+                      {{ ds.name }}
+                    </a>
+                    <div style="font-size: 12px; color: var(--zinc-500);">{{ ds.original_filename }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div style="font-size: 13px;">
+                  <span style="color: white; font-weight: 500;">{{ ds.rows_count|default:"0" }}</span> rows<br>
+                  <span style="color: white; font-weight: 500;">{{ ds.columns_count|default:"0" }}</span> columns
+                </div>
+              </td>
+              <td>
+                <span class="badge badge-{% if ds.storage_format == 'parquet' %}parquet{% else %}csv{% endif %}">
+                  {{ ds.storage_format|upper }}
+                </span>
+                <div style="font-size: 11px; color: var(--zinc-500); margin-top: 4px;">{{ ds.file_size|filesizeformat }}</div>
+              </td>
+              <td>
+                <div style="font-size: 13px; color: var(--zinc-300);">{{ ds.upload_date|date:"M d, Y" }}</div>
+                <div style="font-size: 11px; color: var(--zinc-500);">{{ ds.upload_date|date:"H:i" }}</div>
+              </td>
+              <td>
+                <div class="action-group">
+                  <a href="{% url 'saiha:index' %}?dataset_id={{ ds.id }}" class="btn btn-analyze">
+                    <i data-lucide="play" size="14"></i>
+                    Analyze
+                  </a>
+                  <button class="btn btn-delete" 
+                    hx-post="{% url 'saiha:delete_dataset' ds.id %}" 
+                    hx-target="#ds-{{ ds.id }}" 
+                    hx-swap="outerHTML swap:400ms"
+                    hx-confirm="Are you sure you want to delete this dataset? This action cannot be undone.">
+                    <i data-lucide="trash-2" size="14"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5">
+                <div class="empty-state">
+                  <div class="icon-box" style="width: 60px; height: 60px; margin-bottom: 8px;">
+                    <i data-lucide="plus" size="28"></i>
+                  </div>
+                  <h3 style="color: white;">No datasets found</h3>
+                  <p style="color: var(--zinc-500); max-width: 300px;">Begin by uploading a CSV or Excel file through the chat interface.</p>
+                  <a href="{% url 'saiha:index' %}" class="btn btn-analyze" style="margin-top: 12px;">Go to Chat</a>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+    
+    // Auto-update Lucide icons after HTMX swaps
+    document.body.addEventListener('htmx:afterSwap', function(evt) {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+
+</html>

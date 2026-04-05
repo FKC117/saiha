@@ -1,0 +1,1356 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ site_settings.site_name|default:"ChatFlow" }} — AI Conversations</title>
+  {% if site_settings.favicon %}
+  <link rel="icon" type="image/x-icon" href="{{ site_settings.favicon.url }}">
+  {% endif %}
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap"
+    rel="stylesheet">
+  <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="{% static 'js/charting_engine.js' %}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+  <style>
+    :root {
+      --zinc-950: #09090b;
+      --zinc-900: #18181b;
+      --zinc-800: #27272a;
+      --zinc-700: #3f3f46;
+      --zinc-600: #52525b;
+      --zinc-500: #71717a;
+      --zinc-400: #a1a1aa;
+      --zinc-300: #d4d4d8;
+      --zinc-200: #e4e4e7;
+      --zinc-100: #f4f4f5;
+      --primary-color: #8B5CF6;
+      /* Violet 500 */
+      --primary-hover: #7C3AED;
+      --glass-bg: rgba(24, 24, 27, 0.7);
+      --glass-border: rgba(63, 63, 70, 0.4);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    body {
+      background-color: var(--zinc-950);
+      color: var(--zinc-100);
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* Layout */
+    #app {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* Sidebar Styles */
+    .sidebar {
+      width: 260px;
+      background-color: var(--zinc-900);
+      border-right: 1px solid var(--zinc-800);
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      transition: transform 0.3s ease;
+      z-index: 50;
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-text {
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .toggle-btn {
+      background: none;
+      border: none;
+      color: var(--zinc-400);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+    }
+
+    .toggle-btn:hover {
+      background-color: var(--zinc-800);
+      color: white;
+    }
+
+    .new-chat-container {
+      padding: 0 12px 16px 12px;
+    }
+
+    .new-chat-btn {
+      width: 100%;
+      height: 44px;
+      background-color: transparent;
+      border: 1px solid var(--zinc-800);
+      border-radius: 8px;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .new-chat-btn:hover {
+      background-color: var(--zinc-800);
+      border-color: var(--zinc-700);
+    }
+
+    .search-container {
+      padding: 0 12px 16px 12px;
+    }
+
+    .search-wrapper {
+      position: relative;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--zinc-500);
+    }
+
+    .search-input {
+      width: 100%;
+      height: 36px;
+      background-color: var(--zinc-950);
+      border: 1px solid var(--zinc-800);
+      border-radius: 6px;
+      padding-left: 34px;
+      color: white;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .search-input:focus {
+      border-color: var(--primary-color);
+    }
+
+    .conversation-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0 8px;
+    }
+
+    .group-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--zinc-500);
+      text-transform: uppercase;
+      margin: 16px 12px 8px 12px;
+      letter-spacing: 0.05em;
+    }
+
+    .conv-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      color: var(--zinc-400);
+      margin-bottom: 2px;
+    }
+
+    .conv-item:hover {
+      background-color: var(--zinc-800);
+      color: white;
+    }
+
+    .conv-item.active {
+      background-color: var(--zinc-800);
+      color: white;
+    }
+
+    .conv-title {
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Main Chat Column */
+    .chat-column {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background-color: var(--zinc-950);
+    }
+
+    .chat-header {
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      border-bottom: 1px solid rgba(82, 82, 91, 0.2);
+    }
+
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 40px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    /* Message Styles */
+    .message {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      gap: 20px;
+      padding: 0 20px;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .avatar.ai {
+      background: var(--primary-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .avatar.user {
+      background: linear-gradient(to bottom right, #3f3f46, #18181b);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .message-content {
+      color: #e4e4e7;
+      font-size: 15px;
+      line-height: 1.6;
+      width: 100%;
+      padding-top: 2px;
+    }
+
+    .message-content p {
+      margin-bottom: 16px;
+    }
+
+    .message-content p:last-child {
+      margin-bottom: 0;
+    }
+
+    /* Code Blocks */
+    .message-content pre {
+      background-color: #0d0d0d;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+
+    .message-content code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+    }
+
+    /* Input Area */
+    .input-area {
+      padding: 20px 40px 40px 40px;
+      max-width: 840px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .input-container {
+      background-color: var(--zinc-900);
+      border: 1px solid var(--zinc-800);
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+
+    .input-wrapper {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-input {
+      background: transparent;
+      border: none;
+      color: white;
+      font-size: 15px;
+      resize: none;
+      outline: none;
+      padding: 4px 8px;
+      width: 100%;
+      max-height: 200px;
+      min-height: 24px;
+    }
+
+    .input-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 8px;
+    }
+
+    .action-btn {
+      color: var(--zinc-500);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    .action-btn:hover {
+      color: white;
+      background-color: var(--zinc-800);
+    }
+
+    .send-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .send-btn:hover {
+      background-color: var(--primary-hover);
+      transform: scale(1.05);
+    }
+
+    .send-btn:disabled {
+      background-color: var(--zinc-800);
+      color: var(--zinc-600);
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* Modal Styles */
+    .dataset-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .dataset-modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .dataset-modal {
+      width: 500px;
+      background-color: var(--zinc-900);
+      border: 1px solid var(--zinc-800);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 80vh;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--zinc-800);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .close-modal {
+      background: none;
+      border: none;
+      color: var(--zinc-500);
+      cursor: pointer;
+    }
+
+    .modal-content {
+      padding: 24px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .modal-tabs {
+      display: flex;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--zinc-800);
+    }
+
+    .modal-tab {
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--zinc-500);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .modal-tab.active {
+      color: var(--primary-color);
+    }
+
+    .modal-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: var(--primary-color);
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .upload-zone {
+      height: 180px;
+      border: 2px dashed var(--zinc-800);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-zone:hover {
+      border-color: var(--primary-color);
+      background: rgba(139, 92, 246, 0.05);
+    }
+
+    .upload-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.2s;
+    }
+
+    .upload-btn:hover {
+      background-color: var(--primary-hover);
+    }
+
+    /* Scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--zinc-800);
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--zinc-700);
+    }
+
+    /* Rich Analysis Blocks */
+    .rich-blocks-container {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .rich-block {
+      background-color: var(--zinc-900);
+      border: 1px solid var(--zinc-800);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .block-header {
+      padding: 12px 16px;
+      background-color: rgba(255, 255, 255, 0.03);
+      border-bottom: 1px solid var(--zinc-800);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .block-title-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .block-icon {
+      color: var(--primary-color);
+    }
+
+    .block-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--zinc-300);
+    }
+
+    .chart-container {
+      padding: 16px;
+      min-height: 200px;
+    }
+
+    /* Table blocks */
+    .table-container {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 16px;
+      background-color: rgba(255, 255, 255, 0.02);
+      border-bottom: 1px solid var(--zinc-800);
+      color: var(--zinc-400);
+      font-weight: 600;
+    }
+
+    td {
+      padding: 10px 16px;
+      border-bottom: 1px solid rgba(82, 82, 91, 0.2);
+      color: var(--zinc-300);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    /* Typing Indicator */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      background-color: var(--zinc-500);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+
+    .dot:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    .dot:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      80%,
+      100% {
+        transform: scale(0);
+      }
+
+      40% {
+        transform: scale(1);
+      }
+    }
+
+    /* Dataset List */
+    .dataset-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      border: 1px solid rgba(82, 82, 91, 0.5);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      color: white;
+    }
+
+    .dataset-list-item:hover {
+      border-color: #8B5CF6;
+      background: rgba(139, 92, 246, 0.05);
+    }
+
+    .dataset-icon {
+      color: #8B5CF6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      background: rgba(139, 92, 246, 0.1);
+      border-radius: 6px;
+      margin-right: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          {% if site_settings.logo %}
+          <img src="{{ site_settings.logo.url }}" alt="Logo" style="width: 26px; height: 26px; border-radius: 6px;">
+          {% else %}
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="24" height="24" rx="6" fill="#8B5CF6" />
+            <path d="M7 12L12 7L17 12L12 17L7 12Z" fill="white" />
+          </svg>
+          {% endif %}
+          <span class="logo-text">{{ site_settings.site_name|default:"ChatFlow" }}</span>
+        </div>
+        <button class="toggle-btn" onclick="toggleSidebar()">
+          <i data-lucide="panel-left-close"></i>
+        </button>
+      </div>
+
+      <div class="new-chat-container" style="display: flex; flex-direction: column; gap: 8px;">
+        <button class="new-chat-btn" onclick="openDatasetModal()">
+          <i data-lucide="plus" size="16"></i>
+          <span>New chat</span>
+        </button>
+      </div>
+
+      <div class="search-container">
+        <div class="search-wrapper">
+          <i data-lucide="search" size="13" class="search-icon"></i>
+          <input type="text" placeholder="Search conversations..." class="search-input">
+        </div>
+      </div>
+
+      <div class="conversation-list">
+        <p class="group-label">Your Explorations</p>
+        {% for session in chat_sessions %}
+        <a href="?session_id={{ session.id }}"
+          class="conv-item {% if current_session and current_session.id == session.id %}active{% endif %}"
+          style="text-decoration: none;">
+          <i data-lucide="message-square" size="15"></i>
+          <span class="conv-title">{% if session.session_name %}{{ session.session_name|truncatechars:20 }}{% elif
+            session.dataset %}{{ session.dataset.name|truncatechars:20 }}{% else %}New Analysis{% endif %}</span>
+        </a>
+        {% empty %}
+        <div style="padding: 1rem; color: #a1a1aa; font-size: 12px; text-align: center;">No chat history yet.</div>
+        {% endfor %}
+      </div>
+
+      <div style="margin-top: auto; border-top: 1px solid rgba(39, 39, 42, 0.6); padding: 8px;">
+        <a href="{% url 'saiha:dataset_dashboard' %}" class="conv-item" style="text-decoration: none;">
+          <i data-lucide="database" size="15"></i>
+          <span class="conv-title">Databases</span>
+        </a>
+        <button class="conv-item" onclick="openSettingsModal()">
+          <i data-lucide="settings" size="15"></i>
+          <span class="conv-title">Settings</span>
+        </button>
+        <div class="conv-item" style="margin-top: 4px; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="avatar"
+              style="width: 28px; height: 28px; background: linear-gradient(to bottom right, #8B5CF6, #6366F1); display: flex; align-items: center; justify-content: center;">
+              <span id="sidebar-user-initials" style="font-size: 11px; font-weight: 600; color: white;">{{ user.first_name|default:user.email|slice:":1"|upper }}</span>
+            </div>
+            <div class="conv-title" style="display: flex; flex-direction: column;">
+              <span id="sidebar-user-name" style="font-weight: 500; font-size: 13px; color: #e4e4e7;">{{ user.first_name|default:user.email }}</span>
+              <span style="font-size: 11px; color: #71717a;">Logged in</span>
+            </div>
+          </div>
+          <form method="POST" action="{% url 'account_logout' %}" id="logout-form" style="display: none;">{% csrf_token %}</form>
+          <button onclick="document.getElementById('logout-form').submit();" style="background: none; border: none; padding: 4px; color: #71717a; cursor: pointer;" title="Logout">
+            <i data-lucide="log-out" size="14"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <main class="chat-column">
+      <header class="chat-header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button class="toggle-btn md-hidden" style="display: none;" id="mobile-toggle">
+            <i data-lucide="menu"></i>
+          </button>
+          <span style="font-weight: 600; font-size: 15px;">Advanced analytics platform</span>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="toggle-btn"><i data-lucide="share-2" size="16"></i></button>
+          <button class="toggle-btn"><i data-lucide="more-vertical" size="16"></i></button>
+        </div>
+      </header>
+
+      <section class="chat-messages" id="chat-messages">
+        {% if not messages %}
+        <!-- Empty State / Starter Message -->
+        <div class="message ai">
+          <div class="avatar ai">
+            {% if site_settings.logo %}
+            <img src="{{ site_settings.logo.url }}" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
+            {% else %}
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="24" height="24" rx="6" fill="#8B5CF6" />
+              <path d="M7 12L12 7L17 12L12 17L7 12Z" fill="white" />
+            </svg>
+            {% endif %}
+          </div>
+          <div class="message-content">
+            Hello! This is {{ site_settings.site_name|default:"ChatFlow" }}. What would you like to analyze today?
+          </div>
+        </div>
+        {% else %}
+        {% for msg in messages %}
+          {% if msg.message_type == 'user' %}
+          <div class="message user">
+            <div class="avatar user">
+              <span style="font-size: 11px; font-weight: 600; color: white;">{{ user.first_name|default:user.email|slice:":1"|upper }}</span>
+            </div>
+            <div class="message-content">{{ msg.content }}</div>
+          </div>
+          {% elif msg.message_type == 'ai' %}
+          <div class="message ai">
+            <div class="avatar ai">
+              {% if site_settings.logo %}
+              <img src="{{ site_settings.logo.url }}" alt="Logo" style="width: 100%; height: 100%; object-fit: cover;">
+              {% else %}
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="24" height="24" rx="6" fill="#8B5CF6" />
+                <path d="M7 12L12 7L17 12L12 17L7 12Z" fill="white" />
+              </svg>
+              {% endif %}
+            </div>
+            <div class="message-content" id="msg-{{ msg.id }}" data-rich-msg="true">
+              <div class="text-content">{{ msg.content }}</div>
+              <div class="rich-blocks-container"></div>
+            </div>
+            {% if msg.metadata %}
+            <script type="application/json" id="meta-{{ msg.id }}">{{ msg.metadata_json|safe }}</script>
+            {% endif %}
+          </div>
+          {% elif msg.message_type == 'system' %}
+          <div class="message system" style="display: flex; justify-content: center; margin: 16px 0;">
+            <div style="background: rgba(39, 39, 42, 0.4); padding: 4px 12px; border-radius: 20px; font-size: 11px; color: var(--zinc-500); border: 1px solid var(--zinc-800);">
+              {{ msg.content }}
+            </div>
+          </div>
+          {% elif msg.message_type == 'analysis_result' %}
+          <div class="message ai">
+            <div class="avatar ai" style="background: rgba(139, 92, 246, 0.1);">
+              <i data-lucide="zap" size="14" style="color: var(--primary-color);"></i>
+            </div>
+            <div class="message-content" id="msg-{{ msg.id }}" data-rich-msg="true">
+              <div class="text-content" style="font-weight: 600; color: var(--primary-color);">{{ msg.content }}</div>
+              <div class="rich-blocks-container"></div>
+            </div>
+            {% if msg.metadata %}
+            <script type="application/json" id="meta-{{ msg.id }}">{{ msg.metadata_json|safe }}</script>
+            {% endif %}
+          </div>
+          {% endif %}
+        {% endfor %}
+        {% endif %}
+      </section>
+
+      <footer class="input-area">
+        <form id="chat-form">
+          {% csrf_token %}
+          {% if current_session %}
+          <input type="hidden" name="session_id" value="{{ current_session.id }}">
+          <input type="hidden" name="dataset_id" value="{{ current_session.dataset.id }}">
+          {% endif %}
+          <div class="input-container">
+            <div class="input-wrapper">
+              <textarea name="message" class="chat-input" placeholder="Message {{ site_settings.site_name|default:'ChatFlow' }}..." rows="1"
+                id="chat-textarea"></textarea>
+            </div>
+            <div class="input-actions">
+              <div style="display: flex; gap: 4px;">
+                <!-- Media/Emoji actions removed for minimalist analysis interface -->
+              </div>
+              <button type="submit" class="send-btn" id="submit-btn" disabled>
+                <i data-lucide="arrow-up" size="18"></i>
+              </button>
+            </div>
+          </div>
+        </form>
+        <p style="text-align: center; font-size: 11px; color: var(--zinc-600); margin-top: 12px;">
+          {{ site_settings.site_name|default:"ChatFlow" }} can make mistakes. Check important info.
+        </p>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Dataset Selection Modal -->
+  <div id="datasetModal" class="dataset-modal-backdrop {% if not current_session and not messages %}open{% endif %}">
+    <div class="dataset-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Start New Analysis</h3>
+        <button class="close-modal" onclick="closeDatasetModal()">
+          <i data-lucide="x" size="20"></i>
+        </button>
+      </div>
+
+      <div class="modal-tabs">
+        <div class="modal-tab active" onclick="switchModalTab('upload-tab')" id="tab-btn-upload">Upload New</div>
+        <div class="modal-tab" onclick="switchModalTab('select-tab')" id="tab-btn-select">Select Existing</div>
+      </div>
+
+      <div class="modal-content">
+        <!-- Upload Tab -->
+        <div id="upload-tab" class="tab-pane active">
+          <form id="uploadDatasetForm" action="{% url 'saiha:upload_dataset' %}" method="post"
+            enctype="multipart/form-data" style="height: 100%;">
+            {% csrf_token %}
+            <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+              <i data-lucide="upload-cloud" size="40" style="color: #a1a1aa; margin-bottom: 16px;"></i>
+              <p style="color: white; font-weight: 500; font-size: 15px; margin-bottom: 4px;">Click or drag file to this
+                area</p>
+              <p style="color: #a1a1aa; font-size: 13px;">Support for a single CSV or Excel file.</p>
+              <input type="file" id="file-input" name="file" style="display: none;" accept=".csv,.xlsx,.xls">
+              <button type="submit" class="upload-btn" id="upload-submit-btn"
+                style="display:none; position: relative; z-index: 10;">Upload Dataset</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Select Tab -->
+        <div id="select-tab" class="tab-pane">
+          {% if available_datasets %}
+          {% for ds in available_datasets %}
+          <a href="?dataset_id={{ ds.id }}" class="dataset-list-item">
+            <div style="display: flex; align-items: center;">
+              <div class="dataset-icon">
+                <i data-lucide="table" size="20"></i>
+              </div>
+              <div>
+                <div style="font-size: 14px; font-weight: 500;">{{ ds.name }}</div>
+                <div style="font-size: 12px; color: #a1a1aa;">{{ ds.rows_count|default:"Unknown" }} rows • {{
+                  ds.upload_date|date:"M d, Y" }}</div>
+              </div>
+            </div>
+            <i data-lucide="chevron-right" size="16" style="color: #a1a1aa;"></i>
+          </a>
+          {% endfor %}
+          {% else %}
+          <div
+            style="height: 100%; display: flex; align-items: center; justify-content: center; color: #a1a1aa; font-size: 14px;">
+            No datasets available.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="dataset-modal-backdrop">
+    <div class="dataset-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Settings</h3>
+        <button class="close-modal" onclick="closeSettingsModal()">
+          <i data-lucide="x" size="20"></i>
+        </button>
+      </div>
+
+      <div class="modal-tabs">
+        <div class="modal-tab active" onclick="switchSettingsTab('profile-tab')" id="tab-btn-profile">Profile</div>
+        <div class="modal-tab" onclick="switchSettingsTab('account-tab')" id="tab-btn-account">Account</div>
+      </div>
+
+      <div class="modal-content">
+        <!-- Profile Tab -->
+        <div id="profile-tab" class="tab-pane active">
+          <form id="updateProfileForm" hx-post="{% url 'saiha:update_profile' %}" hx-swap="none"
+            onsubmit="handleProfileSubmit(event)" style="padding: 10px 0;">
+            {% csrf_token %}
+            <div style="margin-bottom: 20px;">
+              <label style="display: block; font-size: 13px; color: #a1a1aa; margin-bottom: 8px;">Email Address</label>
+              <input type="text" value="{{ user.email }}" disabled
+                style="width: 100%; background: rgba(39, 39, 42, 0.4); border: 1px solid rgba(82, 82, 91, 0.3); border-radius: 8px; padding: 10px; color: #fff; opacity: 0.7;">
+            </div>
+            <div style="margin-bottom: 20px;">
+              <label style="display: block; font-size: 13px; color: #a1a1aa; margin-bottom: 8px;">Display Name</label>
+              <input type="text" name="display_name" value="{{ user.first_name }}" placeholder="Enter display name"
+                style="width: 100%; background: rgba(39, 39, 42, 0.6); border: 1px solid rgba(82, 82, 91, 0.4); border-radius: 8px; padding: 10px; color: #fff; outline: none;"
+                onfocus="this.style.borderColor='#8B5CF6'" id="settings-display-name">
+            </div>
+            <button type="submit" class="upload-btn" style="width: 100%; margin: 0; padding: 10px;"
+              id="save-profile-btn">Save Profile</button>
+            <div id="profile-status" style="margin-top: 12px; font-size: 12px; text-align: center; display: none;"></div>
+          </form>
+        </div>
+
+        <!-- Account Tab -->
+        <div id="account-tab" class="tab-pane">
+          <div style="padding: 10px 0; display: flex; flex-direction: column; gap: 12px; height: 100%;">
+            <p style="color: #a1a1aa; font-size: 14px; margin-bottom: 8px;">Account Security Management</p>
+
+            <a href="{% url 'account_change_password' %}" class="dataset-list-item" style="margin-bottom: 4px;">
+              <div style="display: flex; align-items: center;">
+                <div class="dataset-icon">
+                  <i data-lucide="lock" size="18"></i>
+                </div>
+                <div>
+                  <div style="font-size: 14px; font-weight: 500;">Change Password</div>
+                  <div style="font-size: 12px; color: #a1a1aa;">Update your login credentials</div>
+                </div>
+              </div>
+              <i data-lucide="external-link" size="14" style="color: #a1a1aa;"></i>
+            </a>
+
+            <div onclick="document.getElementById('logout-form').submit();" class="dataset-list-item"
+              style="color: #f87171; border-color: rgba(248, 113, 113, 0.2); background: rgba(248, 113, 113, 0.05);">
+              <div style="display: flex; align-items: center;">
+                <div class="dataset-icon" style="color: #f87171; background: rgba(248, 113, 113, 0.1);">
+                  <i data-lucide="log-out" size="18"></i>
+                </div>
+                <div>
+                  <div style="font-size: 14px; font-weight: 500;">Logout</div>
+                  <div style="font-size: 12px; color: #f87171; opacity: 0.8;">End your active session</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    lucide.createIcons();
+    const userInitials = '{{ user.first_name|default:user.email|slice:":1"|upper }}';
+    const siteLogoUrl = '{{ site_settings.logo.url|default:"" }}';
+    const siteName = "{{ site_settings.site_name|default:'ChatFlow' }}";
+
+    // --- 1. Global State ---
+    let isSubmitting = false;
+
+    // --- 2. Sidebar Toggle ---
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      sidebar.style.transform = sidebar.style.transform === 'translateX(-100%)' ? 'translateX(0)' : 'translateX(-100%)';
+    }
+
+    // --- 3. Chat Logic ---
+    const textarea = document.getElementById('chat-textarea');
+    textarea?.addEventListener('input', function () {
+      this.style.height = 'auto';
+      this.style.height = (this.scrollHeight) + 'px';
+      updateSendBtn();
+    });
+
+    function updateSendBtn() {
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = isSubmitting || !textarea.value.trim();
+    }
+
+    function escapedHTML(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function scrollToBottom() {
+      const chatMessages = document.getElementById('chat-messages');
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    async function renderRichMessage(container, content, metadata = null) {
+      if (!container) return;
+      const textContent = container.querySelector('.text-content');
+      if (textContent && content) textContent.innerHTML = marked.parse(content);
+
+      if (metadata && metadata.artifacts) {
+        const blocksContainer = container.querySelector('.rich-blocks-container');
+        if (!blocksContainer) return;
+        blocksContainer.innerHTML = '';
+        
+        for (const [index, art] of metadata.artifacts.entries()) {
+          if (art.type === 'chart') {
+            const chartId = 'chart-' + Math.random().toString(36).substr(2, 9);
+            blocksContainer.insertAdjacentHTML('beforeend', `
+                            <div class="rich-block chart-block">
+                                <div class="block-header">
+                                    <div class="block-title-group">
+                                        <i data-lucide="bar-chart" class="block-icon" size="14"></i>
+                                        <span class="block-title">${art.title || "Visualization"}</span>
+                                    </div>
+                                </div>
+                                <div id="${chartId}" class="chart-container"></div>
+                            </div>
+                        `);
+            const chartMeta = art.metadata || {};
+            new ApexCharts(document.querySelector("#" + chartId), {
+              chart: { type: chartMeta.type || 'bar', height: 250, toolbar: { show: false }, background: 'transparent' },
+              theme: { mode: 'dark', palette: 'palette1' },
+              series: chartMeta.series || [],
+              xaxis: { categories: chartMeta.categories || [] },
+              colors: ['#8B5CF6', '#6366F1', '#A78BFA'],
+              grid: { borderColor: 'rgba(255,255,255,0.05)' }
+            }).render();
+          } else if (art.type === 'plot') {
+            const plotData = art.metadata;
+            if (plotData && plotData.base64) {
+              blocksContainer.insertAdjacentHTML('beforeend', `
+                            <div class="rich-block chart-block">
+                                <div class="block-header">
+                                    <div class="block-title-group">
+                                        <i data-lucide="image" class="block-icon" size="14"></i>
+                                        <span class="block-title">${art.title || "Plot Result"}</span>
+                                    </div>
+                                </div>
+                                <div style="padding: 12px; background: white;"><img src="data:image/png;base64,${plotData.base64}" style="max-width: 100%; height: auto; border-radius: 4px;"></div>
+                            </div>
+                        `);
+            }
+          } else if (art.type === 'table') {
+            blocksContainer.insertAdjacentHTML('beforeend', `
+              <div class="rich-block table-block">
+                <div class="block-header">
+                  <div class="block-title-group">
+                    <i data-lucide="table" class="block-icon" size="14"></i>
+                    <span class="block-title">${art.title || "Data Insight"}</span>
+                  </div>
+                </div>
+                <div class="table-container" style="overflow-x: auto; font-size: 13px;">
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <thead><tr style="background: rgba(255,255,255,0.02);"><th style="padding: 12px; text-align: left; border-bottom: 1px solid #27272a;">${art.headers.map(h => h).join('</th><th style="padding: 12px; text-align: left; border-bottom: 1px solid #27272a;">')}</th></tr></thead>
+                    <tbody>${art.data.map(row => `<tr><td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.02);">${row.map(cell => cell).join('</td><td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.02);">')}</td></tr>`).join('')}</tbody>
+                  </table>
+                </div>
+              </div>
+            `);
+          }
+        }
+      }
+      lucide.createIcons();
+    }
+
+    async function handleChatSubmit(e) {
+      if (e) e.preventDefault();
+      if (isSubmitting) return;
+
+      const form = document.getElementById('chat-form');
+      const formData = new FormData(form);
+      const message = formData.get('message');
+      if (!message || !message.trim()) return;
+
+      isSubmitting = true;
+      updateSendBtn();
+
+      textarea.value = '';
+      textarea.style.height = 'auto';
+
+      requestAnimationFrame(() => {
+        textarea.value = '';
+        updateSendBtn();
+      });
+
+      const chatMessages = document.getElementById('chat-messages');
+
+      chatMessages.insertAdjacentHTML('beforeend', `
+        <div class="message user">
+          <div class="avatar user">
+            <span style="font-size: 11px; font-weight: 600; color: white;">${userInitials}</span>
+          </div>
+          <div class="message-content">${escapedHTML(message)}</div>
+        </div>
+      `);
+
+      chatMessages.insertAdjacentHTML('beforeend', `
+        <div class="message ai typing-indicator-msg">
+          <div class="avatar ai">
+            ${siteLogoUrl ? `<img src="${siteLogoUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">` : `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="24" height="24" rx="6" fill="#8B5CF6"/>
+              <path d="M7 12L12 7L17 12L12 17L7 12Z" fill="white"/>
+            </svg>`}
+          </div>
+          <div class="message-content">
+            <div class="typing-indicator" style="gap: 12px;">
+              <div class="dot" style="background-color: var(--primary-color);"></div><div class="dot" style="background-color: var(--primary-color); opacity: 0.7;"></div><div class="dot" style="background-color: var(--primary-color); opacity: 0.4;"></div>
+            </div>
+          </div>
+        </div>
+      `);
+      scrollToBottom();
+
+      try {
+        const response = await fetch('/api/quanta-chat/', {
+          method: 'POST',
+          body: JSON.stringify({ message }),
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+          }
+        });
+        const data = await response.json();
+        // Socket or polling logic would normally update this. Manual for now.
+      } catch (err) {
+        console.error(err);
+      } finally {
+        isSubmitting = false;
+        updateSendBtn();
+      }
+    }
+
+    document.getElementById('chat-form')?.addEventListener('submit', handleChatSubmit);
+    textarea?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleChatSubmit();
+      }
+    });
+
+  </script>
+
+  {% if user.is_authenticated %}
+  <script>
+    (function () {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const socketUrl = `${protocol}//${window.location.host}/ws/notifications/`;
+      let socket = null;
+      let reconnectInterval = 5000;
+
+      function connect() {
+        socket = new WebSocket(socketUrl);
+        socket.onopen = () => console.log('Chat UI WebSocket connected');
+        socket.onerror = (err) => { console.error('Socket error:', err); socket.close(); };
+        socket.onclose = () => { setTimeout(connect, reconnectInterval); };
+
+        socket.onmessage = function (e) {
+          const data = JSON.parse(e.data);
+          const chatMessages = document.getElementById('chat-messages');
+
+          const indicator = document.querySelector('.typing-indicator-msg');
+          if (indicator) {
+            indicator.remove();
+            isSubmitting = false;
+            updateSendBtn();
+          }
+
+          if (data.type === 'chat_trace' || data.event_type === 'agent_message') {
+            const msgFormat = (data.message_type === 'ai' || data.message_type === 'system') ? 'ai' : null;
+            if (msgFormat === 'ai') {
+              let msgId = (data.metadata && data.metadata.id) ? 'msg-' + data.metadata.id : 'msg-streaming-response';
+              let msgEl = document.getElementById(msgId);
+              if (!msgEl) {
+                chatMessages.insertAdjacentHTML('beforeend', `
+                              <div class="message ai" id="${msgId}" data-rich-msg="true">
+                                <div class="avatar ai">
+                                  ${siteLogoUrl ? `<img src="${siteLogoUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">` : `
+                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect width="24" height="24" rx="6" fill="#8B5CF6"/>
+                                    <path d="M7 12L12 7L17 12L12 17L7 12Z" fill="white"/>
+                                  </svg>`}
+                                </div>
+                                <div class="message-content"><div class="text-content"></div><div class="rich-blocks-container"></div></div>
+                              </div>
+                            `);
+                msgEl = document.getElementById(msgId);
+              }
+              renderRichMessage(msgEl, data.content || "", data.metadata);
+              scrollToBottom();
+            }
+          }
+        };
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          document.querySelectorAll('[data-rich-msg="true"]').forEach(msgEl => {
+            const msgId = msgEl.id.replace('msg-', '');
+            const metadataScript = document.getElementById('meta-' + msgId);
+            let metadata = null;
+            if (metadataScript) try { metadata = JSON.parse(metadataScript.textContent); } catch (e) { }
+            const contextEl = msgEl.querySelector('.text-content');
+            if (contextEl && contextEl.innerText.trim()) renderRichMessage(msgEl, contextEl.innerText.trim(), metadata);
+          });
+          scrollToBottom();
+        }, 200);
+      });
+
+      connect();
+    })();
+  </script>
+  {% endif %}
+
+  <script>
+    function openDatasetModal() { document.getElementById('datasetModal').classList.add('open'); }
+    function closeDatasetModal() { document.getElementById('datasetModal').classList.remove('open'); }
+    function switchModalTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.modal-tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      document.getElementById(tabId === 'upload-tab' ? 'tab-btn-upload' : 'tab-btn-select').classList.add('active');
+    }
+
+    document.getElementById('file-input')?.addEventListener('change', function () {
+      if (this.files?.length > 0) {
+        document.querySelector('.upload-zone p').innerText = this.files[0].name;
+        document.getElementById('upload-submit-btn').style.display = 'inline-block';
+      }
+    });
+
+    document.getElementById('uploadDatasetForm')?.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('upload-submit-btn');
+      btn.innerText = "Processing..."; btn.disabled = true;
+      try {
+        const response = await fetch(this.action, {
+          method: 'POST', body: new FormData(this),
+          headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+        });
+        const data = await response.json();
+        if (data.dataset_id || data.id) window.location.href = "?dataset_id=" + (data.dataset_id || data.id);
+      } catch (err) { console.error(err); btn.innerText = "Upload Dataset"; btn.disabled = false; }
+    });
+
+    function openSettingsModal() { document.getElementById('settingsModal').classList.add('open'); }
+    function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('open'); }
+    function switchSettingsTab(tabId) {
+      const modal = document.getElementById('settingsModal');
+      modal.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      modal.querySelectorAll('.modal-tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      document.getElementById('tab-btn-' + tabId.replace('-tab', '')).classList.add('active');
+    }
+
+    async function handleProfileSubmit(event) {
+      event.preventDefault();
+      const form = event.target;
+      const statusEl = document.getElementById('profile-status');
+      const btn = document.getElementById('save-profile-btn');
+      
+      btn.disabled = true;
+      btn.innerText = 'Saving...';
+      statusEl.style.display = 'none';
+
+      try {
+        const response = await fetch(form.getAttribute('hx-post'), {
+          method: 'POST',
+          body: new FormData(form),
+          headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.status === 'success') {
+          statusEl.innerText = data.message;
+          statusEl.style.color = '#34d399';
+          statusEl.style.display = 'block';
+          
+          document.getElementById('sidebar-user-name').innerText = data.display_name;
+          document.getElementById('sidebar-user-initials').innerText = data.initials;
+          
+          setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
+        } else {
+          statusEl.innerText = data.message || 'Error updating profile';
+          statusEl.style.color = '#f87171';
+          statusEl.style.display = 'block';
+        }
+      } catch (err) {
+        console.error(err);
+        statusEl.innerText = 'Server error. Please try again.';
+        statusEl.style.color = '#f87171';
+        statusEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Save Profile';
+      }
+    }
+
+    window.onclick = function (event) {
+      if (event.target.classList.contains('dataset-modal-backdrop')) {
+        event.target.classList.remove('open');
+      }
+    }
+  </script>
+</body>
+
+</html>

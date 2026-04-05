@@ -1,0 +1,23 @@
+<div class="rich-block text-block">
+  <div class="block-header">
+    <div class="block-title-group">
+      <i data-lucide="file-text" class="block-icon" size="14"></i>
+      <span class="block-label">Text Content</span>
+      <span style="color: var(--zinc-700);">·</span>
+      <span class="block-title">{{ title }}</span>
+    </div>
+    <div class="block-actions">
+      <button class="block-btn" onclick="navigator.clipboard.writeText(this.closest('.text-block').querySelector('.text-content').innerText)">
+        <i data-lucide="copy" size="12"></i>
+        Copy
+      </button>
+      <button class="block-btn" hx-get="/export/text/" hx-swap="none">
+        <i data-lucide="download" size="12"></i>
+        Export
+      </button>
+    </div>
+  </div>
+  <div class="text-content">
+    {{ content|safe }}
+  </div>
+</div>

@@ -1,0 +1,293 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dataset Details — {{ dataset.name }}</title>
+  {% if site_settings.favicon %}
+  <link rel="icon" type="image/x-icon" href="{{ site_settings.favicon.url }}">
+  {% endif %}
+  <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/htmx.org@2.0.0"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --zinc-950: #09090b;
+      --zinc-900: #18181b;
+      --zinc-800: #27272a;
+      --zinc-700: #3f3f46;
+      --zinc-600: #52525b;
+      --zinc-500: #71717a;
+      --zinc-400: #a1a1aa;
+      --zinc-300: #d4d4d8;
+      --zinc-200: #e4e4e7;
+      --zinc-100: #f4f4f5;
+      --primary-color: #8B5CF6;
+      --primary-hover: #7C3AED;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'DM Sans', sans-serif; }
+    body { background-color: var(--zinc-950); color: var(--zinc-100); min-height: 100vh; }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
+
+    .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 32px; }
+    .header-info h1 { font-size: 28px; font-weight: 800; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .header-info p { color: var(--zinc-500); font-size: 14px; }
+
+    .back-btn {
+      display: flex; align-items: center; gap: 8px; color: var(--zinc-400);
+      text-decoration: none; font-size: 14px; font-weight: 500; margin-bottom: 24px;
+      transition: color 0.2s;
+    }
+    .back-btn:hover { color: white; }
+
+    .btn {
+      padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.2s;
+      text-decoration: none; border: none;
+    }
+    .btn-primary { background: var(--primary-color); color: white; }
+    .btn-secondary { background: var(--zinc-800); color: white; border: 1px solid var(--zinc-700); }
+    .btn:hover { transform: translateY(-1px); opacity: 0.9; }
+
+    /* Layout Selection */
+    .grid { 
+      display: grid; 
+      grid-template-columns: 1fr 320px; 
+      gap: 24px; 
+      align-items: start;
+    }
+    .main-content { min-width: 0; }
+
+    .card {
+      background: rgba(24, 24, 27, 0.4); border: 1px solid var(--zinc-800);
+      border-radius: 16px; padding: 24px; margin-bottom: 24px;
+      max-width: 100%;
+      overflow: hidden;
+    }
+    .card-title { font-size: 14px; font-weight: 700; color: white; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+
+    /* Lineage Visualization */
+    .lineage-track { border-left: 2px solid var(--zinc-800); margin-left: 10px; padding-left: 30px; position: relative; }
+    .lineage-node { position: relative; margin-bottom: 24px; }
+    .lineage-node::before {
+      content: ''; position: absolute; left: -36px; top: 10px;
+      width: 10px; height: 10px; background: var(--zinc-800);
+      border-radius: 50%; border: 2px solid var(--zinc-950);
+    }
+    .lineage-node.active::before { background: var(--primary-color); box-shadow: 0 0 10px var(--primary-color); }
+    
+    .node-content { font-size: 13px; font-weight: 500; color: var(--zinc-400); }
+    .node-title { color: white; font-weight: 600; margin-bottom: 2px; }
+    .node-meta { font-size: 11px; color: var(--zinc-600); }
+
+    /* Table Styles */
+    .table-wrapper { 
+      overflow-x: auto; 
+      border-radius: 8px; 
+      background: rgba(0,0,0,0.2);
+      width: 100%;
+      position: relative;
+    }
+    table { width: 100%; border-collapse: collapse; text-align: left; table-layout: auto; }
+    th { 
+      padding: 12px 16px; 
+      font-size: 12px; 
+      font-weight: 600; 
+      color: var(--zinc-500); 
+      border-bottom: 1px solid var(--zinc-800);
+      white-space: nowrap;
+    }
+    td { padding: 14px 16px; font-size: 13px; color: var(--zinc-300); border-bottom: 1px solid rgba(82, 82, 91, 0.1); }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: rgba(255,255,255,0.05); padding: 2px 4px; border-radius: 4px; color: var(--primary-color); }
+
+    .preview-table { min-width: 100%; }
+    .preview-table th, .preview-table td { white-space: nowrap; min-width: 120px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--zinc-800); margin-bottom: 24px; }
+    .tab { padding-bottom: 12px; font-size: 14px; font-weight: 600; color: var(--zinc-500); cursor: pointer; position: relative; }
+    .tab.active { color: white; }
+    .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--primary-color); }
+
+    .badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; background: var(--zinc-800); color: var(--zinc-400); }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <a href="{% url 'saiha:dataset_dashboard' %}" class="back-btn">
+      <i data-lucide="arrow-left" size="16"></i>
+      Back to Explorer
+    </a>
+
+    <div class="header">
+      <div class="header-info">
+        <h1>{{ dataset.name }} <span class="badge">{{ dataset.file_type|upper }}</span></h1>
+        <p>Uploaded by {{ dataset.user.first_name|default:dataset.user.username }} on {{ dataset.upload_date|date:"F d, Y" }}</p>
+      </div>
+      <div style="display: flex; gap: 12px;">
+        <a href="{% url 'saiha:index' %}?dataset_id={{ dataset.id }}" class="btn btn-primary">
+          <i data-lucide="play" size="16"></i>
+          Analyze Now
+        </a>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="main-content">
+        <!-- Content Tabs -->
+        <div class="tabs">
+          <div class="tab active" onclick="switchDetailTab('schema')">Schema Analysis</div>
+          <div class="tab" onclick="switchDetailTab('preview')">Data Preview</div>
+        </div>
+
+        <!-- Schema Tab -->
+        <div id="tab-schema" class="card">
+          <div class="card-title">
+            <i data-lucide="table-2" size="18"></i>
+            Column Definitions
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Column Name</th>
+                  <th>Type</th>
+                  <th>Nulls</th>
+                  <th>Uniques</th>
+                  <th>Samples</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for col in columns %}
+                <tr>
+                  <td style="color: var(--zinc-600);">{{ col.column_index }}</td>
+                  <td style="font-weight: 600; color: white;">{{ col.column_name }}</td>
+                  <td><code>{{ col.data_type }}</code></td>
+                  <td>{{ col.null_count }}</td>
+                  <td>{{ col.unique_count }}</td>
+                  <td style="font-size: 11px; color: var(--zinc-500);">
+                    {{ col.sample_values|join:", "|truncatechars:30 }}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Preview Tab -->
+        <div id="tab-preview" class="card" style="display: none;">
+          <div class="card-title">
+            <i data-lucide="eye" size="18"></i>
+            Raw Data Preview (Top 10 Rows)
+          </div>
+          <div class="table-wrapper">
+            <table class="preview-table">
+              <thead>
+                <tr>
+                  {% for col in preview_columns %}
+                  <th>{{ col }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in preview_data %}
+                <tr>
+                  {% for val in row.values %}
+                  <td>{{ val }}</td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <aside class="side-info">
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="git-branch" size="18"></i>
+            Data Lineage
+          </div>
+          
+          <div class="lineage-track">
+            {% if parent %}
+            <div class="lineage-node">
+              <div class="node-content">
+                <a href="{% url 'saiha:dataset_detail' parent.id %}" style="text-decoration: none;">
+                  <div class="node-title">{{ parent.name }}</div>
+                  <div class="node-meta">Parent • {{ parent.upload_date|date:"M d" }}</div>
+                </a>
+              </div>
+            </div>
+            {% endif %}
+
+            <div class="lineage-node active">
+              <div class="node-content">
+                <div class="node-title" style="color: var(--primary-color);">{{ dataset.name }}</div>
+                <div class="node-meta">Current Dataset</div>
+              </div>
+            </div>
+
+            {% for child in children %}
+            <div class="lineage-node">
+              <div class="node-content">
+                <a href="{% url 'saiha:dataset_detail' child.id %}" style="text-decoration: none;">
+                  <div class="node-title">{{ child.name }}</div>
+                  <div class="node-meta">Child • {{ child.upload_date|date:"M d" }}</div>
+                </a>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">
+            <i data-lucide="info" size="18"></i>
+            Storage Properties
+          </div>
+          <div style="font-size: 13px; display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--zinc-500);">Format</span>
+              <span style="font-weight: 600;">Parquet (High Speed)</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--zinc-500);">Size</span>
+              <span style="font-weight: 600;">{{ dataset.file_size|filesizeformat }}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: var(--zinc-500);">Encoding</span>
+              <span style="font-weight: 600;">{{ dataset.encoding }}</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    lucide.createIcons();
+
+    function switchDetailTab(tabId) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-schema').style.display = 'none';
+      document.getElementById('tab-preview').style.display = 'none';
+      
+      document.getElementById('tab-' + tabId).style.display = 'block';
+      event.target.classList.add('active');
+    }
+  </script>
+</body>
+
+</html>

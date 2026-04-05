@@ -1,0 +1,19 @@
+<div class="rich-block code-block">
+  <div class="block-header">
+    <div class="block-title-group">
+      <i data-lucide="code" class="block-icon" size="14"></i>
+      <span class="block-label">Code Snippet</span>
+      <span style="color: var(--zinc-700);">·</span>
+      <span class="block-title">{{ filename }}</span>
+    </div>
+    <div class="block-actions">
+      <button class="block-btn" onclick="navigator.clipboard.writeText(this.closest('.code-block').querySelector('pre').innerText)">
+        <i data-lucide="copy" size="12"></i>
+        Copy
+      </button>
+    </div>
+  </div>
+  <div class="code-wrapper">
+    <pre><code>{{ code }}</code></pre>
+  </div>
+</div>

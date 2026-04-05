@@ -1,0 +1,17 @@
+<div class="message ai" data-rich-msg="true" id="msg-{{ msg.id }}">
+  <div class="avatar ai">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="24" height="24" rx="6" fill="#8B5CF6"/>
+      <path d="M7 12L12 7L17 12L12 17L7 12Z" fill="white"/>
+    </svg>
+  </div>
+  <div class="message-content">
+    <div class="text-content">
+      {% if msg %}{{ msg.content|safe }}{% else %}{{ message_content|safe }}{% endif %}
+    </div>
+    <div class="rich-blocks-container"></div>
+  </div>
+  {% if msg.metadata %}
+    <script type="application/json" id="meta-{{ msg.id }}">{{ msg.metadata_json|safe }}</script>
+  {% endif %}
+</div>

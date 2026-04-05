@@ -243,3 +243,29 @@ class SiteSettings(models.Model):
         """
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
+
+class AIAuditLog(models.Model):
+    """
+    Enterprise-grade audit trail for AI interactions.
+    Tracks prompts, responses, and costs (tokens).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    session = models.ForeignKey(AnalysisSession, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    prompt = models.TextField()
+    response = models.TextField()
+    
+    # Cost & Usage metrics
+    tokens_input = models.IntegerField(default=0)
+    tokens_output = models.IntegerField(default=0)
+    model_id = models.CharField(max_length=100)
+    
+    # Timeline
+    timestamp = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = 'AI Audit Log'
+        verbose_name_plural = 'AI Audit Logs'
+    
+    def __str__(self):
+        return f"AI Audit - {self.model_id} - {self.timestamp}"

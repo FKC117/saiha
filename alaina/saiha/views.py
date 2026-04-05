@@ -1,7 +1,7 @@
 import json
 import os
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
@@ -12,6 +12,9 @@ from .database_processing_logic.dataset_processor import DatasetProcessor
 from .database_processing_logic.storage_manager_parquet import DatasetStorageManager
 from .session_management.session_manager import SessionManager
 from .agents.analysis_agent import get_analysis_agent
+from .reporting.report_builder import ReportBuilder
+from .reporting.pptx_exporter import PPTXExporter
+from .reporting.docx_exporter import DOCXExporter
 
 @login_required
 def index(request):
@@ -242,3 +245,36 @@ def get_analysis_result(request, result_id):
         'interpretation': result.ai_interpretation,
         'created_at': result.created_at.isoformat()
     })
+
+@login_required
+def export_session_report(request, session_id, format):
+    """
+    The Consulting-Grade Export Endpoint.
+    Orchestrates the Narrative Builder -> Selection -> Professional Exporter.
+    """
+    session = get_object_or_404(AnalysisSession, id=session_id, user=request.user)
+    
+    # 1. Build Narrative Intelligence (Filtering, Summarizing, Title Generation)
+    builder = ReportBuilder(session_id=str(session.id))
+    report_context = builder.build_narrative_context()
+    
+    # 2. Dispatch to professional layout engine
+    if format.lower() == 'pptx':
+        exporter = PPTXExporter()
+        file_stream = exporter.generate_report(report_context)
+        content_type = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+        filename = f"Analytical_Report_{session.dataset.name}.pptx"
+    elif format.lower() == 'docx':
+        exporter = DOCXExporter()
+        file_stream = exporter.generate_report(report_context)
+        content_type = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        filename = f"Narrative_Report_{session.dataset.name}.docx"
+    else:
+        return HttpResponse("Unsupported Format", status=400)
+    
+    return FileResponse(
+        file_stream,
+        as_attachment=True,
+        filename=filename,
+        content_type=content_type
+    )

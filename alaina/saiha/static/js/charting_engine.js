@@ -156,10 +156,16 @@ const ChatChartManager = (() => {
 
         // 2. Initialize instance
         const chart = echarts.init(container);
-        const option = buildOption(type, data);
         
-        // 3. Apply custom Zinc theme overrides
-        chart.setOption({...ZincTheme, ...option});
+        // 3. Selection: Manual Transformation (Legacy) or Pass-Through (Hardened)
+        // If data has 'series' but no 'type', or if we detect the hardened 'option' pattern
+        let finalOption = data;
+        if (type && type !== 'RAW') {
+             finalOption = buildOption(type, data);
+        }
+        
+        // 4. Apply custom Zinc theme overrides + Final Option
+        chart.setOption({...ZincTheme, ...finalOption});
 
         // 4. Setup Robust Resize Management
         const observer = new ResizeObserver(() => {

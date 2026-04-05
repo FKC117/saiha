@@ -5,7 +5,8 @@ import pandas as pd
 from typing import Any, Dict, List, Optional, Tuple, Type
 from pydantic import BaseModel, ValidationError
 
-logger = logging.getLogger(__name__)
+# Dedicated Tool Logger (Configured in settings.py)
+tool_logger = logging.getLogger('saiha.tools')
 
 class ToolResult(BaseModel):
     """
@@ -68,9 +69,10 @@ class BaseAnalysisTool(abc.ABC):
             return self._normalize_legacy_result(legacy_result)
 
         except ValidationError as e:
+            tool_logger.error(f"Validation failed for tool {self.name}: {e}")
             return ToolResult(status="error", error=str(e), message="Parameter validation failed.")
         except Exception as e:
-            logger.error(f"Error in tool {self.name}: {e}", exc_info=True)
+            tool_logger.error(f"Error in tool {self.name}: {e}", exc_info=True)
             return ToolResult(status="error", error=str(e), message="Analysis failed.")
 
     def _normalize_legacy_result(self, result: Dict[str, Any]) -> ToolResult:

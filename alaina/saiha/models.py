@@ -173,19 +173,40 @@ class ChatMessage(models.Model):
         return json.dumps(self.metadata)
 
 class AnalysisResult(models.Model):
-    """Stores detailed analysis results linked to sessions."""
+    """
+    Stores detailed analysis results linked to sessions.
+    Hardened for production async execution.
+    """
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        RUNNING = 'RUNNING', 'Running'
+        SUCCESS = 'SUCCESS', 'Success'
+        FAILED = 'FAILED', 'Failed'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     session = models.ForeignKey(AnalysisSession, on_delete=models.CASCADE, related_name='analysis_results')
     tool_used = models.CharField(max_length=100)
-    result_data = models.JSONField()
-    ai_interpretation = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
     
-    # Tracking for PPTX/Report generation
-    summary = models.TextField(blank=True, null=True)
+    # Payload
+    result_data = models.JSONField(null=True, blank=True)
+    ai_interpretation = models.TextField(blank=True, null=True)
+    summary = models.TextField(blank=True, null=True) # For PPTX/Report generation
+    
+    # Async Observability
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    task_id = models.CharField(max_length=255, blank=True, null=True)
+    dedup_id = models.CharField(max_length=255, unique=True, blank=True, null=True)
+    error_message = models.TextField(blank=True, null=True)
+    
+    # Timeline
+    created_at = models.DateTimeField(auto_now_add=True)
+    started_at = models.DateTimeField(blank=True, null=True)
+    completed_at = models.DateTimeField(blank=True, null=True)
     
     class Meta:
         ordering = ['-created_at']
+        verbose_name = 'Analysis Result'
+        verbose_name_plural = 'Analysis Results'
     
     def __str__(self):
         return f"Analysis for {self.tool_used} in session {self.session.id}"

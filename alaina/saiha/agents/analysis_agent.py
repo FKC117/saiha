@@ -1,0 +1,84 @@
+import logging
+from typing import List, Dict, Any, Optional
+from ..models import AnalysisSession, AnalysisResult, Dataset
+from .analysis_planner import analysis_planner
+from .param_corrector import ParamCorrector
+from .interpretation_agent import interpretation_agent
+from ..analysis_tools.registry import tool_registry
+from ..celery_tasks.analysis_tasks import execute_analysis_task
+
+logger = logging.getLogger(__name__)
+
+class AnalysisAgent:
+    """
+    The Centralized Orchestrator for the ChatFlow AI agent.
+    Role: Gathers intent, corrects parameters, and dispatches to Celery.
+    Prevents LLM from directly controlling tool execution.
+    """
+    def __init__(self, session_id: str):
+        self.session = AnalysisSession.objects.get(id=session_id)
+        self.dataset = self.session.dataset
+
+    def process_query(self, query: str) -> List[str]:
+        """
+        Processes a natural language query:
+        1. Contextualize (Schema + Metadata)
+        2. Plan (AnalysisPlanner)
+        3. Correct (ParamCorrector)
+        4. Dispatch (Celery Task)
+        """
+        # 1. Get Schema Metadata
+        columns_meta = self.dataset.columns.all()
+        schema_text = "\n".join([f"- {c.column_name} ({c.data_type})" for c in columns_meta])
+        column_names = [c.column_name for c in columns_meta]
+
+        # 2. Planning (LLM Intent Detection)
+        intents = analysis_planner.create_plan(query, schema_text)
+        if not intents:
+            logger.warning(f"No intents generated for query: '{query}'")
+            return []
+
+        # 3. Hybrid Correction Layer
+        corrector = ParamCorrector(column_names)
+        task_ids = []
+
+        for intent in intents:
+            tool_name = intent.get('tool')
+            raw_params = intent.get('params', {})
+
+            # A. Whitelist Validation
+            tool_instance = tool_registry.get_tool(tool_name)
+            if not tool_instance:
+                logger.warning(f"Tool '{tool_name}' blocked by registry whitelist.")
+                continue
+
+            # B. Fuzzy Column Matching & System-level Correction
+            # We fix names like 'price' to 'price_usd' before the tool is even initialized
+            corrected_params = corrector.apply_to_params(raw_params, {})
+            
+            # C. Create DB Record (Pending State) for Traceability
+            # Using a deterministic dedup_id: session_id + query_hash + tool_idx
+            import hashlib
+            dedup_id = hashlib.sha256(f"{self.session.id}_{query}_{tool_name}".encode()).hexdigest()
+            
+            # NOTE: We only pass reference IDs to Celery (Pass-by-Reference)
+            # This follows the 'Hardened Payload' rule.
+            try:
+                # Dispatch to Hardened Async Infrastructure
+                task = execute_analysis_task.delay(
+                    session_id=str(self.session.id),
+                    tool_name=tool_name,
+                    params=corrected_params,
+                    dedup_id=dedup_id,
+                    query=query
+                )
+                task_ids.append(task.id)
+                logger.info(f"Dispatched Hardened Task: {tool_name} (ID: {task.id})")
+            except Exception as e:
+                logger.error(f"Failed to dispatch task for {tool_name}: {e}")
+
+        return task_ids
+
+# Accessor factory
+def get_analysis_agent(session_id: str):
+    return AnalysisAgent(session_id)

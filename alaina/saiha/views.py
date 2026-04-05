@@ -11,6 +11,7 @@ from .models import Dataset, DatasetColumn, AnalysisSession, ChatMessage, Analys
 from .database_processing_logic.dataset_processor import DatasetProcessor
 from .database_processing_logic.storage_manager_parquet import DatasetStorageManager
 from .session_management.session_manager import SessionManager
+from .agents.analysis_agent import get_analysis_agent
 
 @login_required
 def index(request):
@@ -131,13 +132,26 @@ def api_quanta_chat(request):
         try:
             data = json.loads(request.body)
             message = data.get('message', '')
+            session_id = data.get('session_id')
+            
+            if not session_id:
+                return JsonResponse({'status': 'error', 'message': 'Session ID is required.'}, status=400)
+            
+            # 1. Initialize the AnalysisAgent
+            agent = get_analysis_agent(session_id)
+            
+            # 2. Process Query (Async Pipeline)
+            task_ids = agent.process_query(message)
+            
             return JsonResponse({
                 'status': 'success',
-                'session_assigned': data.get('session_id', 'new-session-id'),
-                'response': f"Echo: {message}"
+                'session_id': session_id,
+                'tasks': task_ids,
+                'message': 'Analysis request received and dispatched.'
             })
         except Exception as e:
-            return JsonResponse({'error': str(e)}, status=400)
+            logger.error(f"Chat API Error: {e}", exc_info=True)
+            return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'POST required'}, status=405)
 
 @login_required

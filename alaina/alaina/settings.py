@@ -44,6 +44,9 @@ INSTALLED_APPS = [
     
     # Internal apps
     "saiha",
+
+    # Async
+    "django_celery_results",
 ]
 
 MIDDLEWARE = [
@@ -158,3 +161,31 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# ==============================================================================
+# ASYNC INFRASTRUCTURE (CELERY & REDIS STACK)
+# ==============================================================================
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+
+CELERY_BROKER_URL = REDIS_URL
+CELERY_RESULT_BACKEND = 'django-db' # Use Django DB for persistent results observability
+CELERY_CACHE_BACKEND = 'django-cache'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_ENABLE_UTC = True
+
+# Reliability & Hardening
+CELERY_TASK_ACKS_LATE = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_SOFT_TIME_LIMIT = 300  # 5 minutes
+CELERY_TASK_TIME_LIMIT = 600       # 10 minutes
+
+# Windows Worker Logic
+import sys
+IS_WINDOWS = sys.platform.startswith('win')
+CELERY_WORKER_POOL = 'solo' if IS_WINDOWS else 'prefork'
+
+# Celery Result Settings
+CELERY_RESULT_EXTENDED = True # Store task args, kwargs, and other metadata

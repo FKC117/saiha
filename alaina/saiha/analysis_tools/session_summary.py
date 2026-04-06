@@ -85,64 +85,25 @@ class SessionSummaryTool(BaseAnalysisTool):
         """
 
         start_time = time.time()
-        # 3. --- LLM INVOCATION & RESPONSE (cache-aware) ---
-        model_config = get_model_config('google')
-        max_output_tokens = model_config.get('max_tokens', 2048)
-
-        # Try to reuse the session-level provider cache if available. If not, allow creation
-        # of a new provider cache and include a compact tools_results payload so the LLM
-        # has access to the per-step summaries without resending full tool definitions.
-        session_obj = self.session
-        cache_name = getattr(session_obj, 'llm_cache_id', None)
-
-        # Build compact tools_results payload (one entry per analysis step)
-        tools_results_payload = []
-        for result in results:
-            # Recompute a short summary for the payload (avoid artifacts)
-            if result.ai_interpretation:
-                short_summary = result.ai_interpretation
-            elif result.result_data.get('canned_interpretation'):
-                short_summary = result.result_data['canned_interpretation']
-            elif result.result_data.get('structured_result', {}).get('summary'):
-                short_summary = result.result_data['structured_result']['summary']
-            else:
-                short_summary = "A data analysis step was performed."
-
-            tools_results_payload.append({
-                'tool': result.tool_used,
-                'summary': short_summary
-            })
-
-        gen_result = generate_gemini_interpretation(
-            prompt,
-            max_output_tokens,
-            cache_name=cache_name,
-            create_cache=True,
-            session_id=session_obj.id,
-            tools_text=None,
-            tools_results=tools_results_payload
-        )
-
-        # Unpack helper return safely (older helper versions returned 3-tuple, newer return 4)
-        returned_cache_name = None
-        if isinstance(gen_result, tuple):
-            if len(gen_result) == 4:
-                llm_full_response, req_tokens, res_tokens, returned_cache_name = gen_result
-            else:
-                llm_full_response, req_tokens, res_tokens = gen_result
-        else:
-            llm_full_response = str(gen_result)
-            req_tokens = 0
-            res_tokens = 0
-
-        # Persist any returned provider cache name to the session for future reuse
+        # 3. --- LLM INVOCATION & RESPONSE ---
+        from ..llm_management.gemini_service import gemini_service
+        from ..models import AIAuditLog
+        
+        start_time = time.time()
         try:
-            if returned_cache_name and returned_cache_name != cache_name:
-                session_obj.llm_cache_id = returned_cache_name
-                session_obj.save()
-                logger.info(f"Updated session.llm_cache_id to {returned_cache_name}")
+            llm_full_response = gemini_service.generate_response(prompt, session_id=str(self.session.id))
+            execution_time_ms = int((time.time() - start_time) * 1000)
+
+            # Log to the new Audit Trail
+            AIAuditLog.objects.create(
+                session=self.session,
+                prompt=prompt,
+                response=llm_full_response,
+                model_id=gemini_service.model_id
+            )
         except Exception as e:
-            logger.warning(f"Could not persist returned cache name to session: {e}")
+            logger.error(f"LLM Synthesis failed in SessionSummaryTool: {e}")
+            return {'status': 'error', 'summary': f"Detailed synthesis failed: {str(e)}"}
 
         # Parse the response for the main summary and the pptx summary
         pptx_summary = ""

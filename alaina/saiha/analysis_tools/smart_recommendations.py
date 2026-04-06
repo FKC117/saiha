@@ -129,35 +129,26 @@ class SmartRecommendationsTool(BaseAnalysisTool):
         model_config = get_model_config('google')
         max_output_tokens = model_config.get('max_tokens', 2048) # Default to 2048 if not in config
 
-        # 5. Call the LLM
+        # 5. Call the LLM (Using the new hardened GeminiService)
+        from ..llm_management.gemini_service import gemini_service
+        from ..models import AIAuditLog
+        
         llm_response_str = ""
         pptx_summary = ""
         recommendations_json = []
 
         try:
             start_time = time.time()
-            # The LLM helper returns (interpretation, prompt_tokens, completion_tokens, cache_name)
-            llm_full_response, prompt_tokens, completion_tokens, cache_name = generate_gemini_interpretation(prompt, max_output_tokens)
-            
+            llm_full_response = gemini_service.generate_response(prompt, session_id=str(self.session.id))
             execution_time_ms = int((time.time() - start_time) * 1000)
 
-            # Log the usage
-            try:
-                logger.debug(f"Attempting to log LLM usage for session {self.session.id}")
-                LLMUsageLog.objects.create(
-                    user=self.user,
-                    analysis_session=self.session,
-                    prompt_text=prompt,
-                    response_text=llm_full_response,
-                    request_token_count=prompt_tokens,
-                    response_token_count=completion_tokens,
-                    model_used=model_config.get('model', 'google-gemini'),
-                    tool_name='Smart Recommendations',
-                    execution_time_ms=execution_time_ms
-                )
-                logger.info(f"Successfully logged LLM usage for session {self.session.id}")
-            except Exception as log_e:
-                logger.error(f"Failed to log LLM usage: {log_e}", exc_info=True)
+            # Log to the new Audit Trail
+            AIAuditLog.objects.create(
+                session=self.session,
+                prompt=prompt,
+                response=llm_full_response,
+                model_id=gemini_service.model_id
+            )
             
             # Parse pptx summary
             match_pptx = re.search(r'<pptx_summary>(.*?)</pptx_summary>', llm_full_response, re.DOTALL)

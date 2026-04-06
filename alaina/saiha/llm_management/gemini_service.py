@@ -14,14 +14,15 @@ class GeminiService:
     Uses the modern 'google-genai' (v1.0+) SDK.
     Hardened with Automated Audit Trails & Token Tracking.
     """
-    def __init__(self, model_id: str = "gemini-1.5-flash"):
+    def __init__(self, model_id: Optional[str] = None):
         self.api_key = os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
             ai_logger.error("GOOGLE_API_KEY not found in environment.")
             raise ValueError("Cloud analysis requires a valid Google API Key.")
         
         self.client = genai.Client(api_key=self.api_key)
-        self.model_id = model_id
+        # Use provided model_id or fetch from .env, defaulting to gemini-2.0-flash
+        self.model_id = model_id or os.getenv("DEFAULT_MODEL", "gemini-2.0-flash")
 
     def _log_interaction(self, prompt: str, response_text: str, usage: Any, session_id: Optional[str] = None):
         """

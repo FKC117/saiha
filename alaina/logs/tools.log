@@ -1,0 +1,43 @@
+ERROR 2026-04-06 11:54:02,201 base_tool 8704 9876 Error in tool recommendations: 'RecommendationsTool' object has no attribute 'log_error'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\recommendations_tool.py", line 27, in execute
+    self.validate_dataset_requirement()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'RecommendationsTool' object has no attribute 'validate_dataset_requirement'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\base_tool.py", line 68, in validate_and_run
+    legacy_result = self.execute(query="", **validated_params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\analysis_tools\recommendations_tool.py", line 63, in execute
+    self.log_error(e)
+    ^^^^^^^^^^^^^^
+AttributeError: 'RecommendationsTool' object has no attribute 'log_error'
+ERROR 2026-04-06 12:07:20,423 base_tool 4408 16904 Error in tool dataset_overview: 'DatasetOverviewTool' object has no attribute 'log_error'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\dataset_overview_tool.py", line 31, in execute
+    self.validate_dataset_requirement()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'DatasetOverviewTool' object has no attribute 'validate_dataset_requirement'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\base_tool.py", line 68, in validate_and_run
+    legacy_result = self.execute(query="", **validated_params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\analysis_tools\dataset_overview_tool.py", line 100, in execute
+    self.log_error(e)
+    ^^^^^^^^^^^^^^
+AttributeError: 'DatasetOverviewTool' object has no attribute 'log_error'
+ERROR 2026-04-06 12:43:23,564 base_tool 20240 10084 Error in tool statistical_analysis: 'str' object has no attribute 'get'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\base_tool.py", line 85, in validate_and_run
+    return self._normalize_legacy_result(legacy_result)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\analysis_tools\base_tool.py", line 96, in _normalize_legacy_result
+    status = "success" if result.get('status') in ['ok', 'success'] or result.get('success') else "error"
+                          ^^^^^^^^^^
+AttributeError: 'str' object has no attribute 'get'

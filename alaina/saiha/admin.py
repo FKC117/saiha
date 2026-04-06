@@ -1,11 +1,12 @@
 from django.contrib import admin
-from .models import Dataset, DatasetColumn, ToolCategory, Tool, AnalysisSession, ChatMessage, SiteSettings
+from .models import (
+    Dataset, DatasetColumn, ToolCategory, Tool, 
+    AnalysisSession, ChatMessage, SiteSettings, 
+    AnalysisResult, AIAuditLog
+)
 
 @admin.register(SiteSettings)
 class SiteSettingsAdmin(admin.ModelAdmin):
-    """
-    Ensures that only one instance of SiteSettings can be created.
-    """
     def has_add_permission(self, request):
         if SiteSettings.objects.exists():
             return False
@@ -35,3 +36,14 @@ class ToolCategoryAdmin(admin.ModelAdmin):
 @admin.register(Tool)
 class ToolAdmin(admin.ModelAdmin):
     list_display = ('name', 'category', 'tool_type')
+
+@admin.register(AnalysisResult)
+class AnalysisResultAdmin(admin.ModelAdmin):
+    list_display = ('tool_used', 'session', 'status', 'created_at')
+    list_filter = ('status', 'tool_used')
+    search_fields = ('query', 'error_message')
+
+@admin.register(AIAuditLog)
+class AIAuditLogAdmin(admin.ModelAdmin):
+    list_display = ('model_id', 'session', 'tokens_input', 'tokens_output', 'timestamp')
+    list_filter = ('model_id',)

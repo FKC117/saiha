@@ -21,21 +21,36 @@ class AnalysisAgent:
 
     def process_query(self, query: str) -> List[str]:
         """
-        Processes a natural language query:
-        1. Contextualize (Schema + Metadata)
-        2. Plan (AnalysisPlanner)
-        3. Correct (ParamCorrector)
-        4. Dispatch (Celery Task)
+        Processes a natural language query with context-awareness and real-time status.
         """
+        # 0. Fetch Context (Last 10 messages for stateful analysis)
+        history = list(self.session.messages.all().order_by('-created_at')[:10])
+        history_data = [
+            {"role": "user" if m.message_type == "user" else "assistant", "content": m.content}
+            for m in reversed(history)
+        ]
+
+        # Notify UI: Planning Stage
+        send_ws_notification(
+            "Planning your analysis strategy...",
+            status="planning",
+            session_id=str(self.session.id)
+        )
+
         # 1. Get Schema Metadata
         columns_meta = self.dataset.columns.all()
         schema_text = "\n".join([f"- {c.column_name} ({c.data_type})" for c in columns_meta])
         column_names = [c.column_name for c in columns_meta]
 
-        # 2. Planning (LLM Intent Detection)
-        intents = analysis_planner.create_plan(query, schema_text)
+        # 2. Planning (LLM Intent Detection with History)
+        intents = analysis_planner.create_plan(query, schema_text, history=history_data)
         if not intents:
             logger.warning(f"No intents generated for query: '{query}'")
+            send_ws_notification(
+                "I couldn't determine a plan. Please try rephrasing your request.",
+                status="error",
+                session_id=str(self.session.id)
+            )
             return []
 
         # 3. Hybrid Correction Layer
@@ -43,12 +58,11 @@ class AnalysisAgent:
         task_ids = []
 
         # Notify UI about planned tasks
-        if intents:
-            send_ws_notification(
-                f"Planned {len(intents)} analytical steps. Dispatching now...",
-                status="dispatched",
-                session_id=str(self.session.id)
-            )
+        send_ws_notification(
+            f"Orchestrating {len(intents)} analytical step(s)...",
+            status="dispatching",
+            session_id=str(self.session.id)
+        )
 
         for intent in intents:
             tool_name = intent.get('tool')
@@ -69,16 +83,31 @@ class AnalysisAgent:
             import hashlib
             dedup_id = hashlib.sha256(f"{self.session.id}_{query}_{tool_name}".encode()).hexdigest()
             
+            # 1. Create the Result Placeholder (Atoms of Traceability)
+            result_record, created = AnalysisResult.objects.get_or_create(
+                dedup_id=dedup_id,
+                defaults={
+                    "session": self.session,
+                    "tool_used": tool_name,
+                    "query": query,
+                    "status": AnalysisResult.Status.PENDING
+                }
+            )
+
             # NOTE: We only pass reference IDs to Celery (Pass-by-Reference)
             # This follows the 'Hardened Payload' rule.
             try:
-                # Dispatch to Hardened Async Infrastructure
-                task = execute_analysis_task.delay(
-                    session_id=str(self.session.id),
-                    tool_name=tool_name,
-                    params=corrected_params,
-                    dedup_id=dedup_id,
-                    query=query
+                # 2. Dispatch to Hardened Async Infrastructure
+                # Using keyword arguments for version-agnostic stability
+                task = execute_analysis_task.apply_async(
+                    kwargs={
+                        "result_id": str(result_record.id),
+                        "session_id": str(self.session.id),
+                        "tool_name": tool_name,
+                        "params": corrected_params,
+                        "dedup_id": dedup_id,
+                        "query": query
+                    }
                 )
                 task_ids.append(task.id)
                 logger.info(f"Dispatched Hardened Task: {tool_name} (ID: {task.id})")

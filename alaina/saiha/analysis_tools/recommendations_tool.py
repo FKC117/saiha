@@ -21,49 +21,38 @@ class RecommendationsTool(BaseAnalysisTool):
     def description(self) -> str:
         return "Get intelligent recommendations for what analysis to perform next based on the dataset characteristics"
     
-    def execute(self, query: str, **kwargs) -> str:
+    def execute(self, query: str = "", **kwargs) -> Dict[str, Any]:
         """Execute recommendations analysis."""
         try:
-            self.validate_dataset_requirement()
+            # 1. Load dataset using hardened loader
+            df = self.load_dataset()
             
-            # Load dataset from storage
-            with default_storage.open(self.dataset.processed_file_path, 'rb') as f:
-                df = pd.read_parquet(f)
-            
-            # Analyze dataset characteristics
+            # 2. Analyze dataset characteristics
             analysis_context = self._analyze_dataset_characteristics(df)
             
-            # Generate recommendations
+            # 3. Generate recommendations
             recommendations = self._generate_recommendations(analysis_context, query)
             
-            # Format response
-            response = f"💡 **Analysis Recommendations**\n\n"
-            response += f"**Dataset Summary:**\n"
-            response += f"- Total columns: {analysis_context['total_columns']}\n"
-            response += f"- Numeric columns: {analysis_context['numeric_columns']}\n"
-            response += f"- Categorical columns: {analysis_context['categorical_columns']}\n"
-            response += f"- Date columns: {analysis_context['date_columns']}\n"
-            response += f"- Rows: {analysis_context['rows']:,}\n\n"
-            
-            response += f"**Recommended Analyses:**\n"
-            for i, rec in enumerate(recommendations, 1):
-                response += f"{i}. **{rec['name']}** ({rec['type']})\n"
-                response += f"   {rec['description']}\n"
-                if 'columns' in rec:
-                    response += f"   Columns: {', '.join(rec['columns'][:3])}\n"
-                response += "\n"
-            
-            # Add priority recommendations
-            response += self._get_priority_recommendations(analysis_context, query)
-            
-            self.log_execution(query, response, success=True)
-            return response
+            # 4. Format Result
+            summary = f"💡 **Analysis Recommendations for this Dataset**\n\n"
+            summary += f"**Dataset Stats:** {analysis_context['total_columns']} columns, {analysis_context['rows']:,} rows.\n"
+            summary += self._get_priority_recommendations(analysis_context, query)
+
+            return {
+                "status": "success",
+                "summary": summary,
+                "data": {
+                    "recommendations": recommendations,
+                    "context": analysis_context
+                }
+            }
             
         except Exception as e:
-            self.log_error(e)
-            error_msg = f"Error getting recommendations: {str(e)}"
-            self.log_execution(query, error_msg, success=False)
-            return error_msg
+            return {
+                "status": "error",
+                "error": str(e),
+                "message": f"Error getting recommendations: {str(e)}"
+            }
     
     def _analyze_dataset_characteristics(self, df: pd.DataFrame) -> Dict[str, Any]:
         """Analyze dataset characteristics for recommendations."""

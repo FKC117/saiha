@@ -40,6 +40,22 @@ class BaseAnalysisTool(abc.ABC):
         self.user = getattr(agent, 'user', None)
         self._created_dataset_info = None
 
+    # --- LEGACY COMPATIBILITY SHIMS ---
+    def log_error(self, e: Exception):
+        """Legacy compatibility: shim for error logging."""
+        tool_logger.error(f"Legacy error in {self.name}: {e}", exc_info=True)
+
+    def log_execution(self, query: str, message: str, success: bool = True):
+        """Legacy compatibility: shim for execution logging."""
+        level = logging.INFO if success else logging.ERROR
+        tool_logger.log(level, f"Legacy execution {self.name}: {message} (Query: {query})")
+
+    def validate_dataset_requirement(self):
+        """Legacy compatibility: ensures a dataset is present before execution."""
+        if not self.dataset:
+            raise ValueError(f"Tool '{self.name}' requires an active dataset.")
+    # -----------------------------------
+
     def execute(self, query: str = "", **kwargs) -> Dict[str, Any]:
         """Legacy method to be implemented by ~80 tools."""
         raise NotImplementedError("Legacy tools must implement execute().")
@@ -75,8 +91,21 @@ class BaseAnalysisTool(abc.ABC):
             tool_logger.error(f"Error in tool {self.name}: {e}", exc_info=True)
             return ToolResult(status="error", error=str(e), message="Analysis failed.")
 
-    def _normalize_legacy_result(self, result: Dict[str, Any]) -> ToolResult:
-        """Converts legacy dict outputs to standardized ToolResult."""
+    def _normalize_legacy_result(self, result: Any) -> ToolResult:
+        """Converts legacy dict or string outputs to standardized ToolResult."""
+        if isinstance(result, str):
+            # Handle tools that return direct Markdown/Text
+            return ToolResult(
+                status="success",
+                message=result,
+                data={},
+                success=True
+            )
+            
+        if not isinstance(result, dict):
+            # Fallback for unexpected types
+            return ToolResult(status="error", error=f"Unexpected tool output type: {type(result)}", message="Analysis failed.")
+
         status = "success" if result.get('status') in ['ok', 'success'] or result.get('success') else "error"
         return ToolResult(
             status=status,
@@ -92,7 +121,7 @@ class BaseAnalysisTool(abc.ABC):
         Optimized dataset loader. Reused from legacy with Parquet support.
         """
         from ..database_processing_logic.storage_manager_parquet import DatasetStorageManager
-        from ..dataset_utils import load_dataset_data
+        from ..database_processing_logic.dataset_utils import load_dataset_data
         if not self.dataset:
             raise ValueError("Tool requires an active dataset.")
         return load_dataset_data(self.dataset.id, columns=columns)
@@ -101,7 +130,7 @@ class BaseAnalysisTool(abc.ABC):
         """
         Saves transformed data. Reused from legacy.
         """
-        from ..dataset_utils import save_dataframe_as_dataset
+        from ..database_processing_logic.dataset_utils import save_dataframe_as_dataset
         new_dataset = save_dataframe_as_dataset(df, self.dataset, new_name_suffix or f"Updated by {self.name}")
         self.dataset = new_dataset
         return {"id": str(new_dataset.id), "name": new_dataset.name}

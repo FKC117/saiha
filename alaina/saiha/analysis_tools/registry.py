@@ -70,9 +70,18 @@ class ToolRegistry:
         self.discover_tools()
         metadata = []
         for name, tool_class in self._tools.items():
+            # Handle property/legacy attributes gracefully
+            desc = getattr(tool_class, 'description', "No description available.")
+            if isinstance(desc, property):
+                try:
+                    # Attempt to get from a temporary instance if it's a property
+                    desc = tool_class().description
+                except Exception:
+                    desc = "Description property calculation failed."
+            
             metadata.append({
                 "name": name,
-                "description": getattr(tool_class, 'description', "No description available."),
+                "description": str(desc) if desc else "No description available.",
                 "is_hardened": getattr(tool_class, 'input_schema', None) is not None
             })
         return metadata

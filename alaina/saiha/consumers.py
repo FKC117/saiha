@@ -8,10 +8,16 @@ class NotificationConsumer(AsyncWebsocketConsumer):
     directly to the user's browser.
     """
     async def connect(self):
-        # We use a global group for now, or could use session-specific groups
-        self.group_name = "analysis_notifications"
+        # Extract session_id from the URL path
+        self.session_id = self.scope['url_route']['kwargs'].get('session_id')
         
-        # Join group
+        if self.session_id:
+            self.group_name = f"notification_{self.session_id}"
+        else:
+            # Legacy fallback: Use a generic group to prevent connection rejection
+            self.group_name = "notification_legacy_fallback"
+            
+        # Join the identified group
         await self.channel_layer.group_add(
             self.group_name,
             self.channel_name
@@ -19,22 +25,27 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, close_code):
-        # Leave group
-        await self.channel_layer.group_discard(
-            self.group_name,
-            self.channel_name
-        )
+        if hasattr(self, 'group_name'):
+            # Leave group
+            await self.channel_layer.group_discard(
+                self.group_name,
+                self.channel_name
+            )
 
     async def send_notification(self, event):
         """
         Handler for 'send_notification' messages.
+        Ensures transparent pass-through of all fields (narratives, metadata, charts).
         """
-        message = event['message']
+        # Create a copy to avoid mutating the original event
+        payload = dict(event)
+        
+        # Standardize 'type' for the frontend as 'notification'
+        # The frontend uses this to route messages.
+        payload['type'] = 'notification'
+        
+        # Clean up internal Channel fields
+        if 'type_orig' in payload: del payload['type_orig']
+        
         # Send message to WebSocket
-        await self.send(text_data=json.dumps({
-            'type': 'notification',
-            'message': message,
-            'status': event.get('status', 'info'),
-            'task_id': event.get('task_id'),
-            'session_id': event.get('session_id')
-        }))
+        await self.send(text_data=json.dumps(payload))

@@ -186,6 +186,7 @@ class AnalysisResult(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     session = models.ForeignKey(AnalysisSession, on_delete=models.CASCADE, related_name='analysis_results')
     tool_used = models.CharField(max_length=100)
+    query = models.TextField(blank=True, null=True) # User's original question
     
     # Payload
     result_data = models.JSONField(null=True, blank=True)

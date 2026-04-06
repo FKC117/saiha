@@ -18,9 +18,9 @@ def send_ws_notification(message, status="info", task_id=None, session_id=None):
     """
     try:
         channel_layer = get_channel_layer()
-        if channel_layer:
+        if channel_layer and session_id:
             async_to_sync(channel_layer.group_send)(
-                "analysis_notifications",
+                f"notification_{str(session_id)}",
                 {
                     "type": "send_notification",
                     "message": message,
@@ -33,18 +33,18 @@ def send_ws_notification(message, status="info", task_id=None, session_id=None):
         logger.warning(f"Could not send WebSocket notification: {e}")
 
 @app.task(base=BaseAnalysisTask, bind=True, name="saiha.celery_tasks.execute_analysis_task")
-def execute_analysis_task(self, session_id: str, tool_name: str, params: dict, 
-                          dedup_id: str, query: str = ""):
+def execute_analysis_task(self, result_id: str, session_id: str, tool_name: str, 
+                          params: dict, dedup_id: str, query: str = ""):
     """
     The Hardened Async Executor.
-    Runs the selected tool, persists results (ECharts/Tables), 
-    and triggers the InterpretationAgent.
     """
     try:
-        # 0. Notify Started
+        # Start Observability: Let the system know we are actually running
+        self.start_observability(result_id, self.request.id)
+
         send_ws_notification(
-            f"Starting {tool_name} analysis...", 
-            status="running", 
+            f"Executing analysis: {tool_name.replace('_', ' ').title()}...",
+            status="executing",
             task_id=self.request.id,
             session_id=session_id
         )
@@ -63,9 +63,7 @@ def execute_analysis_task(self, session_id: str, tool_name: str, params: dict,
         tool.dataset = dataset
         tool.user = session.user
 
-        # 3. Load Data (Optimized via Universal Bridge)
-        # We projection-load only the columns identified by the planner/corrector
-        # (Heuristic: extract all strings from params that look like columns)
+        # 3. Load Data
         relevant_cols = []
         for v in params.values():
             if isinstance(v, str): relevant_cols.append(v)
@@ -73,39 +71,36 @@ def execute_analysis_task(self, session_id: str, tool_name: str, params: dict,
         
         df = tool.load_dataset(columns=list(set(relevant_cols)) if relevant_cols else None)
 
-        # 4. Execute Analysis (Universal Bridge: Hardened vs Legacy)
-        # This handles Pydantic validation internally
+        # 4. Execute Analysis
         result_obj = tool.validate_and_run(df, params)
 
         if result_obj.status == "error":
             raise Exception(result_obj.error or "Analysis failed without specific error.")
 
         # 5. Persist Results (Viz-Ready)
-        # We update the AnalysisResult record (The BaseAnalysisTask handles status=SUCCESS)
-        # Note: AnalysisResult has unique=True on dedup_id
-        # We try to get or create to ensure idempotency
-        
-        # We find the record (it might have been created by the Agent as PENDING)
-        result_record, created = AnalysisResult.objects.get_or_create(
-            dedup_id=dedup_id,
-            defaults={
-                "session": session,
-                "tool_name": tool_name,
-                "query": query,
-                "status": "RUNNING"
-            }
-        )
+        # The result_record definitely exists (created by Agent)
+        result_record = AnalysisResult.objects.get(id=result_id)
 
         result_record.result_data = {
             "data": result_obj.data,
             "artifacts": result_obj.artifacts,
             "message": result_obj.message
         }
-        result_record.task_id = self.request.id
+        result_record.summary = result_obj.message # Primary narrative target
         result_record.save()
 
-        # 6. Trigger Interpreter (Post-Execution Analysis)
-        # Interpreter runs in the same worker/thread for now (simple chaining)
+        # Update Observability to Success
+        self.complete_observability(result_id)
+
+        # 6. Notify: Analysis complete, moving to narrative generation
+        send_ws_notification(
+            "Analysis complete. Generating narratives and business insights...",
+            status="generating",
+            session_id=session_id,
+            task_id=self.request.id
+        )
+
+        # 7. Trigger Interpreter (Post-Execution Analysis)
         interpretation_agent.interpret_result(str(result_record.id))
 
         # 7. Notify Success

@@ -93,7 +93,7 @@ class GeminiService:
             return json.loads(response.text)
         except Exception as e:
             ai_logger.error(f"Gemini Intent extraction failed: {e}")
-            return {"error": str(e)}
+            raise  # Let AnalysisPlanner.create_plan() handle it and show user an error
 
 # Global accessor
 gemini_service = GeminiService()

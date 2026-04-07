@@ -10,7 +10,7 @@ from typing import Dict, Any, List, Tuple, Optional
 
 from .base_tool import BaseAnalysisTool
 from .tool_parameters import ToolParameterSet, ToolParameter, ParameterType
-from saiha.ai_agents.tools.plot_utils import PlotUtils
+from .plot_utils import PlotUtils
 
 
 class OutlierDetectionTool(BaseAnalysisTool):
@@ -25,7 +25,7 @@ class OutlierDetectionTool(BaseAnalysisTool):
 
     @property
     def description(self) -> str:
-        return "Detects outliers in numeric columns using IQR or Z-score methods."
+        return "Detects outliers in numeric columns using IQR or Z-score methods and generates Box Plot charts for visualization. STRICTLY use this for 'outlier graphs'."
 
     def get_parameters_schema(self) -> ToolParameterSet:
         params = ToolParameterSet(tool_name=self.name)
@@ -95,15 +95,21 @@ class OutlierDetectionTool(BaseAnalysisTool):
             zscore_threshold = float(parameters.get("zscore_threshold", 3.0))
 
             if not columns:
-                return {"status": "error", "summary": "Please select at least one numeric column."}
+                # Fallback: All numeric columns (but we need to load df first to know them)
+                df_full = self.load_dataset()
+                columns = df_full.select_dtypes(include=['number']).columns.tolist()
+                
+            if not columns:
+                return {"status": "error", "summary": "No numeric columns found in the dataset for outlier detection."}
 
             # Use efficient column projection loading from BaseAnalysisTool
             df = self.load_dataset(columns=columns)
 
-            # Fail fast if any requested column is missing (keeps API shape the same below)
-            missing = [c for c in columns if c not in df.columns]
-            if missing:
-                return {"status": "error", "summary": f"Column(s) not found in dataset: {', '.join(missing)}."}
+            # Fail fast if any requested column is missing (only if columns were explicitly provided)
+            if parameters.get("numeric_columns"):
+                missing = [c for c in columns if c not in df.columns]
+                if missing:
+                    return {"status": "error", "summary": f"Column(s) not found in dataset: {', '.join(missing)}."}
 
             outlier_summary_records: List[Dict[str, Any]] = []
             total_outliers_found = 0
@@ -159,17 +165,30 @@ class OutlierDetectionTool(BaseAnalysisTool):
                         "Percentage of Outliers": f"{percentage:.2f}%"
                     })
 
+                # Calculate 5-number summary for ECharts
+                stats = [
+                    float(work_col.min()),
+                    float(work_col.quantile(0.25)),
+                    float(work_col.median()),
+                    float(work_col.quantile(0.75)),
+                    float(work_col.max())
+                ]
+                chart_data = {
+                    "type": "boxplot",
+                    "title": f"Box Plot for '{col}'",
+                    "categories": [col],
+                    "values": [stats],
+                    "metadata": {"yAxisLabel": col}
+                }
+
                 # Preserve seaborn boxplot look (unchanged artifact structure)
                 with PlotUtils.setup_plotting():
                     fig, ax = plt.subplots(figsize=(8, 5))
                     sns.boxplot(x=work_col, ax=ax)
                     ax.set_title(f"Box Plot for '{col}'")
-                    artifacts.append({
-                        "type": "plot",
-                        "id": f"boxplot_{col}",
-                        "title": f"Box Plot for '{col}'",
-                        "content": PlotUtils.fig_to_base64(fig),
-                    })
+                    plt.tight_layout()
+                    artifacts.append(PlotUtils.to_artifact(fig, f"boxplot_{col}", f"Box Plot for '{col}'", data_override=chart_data))
+                    plt.close(fig)
 
             summary = (
                 f"Outlier detection complete. Found a total of {total_outliers_found} outliers "

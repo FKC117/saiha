@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Optional
 
 from .base_tool import BaseAnalysisTool
 from .tool_parameters import ToolParameterSet, ToolParameter, ParameterType
-from saiha.ai_agents.tools.plot_utils import PlotUtils
+from .plot_utils import PlotUtils
 
 
 class ChiSquareTool(BaseAnalysisTool):
@@ -151,9 +151,13 @@ class ChiSquareTool(BaseAnalysisTool):
                     ax.set_xlabel(var1)
                     ax.set_ylabel('Count')
                     plt.tight_layout()
+                    plot_res = PlotUtils.fig_to_base64(fig)
                     artifacts.append({
-                        "type": "plot", "id": "chi_square_stacked_bar",
-                        "title": "Stacked Bar Chart", "content": PlotUtils.fig_to_base64(fig)
+                        "type": plot_res['fallback_type'], 
+                        "id": "chi_square_stacked_bar",
+                        "title": "Stacked Bar Chart", 
+                        "content": plot_res['base64'],
+                        "metadata": plot_res['structured_data']
                     })
 
                 # Heatmap
@@ -162,9 +166,14 @@ class ChiSquareTool(BaseAnalysisTool):
                     sns.heatmap(contingency_table, annot=True, fmt='d', cmap='viridis', ax=ax)
                     ax.set_title(f'Heatmap of Observed Frequencies')
                     plt.tight_layout()
+                    
+                    plot_res = PlotUtils.fig_to_base64(fig)
                     artifacts.append({
-                        "type": "plot", "id": "chi_square_heatmap",
-                        "title": "Heatmap of Frequencies", "content": PlotUtils.fig_to_base64(fig)
+                        "type": plot_res['fallback_type'], 
+                        "id": "chi_square_heatmap",
+                        "title": "Heatmap of Frequencies", 
+                        "content": plot_res['base64'],
+                        "metadata": plot_res['structured_data']
                     })
 
                 # Mosaic Plot
@@ -173,9 +182,14 @@ class ChiSquareTool(BaseAnalysisTool):
                         fig, _ = mosaic(contingency_table.stack(), title=f'Mosaic Plot for {var1} and {var2}', gap=0.02)
                         fig.set_size_inches(10, 7)
                         plt.tight_layout()
+                        
+                        plot_res = PlotUtils.fig_to_base64(fig)
                         artifacts.append({
-                            "type": "plot", "id": "chi_square_mosaic",
-                            "title": "Mosaic Plot", "content": PlotUtils.fig_to_base64(fig)
+                            "type": plot_res['fallback_type'], 
+                            "id": "chi_square_mosaic",
+                            "title": "Mosaic Plot", 
+                            "content": plot_res['base64'],
+                            "metadata": plot_res['structured_data']
                         })
                     except Exception as e:
                         sections.append({

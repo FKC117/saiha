@@ -7,9 +7,7 @@ import re
 import time
 from django.db import models
 from .tool_parameters import ToolParameterSet
-from saiha.models import Tool, LLMUsageLog, AnalysisResult
-from saiha.ai_agents.config import get_model_config
-from saiha.llm_service import generate_gemini_interpretation
+from ..models import Tool, AnalysisResult
 
 logger = logging.getLogger(__name__)
 
@@ -125,9 +123,6 @@ class SmartRecommendationsTool(BaseAnalysisTool):
         # 4. Construct the prompt for the LLM
         prompt = self._build_prompt(columns_summary, available_tools, lineage_summary)
 
-        # Get the configured max tokens for the model to avoid hardcoding
-        model_config = get_model_config('google')
-        max_output_tokens = model_config.get('max_tokens', 2048) # Default to 2048 if not in config
 
         # 5. Call the LLM (Using the new hardened GeminiService)
         from ..llm_management.gemini_service import gemini_service
@@ -139,7 +134,7 @@ class SmartRecommendationsTool(BaseAnalysisTool):
 
         try:
             start_time = time.time()
-            llm_full_response = gemini_service.generate_response(prompt, session_id=str(self.session.id))
+            llm_full_response = gemini_service.generate_content(prompt, session_id=str(self.session.id))
             execution_time_ms = int((time.time() - start_time) * 1000)
 
             # Log to the new Audit Trail

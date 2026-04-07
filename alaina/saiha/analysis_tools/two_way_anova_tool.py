@@ -14,7 +14,7 @@ import warnings
 
 from .base_tool import BaseAnalysisTool
 from .tool_parameters import ToolParameterSet, ToolParameter, ParameterType
-from saiha.ai_agents.tools.plot_utils import PlotUtils
+from .plot_utils import PlotUtils
 
 
 class TwoWayAnovaTool(BaseAnalysisTool):
@@ -169,9 +169,13 @@ class TwoWayAnovaTool(BaseAnalysisTool):
                     sns.heatmap(heatmap_df, annot=True, cmap='coolwarm_r', fmt=".4f", ax=ax_heatmap, cbar_kws={'label': 'Adjusted P-value'})
                     ax_heatmap.set_title("Post-Hoc P-Value Heatmap (Tukey's HSD)")
                     plt.tight_layout()
+                    plot_res = PlotUtils.fig_to_base64(fig_heatmap)
                     artifacts.append({
-                        "type": "plot", "id": "twoway_anova_posthoc_heatmap", "title": "Post-Hoc Heatmap",
-                        "content": PlotUtils.fig_to_base64(fig_heatmap)
+                        "type": plot_res['fallback_type'], 
+                        "id": "twoway_anova_posthoc_heatmap", 
+                        "title": "Post-Hoc Heatmap",
+                        "content": plot_res['base64'],
+                        "metadata": plot_res['structured_data']
                     })
                 except Exception as posthoc_ex:
                     sections.append({"type": "text", "title": "Post-Hoc Test Failed", "content": str(posthoc_ex)})
@@ -185,14 +189,17 @@ class TwoWayAnovaTool(BaseAnalysisTool):
                 ax.set_xlabel(factor_a)
                 ax.set_ylabel(f'Mean of {dependent_var}')
                 plt.xticks(rotation=45, ha='right')
+                
+                plot_res = PlotUtils.fig_to_base64(fig)
                 artifacts.append({
-                    "type": "plot",
+                    "type": plot_res['fallback_type'],
                     "id": "interaction_plot",
                     "title": "Interaction Plot",
-                    "content": PlotUtils.fig_to_base64(fig)
+                    "content": plot_res['base64'],
+                    "metadata": plot_res['structured_data']
                 })
 
-                # Conditionally generate Violin Plot to avoid performance issues with high cardinality.
+                # Conditionally generate Violin Plot
                 max_x_categories = 20
                 max_hue_categories = 10
                 num_x_categories = df[clean_a].nunique()
@@ -200,18 +207,20 @@ class TwoWayAnovaTool(BaseAnalysisTool):
 
                 if num_x_categories <= max_x_categories and num_hue_categories <= max_hue_categories:
                     fig_violin, ax_violin = plt.subplots(figsize=(12, 7))
-                    # The 'split' parameter only works when the 'hue' variable has exactly two levels.
                     use_split = num_hue_categories == 2
                     sns.violinplot(data=df, x=clean_a, y=clean_dep, hue=clean_b, ax=ax_violin, split=use_split, inner="quartile")
                     ax_violin.set_title(f'Distribution of {dependent_var} by {factor_a} and {factor_b}')
                     ax_violin.set_xlabel(factor_a)
                     ax_violin.set_ylabel(dependent_var)
                     plt.xticks(rotation=45, ha='right')
+                    
+                    plot_res = PlotUtils.fig_to_base64(fig_violin)
                     artifacts.append({
-                        "type": "plot",
+                        "type": plot_res['fallback_type'],
                         "id": "violin_plot",
                         "title": "Violin Plot",
-                        "content": PlotUtils.fig_to_base64(fig_violin)
+                        "content": plot_res['base64'],
+                        "metadata": plot_res['structured_data']
                     })
                 else:
                     # Add a note to warnings if the plot is skipped.

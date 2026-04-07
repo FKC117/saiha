@@ -12,7 +12,7 @@ from lifelines.statistics import multivariate_logrank_test
 
 from .base_tool import BaseAnalysisTool
 from .tool_parameters import ToolParameterSet, ToolParameter, ParameterType
-from saiha.ai_agents.tools.plot_utils import PlotUtils
+from .plot_utils import PlotUtils
 
 
 class KaplanMeierTool(BaseAnalysisTool):
@@ -282,11 +282,13 @@ class KaplanMeierTool(BaseAnalysisTool):
                 ax.legend()
                 plt.tight_layout()
 
+                plot_res = PlotUtils.fig_to_base64(fig)
                 artifacts.append({
-                    "type": "plot",
+                    "type": plot_res['fallback_type'],
                     "id": "kaplan_meier_curve",
                     "title": "Kaplan-Meier Survival Curve",
-                    "content": PlotUtils.fig_to_base64(fig),
+                    "content": plot_res['base64'],
+                    "metadata": plot_res['structured_data']
                 })
 
             # Median survival (overall only)

@@ -157,7 +157,17 @@ def api_chat_analysis(request):
                 'message': 'Analysis request received and dispatched.'
             })
         except Exception as e:
-            logger.error(f"Chat API Error: {e}", exc_info=True)
+            from .celery_tasks.analysis_tasks import send_ws_notification
+            logging.getLogger(__name__).error(f"Chat API Error: {e}", exc_info=True)
+            
+            # BROADCAST ERROR TO UI TO STOP LOADER
+            if session_id:
+                send_ws_notification(
+                    f"An error occurred while processing your request: {str(e)}",
+                    status="error",
+                    session_id=str(session_id)
+                )
+            
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'POST required'}, status=405)
 

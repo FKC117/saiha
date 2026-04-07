@@ -13,7 +13,7 @@ from typing import Dict, Any, List
 
 from .base_tool import BaseAnalysisTool
 from .tool_parameters import ToolParameterSet, ToolParameter, ParameterType
-from saiha.ai_agents.tools.plot_utils import PlotUtils
+from .plot_utils import PlotUtils
 
 class OneWayAnovaTool(BaseAnalysisTool):
     """
@@ -166,9 +166,13 @@ class OneWayAnovaTool(BaseAnalysisTool):
                     sns.heatmap(heatmap_df, annot=True, cmap='coolwarm_r', fmt=".4f", ax=ax_heatmap, cbar_kws={'label': 'Adjusted P-value'})
                     ax_heatmap.set_title("Post-Hoc P-Value Heatmap (Tukey's HSD)")
                     plt.tight_layout()
+                    plot_res = PlotUtils.fig_to_base64(fig_heatmap)
                     artifacts.append({
-                        "type": "plot", "id": "anova_posthoc_heatmap", "title": "Post-Hoc Heatmap",
-                        "content": PlotUtils.fig_to_base64(fig_heatmap)
+                        "type": plot_res['fallback_type'], 
+                        "id": "anova_posthoc_heatmap", 
+                        "title": "Post-Hoc Heatmap",
+                        "content": plot_res['base64'],
+                        "metadata": plot_res['structured_data']
                     })
                 except Exception as posthoc_ex:
                     sections.append({"type": "text", "title": "Post-Hoc Test Failed", "content": str(posthoc_ex)})
@@ -182,9 +186,14 @@ class OneWayAnovaTool(BaseAnalysisTool):
                 ax.set_xlabel(group_var)
                 ax.set_ylabel(dependent_var)
                 plt.xticks(rotation=45, ha='right')
+                
+                plot_res = PlotUtils.fig_to_base64(fig)
                 artifacts.append({
-                    "type": "plot", "id": "anova_boxplot", "title": "Box Plot",
-                    "content": PlotUtils.fig_to_base64(fig)
+                    "type": plot_res['fallback_type'], 
+                    "id": "anova_boxplot", 
+                    "title": "Box Plot",
+                    "content": plot_res['base64'],
+                    "metadata": plot_res['structured_data']
                 })
 
                 # Violin Plot
@@ -194,9 +203,14 @@ class OneWayAnovaTool(BaseAnalysisTool):
                 ax.set_xlabel(group_var)
                 ax.set_ylabel(dependent_var)
                 plt.xticks(rotation=45, ha='right')
+                
+                plot_res = PlotUtils.fig_to_base64(fig)
                 artifacts.append({
-                    "type": "plot", "id": "anova_violinplot", "title": "Violin Plot",
-                    "content": PlotUtils.fig_to_base64(fig)
+                    "type": plot_res['fallback_type'], 
+                    "id": "anova_violinplot", 
+                    "title": "Violin Plot",
+                    "content": plot_res['base64'],
+                    "metadata": plot_res['structured_data']
                 })
 
                 # Means Plot
@@ -206,9 +220,14 @@ class OneWayAnovaTool(BaseAnalysisTool):
                 ax.set_xlabel(group_var)
                 ax.set_ylabel(f'Mean of {dependent_var}')
                 plt.xticks(rotation=45, ha='right')
+                
+                plot_res = PlotUtils.fig_to_base64(fig)
                 artifacts.append({
-                    "type": "plot", "id": "anova_meansplot", "title": "Means Plot",
-                    "content": PlotUtils.fig_to_base64(fig)
+                    "type": plot_res['fallback_type'], 
+                    "id": "anova_meansplot", 
+                    "title": "Means Plot",
+                    "content": plot_res['base64'],
+                    "metadata": plot_res['structured_data']
                 })
 
             # Add main ANOVA table to sections

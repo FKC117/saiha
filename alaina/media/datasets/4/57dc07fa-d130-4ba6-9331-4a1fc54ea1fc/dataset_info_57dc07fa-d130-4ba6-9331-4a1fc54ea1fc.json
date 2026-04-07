@@ -1,0 +1,114 @@
+{
+  "dataset_id": "57dc07fa-d130-4ba6-9331-4a1fc54ea1fc",
+  "name": "FashionDataset.csv (Updated by drop_column)",
+  "parent_dataset_id": "12d6e6f6-a955-4a25-8f7f-b39f20d29863",
+  "created_via": "Transformation: Updated by drop_column",
+  "created_at": "2026-04-06T16:06:26.789507",
+  "storage_path": "F:\\saiha\\alaina\\media\\datasets\\4\\57dc07fa-d130-4ba6-9331-4a1fc54ea1fc",
+  "storage_format": "parquet",
+  "preview_data": {
+    "columns": [
+      "BrandName",
+      "Deatils",
+      "Sizes",
+      "MRP",
+      "SellPrice",
+      "Discount",
+      "Category"
+    ],
+    "data": [
+      {
+        "BrandName": "life",
+        "Deatils": "solid cotton blend collar neck womens a-line dress - indigo",
+        "Sizes": "Size:Large,Medium,Small,X-Large,X-Small",
+        "MRP": "Rs\n1699",
+        "SellPrice": "849",
+        "Discount": "50% off",
+        "Category": "Westernwear-Women"
+      },
+      {
+        "BrandName": "only",
+        "Deatils": "polyester peter pan collar womens blouson dress - yellow",
+        "Sizes": "Size:34,36,38,40",
+        "MRP": "Rs\n3499",
+        "SellPrice": "2449",
+        "Discount": "30% off",
+        "Category": "Westernwear-Women"
+      },
+      {
+        "BrandName": "fratini",
+        "Deatils": "solid polyester blend wide neck womens regular top - off white",
+        "Sizes": "Size:Large,X-Large,XX-Large",
+        "MRP": "Rs\n1199",
+        "SellPrice": "599",
+        "Discount": "50% off",
+        "Category": "Westernwear-Women"
+      },
+      {
+        "BrandName": "zink london",
+        "Deatils": "stripes polyester sweetheart neck womens dress - black",
+        "Sizes": "Size:Large,Medium,Small,X-Large",
+        "MRP": "Rs\n2299",
+        "SellPrice": "1379",
+        "Discount": "40% off",
+        "Category": "Westernwear-Women"
+      },
+      {
+        "BrandName": "life",
+        "Deatils": "regular fit regular length denim womens jeans - stone",
+        "Sizes": "Size:26,28,30,32,34,36",
+        "MRP": "Rs\n1699",
+        "SellPrice": "849",
+        "Discount": "50% off",
+        "Category": "Westernwear-Women"
+      },
+      {
+        "BrandName": "kraus",
+        "Deatils": "wide ankle length cotton womens jeans - light blue",
+        "Sizes": "Size:26,28,30,32,34",
+        "MRP": "Rs\n1795",
+        "SellPrice": "1615",
+        "Discount": "10% off",
+        "Category": "Westernwear-Women"
+      },
+      {
+        "BrandName": "life",
+        "Deatils": "printed cotton blend collared womens regular dress - white",
+        "Sizes": "Size:Large,Medium,Small,X-Large,X-Small",
+        "MRP": "Rs\n1299",
+        "SellPrice": "649",
+        "Discount": "50% off",
+        "Category": "Westernwear-Women"
+      },
+      {
+        "BrandName": "fratini",
+        "Deatils": "embroidered wide neck polyester womens regular top - blush",
+        "Sizes": "Size:XX-Large",
+        "MRP": "Rs\n1299",
+        "SellPrice": "649",
+        "Discount": "50% off",
+        "Category": "Westernwear-Women"
+      },
+      {
+        "BrandName": "rare",
+        "Deatils": "floral polyester v neck womens flared dress - navy",
+        "Sizes": "Size:Large,Medium,Small,X-Large",
+        "MRP": "Rs\n2099",
+        "SellPrice": "839",
+        "Discount": "60% off",
+        "Category": "Westernwear-Women"
+      },
+      {
+        "BrandName": "rare",
+        "Deatils": "checks cotton boat neck womens regular top - black",
+        "Sizes": "Size:Medium,Small,X-Large",
+        "MRP": "Rs\n1499",
+        "SellPrice": "599",
+        "Discount": "60% off",
+        "Category": "Westernwear-Women"
+      }
+    ],
+    "total_rows": 30758,
+    "preview_rows": 10
+  }
+}

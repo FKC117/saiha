@@ -107,20 +107,69 @@ class BaseAnalysisTool(abc.ABC):
             return ToolResult(status="error", error=f"Unexpected tool output type: {type(result)}", message="Analysis failed.")
 
         status = "success" if result.get('status') in ['ok', 'success'] or result.get('success') else "error"
+        error_msg = result.get('error')
+        
+        # Fallback for error message if status is error but error field is empty
+        if status == "error" and not error_msg:
+            error_msg = result.get('summary') or result.get('message') or "Analysis failed without specific error."
+
+        # Bridge: Map legacy 'sections' and 'data' tables to modern 'artifacts'
+        # This allows all 82 legacy tools to render tables/charts in the AI Chat.
+        artifacts = result.get('artifacts', [])
+        sections = result.get('sections', [])
+        data = result.get('data', {})
+        
+        if not artifacts:
+            # 1. From Sections
+            if sections:
+                for section in sections:
+                    artifact_type = section.get('type')
+                    if artifact_type in ['table', 'chart', 'plot', 'image']:
+                        artifacts.append({
+                            'type': artifact_type,
+                            'label': section.get('title', 'Analysis Result'),
+                            'headers': section.get('headers', []),
+                            'data': section.get('data', []),
+                            'metadata': section.get('metadata', {})
+                        })
+            
+            # 2. From Data (Scan for tables like 'outlier_table')
+            if isinstance(data, dict):
+                for key, val in data.items():
+                    if isinstance(val, dict) and 'records' in val:
+                        # This looks like a legacy table in data dictionary
+                        headers = val.get('headers')
+                        records = val.get('records', [])
+                        if not headers and records and isinstance(records[0], dict):
+                            headers = list(records[0].keys())
+                            data_rows = [list(r.values()) for r in records]
+                        else:
+                            data_rows = records
+                        
+                        artifacts.append({
+                            'type': 'table',
+                            'label': val.get('title', key.replace('_', ' ').title()),
+                            'headers': headers or [],
+                            'data': data_rows
+                        })
+
         return ToolResult(
             status=status,
-            data=result.get('data', result.get('metrics', {})),
-            artifacts=result.get('artifacts', []),
+            data=data,
+            artifacts=artifacts,
             message=result.get('summary', result.get('message')),
-            error=result.get('error'),
+            error=error_msg,
             success=result.get('success')
         )
 
     def load_dataset(self, columns=None) -> pd.DataFrame:
         """
-        Optimized dataset loader. Reused from legacy with Parquet support.
+        Optimized dataset loader. Prefers cached _df from the executor (Pass-by-Memory).
         """
-        from ..database_processing_logic.storage_manager_parquet import DatasetStorageManager
+        # --- Memory Cache Optimization (Bug 12) ---
+        if hasattr(self, '_df') and self._df is not None:
+            return self._df
+        
         from ..database_processing_logic.dataset_utils import load_dataset_data
         if not self.dataset:
             raise ValueError("Tool requires an active dataset.")
@@ -134,3 +183,28 @@ class BaseAnalysisTool(abc.ABC):
         new_dataset = save_dataframe_as_dataset(df, self.dataset, new_name_suffix or f"Updated by {self.name}")
         self.dataset = new_dataset
         return {"id": str(new_dataset.id), "name": new_dataset.name}
+
+    def clean_column_names(self, columns: List[str]) -> List[str]:
+        """
+        Sanitizes a list of column names for use in 'statsmodels' formulas.
+        Mirror's DatasetProcessor's cleaning logic to ensure consistency.
+        Example: 'Air Pollution (%)' -> 'Air_Pollution'
+        """
+        import re
+        cleaned_cols = []
+        for col in columns:
+            if not col:
+                cleaned_cols.append("unnamed_column")
+                continue
+            
+            # 1. Replace non-alphanumeric with '_'
+            sanitized = re.sub(r'[^0-9a-zA-Z_]', '_', str(col))
+            # 2. Handle starting digits
+            if sanitized and sanitized[0].isdigit():
+                sanitized = '_' + sanitized
+            # 3. Collapse multiple underscores and strip them from ends
+            sanitized = re.sub(r'__+', '_', sanitized).strip('_')
+            
+            cleaned_cols.append(sanitized or "clean_column")
+        
+        return cleaned_cols

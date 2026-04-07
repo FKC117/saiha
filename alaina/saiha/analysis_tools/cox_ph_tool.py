@@ -13,7 +13,7 @@ from lifelines.statistics import proportional_hazard_test
 
 from .base_tool import BaseAnalysisTool
 from .tool_parameters import ToolParameterSet, ToolParameter, ParameterType
-from saiha.ai_agents.tools.plot_utils import PlotUtils
+from .plot_utils import PlotUtils
 
 
 class CoxPHTool(BaseAnalysisTool):
@@ -312,29 +312,29 @@ class CoxPHTool(BaseAnalysisTool):
                 cph.plot(ax=ax)  # shows coef & CI; labels reflect CI level
                 ax.set_title("Hazard Ratios with Confidence Intervals")
                 plt.tight_layout()
+                plot_res = PlotUtils.fig_to_base64(fig)
                 artifacts.append({
-                    "type": "plot",
+                    "type": plot_res['fallback_type'],
                     "id": "cox_ph_forest_plot",
                     "title": "Forest Plot of Hazard Ratios",
-                    "content": PlotUtils.fig_to_base64(fig),
+                    "content": plot_res['base64'],
+                    "metadata": plot_res['structured_data']
                 })
-                plt.close(fig) # Explicitly close the figure
+                plt.close(fig)
 
             # === Predicted survival curves for one covariate (robust to encoding & strata) ===
             plot_covariate = None
-            # Prefer the first *original* categorical covariate (pre-encoding); else fall back to first numeric
             for cov in covariates:
                 if pd.api.types.is_categorical_dtype(df[cov]) or pd.api.types.is_object_dtype(df[cov]) or pd.api.types.is_bool_dtype(df[cov]):
                     plot_covariate = cov
                     break
             if plot_covariate is None and covariates:
-                plot_covariate = covariates[0]  # fallback: continuous/numeric
+                plot_covariate = covariates[0]
 
             def _model_cols(cph_):
                 return list(cph_.params_.index)
 
             def _sanitize_level(s: str) -> str:
-                # Make a category name compatible with dummy col names lifelines/pandas created
                 return "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in str(s))
 
             def _encoded_cols_for(original_col: str, model_cols: List[str]) -> List[str]:
@@ -342,7 +342,6 @@ class CoxPHTool(BaseAnalysisTool):
                 return [c for c in model_cols if c.startswith(pref)]
 
             def _baseline_row(df_final: pd.DataFrame, model_cols: List[str], strata_col: Optional[str], strata_val: Optional[Any]) -> pd.DataFrame:
-                # zeros for indicators; medians for numeric columns present in model; include strata if needed
                 row = {col: 0.0 for col in model_cols}
                 for col in model_cols:
                     if col in df_final.columns and pd.api.types.is_numeric_dtype(df_final[col]):
@@ -357,9 +356,7 @@ class CoxPHTool(BaseAnalysisTool):
             def _levels_to_plot(df: pd.DataFrame, col: str, max_levels: int = 8) -> List[Any]:
                 if col not in df.columns:
                     return []
-                # Keep it readable
                 vals = pd.Series(df[col].dropna().unique()).tolist()
-                # sort for deterministic legend
                 try:
                     return sorted(vals)[:max_levels]
                 except Exception:
@@ -368,30 +365,24 @@ class CoxPHTool(BaseAnalysisTool):
             def _apply_category(X: pd.DataFrame, original_col: str, model_cols: List[str], chosen_level: Any, encoding: str):
                 enc_cols = _encoded_cols_for(original_col, model_cols)
                 if not enc_cols:
-                    # Either continuous var or not encoded (no-op here)
                     return
-                # zero all indicators first
                 for c in enc_cols:
                     X[c] = 0.0
-                # find matching indicator for chosen level (if any)
                 wanted = f"{original_col}_{chosen_level}"
                 if wanted not in enc_cols:
                     safe = f"{original_col}_{_sanitize_level(chosen_level)}"
                     if safe in enc_cols:
                         wanted = safe
                     else:
-                        # fallback: suffix match
                         matches = [c for c in enc_cols if c.lower().endswith(str(chosen_level).lower())]
                         if matches:
                             wanted = matches[0]
                         else:
                             wanted = None
-                # dummy: reference level == all zeros; one-hot: set its column to 1.0
                 if wanted is not None:
                     X[wanted] = 1.0
 
             def _apply_continuous(X: pd.DataFrame, model_cols: List[str], col: str, val: float):
-                # if the original column survived as-is
                 if col in model_cols:
                     X[col] = float(val)
 
@@ -400,15 +391,11 @@ class CoxPHTool(BaseAnalysisTool):
                     with PlotUtils.setup_plotting():
                         fig, ax = plt.subplots(figsize=(10, 7))
                         mcols = _model_cols(cph)
-
-                        # choose a stratum to visualize, if any
                         chosen_stratum = None
                         if strata_col is not None and strata_col in df_final.columns:
                             chosen_stratum = df_final[strata_col].value_counts(dropna=False).index[0]
 
                         base = _baseline_row(df_final, mcols, strata_col, chosen_stratum)
-
-                        # category vs continuous
                         is_cat = (pd.api.types.is_object_dtype(df[plot_covariate]) or
                                   pd.api.types.is_categorical_dtype(df[plot_covariate]) or
                                   pd.api.types.is_bool_dtype(df[plot_covariate]))
@@ -420,7 +407,6 @@ class CoxPHTool(BaseAnalysisTool):
                             for lvl in levels:
                                 X = base.copy()
                                 _apply_category(X, plot_covariate, mcols, lvl, encoding)
-                                # ensure all params columns exist (in case dummy ref → no col)
                                 for c in mcols:
                                     if c not in X.columns:
                                         X[c] = 0.0
@@ -431,7 +417,6 @@ class CoxPHTool(BaseAnalysisTool):
                             title_extra = f" (stratum={chosen_stratum})" if strata_col else ""
                             ax.set_title(f"Predicted Survival by {plot_covariate}{title_extra}")
                         else:
-                            # continuous: show at low/median/high (10th/50th/90th)
                             series = pd.to_numeric(df[plot_covariate], errors="coerce").dropna()
                             if series.empty:
                                 raise ValueError(f"No numeric data for {plot_covariate}")
@@ -440,7 +425,6 @@ class CoxPHTool(BaseAnalysisTool):
                             for val, lbl in zip(q_vals, labels):
                                 X = base.copy()
                                 _apply_continuous(X, mcols, plot_covariate, val)
-                                # ensure complete column set/order
                                 for c in mcols:
                                     if c not in X.columns:
                                         X[c] = 0.0
@@ -455,11 +439,13 @@ class CoxPHTool(BaseAnalysisTool):
                         ax.set_ylabel("Survival probability")
                         ax.grid(True, alpha=0.3)
 
+                        plot_res = PlotUtils.fig_to_base64(fig)
                         artifacts.append({
-                            "type": "plot",
+                            "type": plot_res['fallback_type'],
                             "id": "cox_ph_survival_curves",
                             "title": f"Predicted Survival Curves by {plot_covariate}",
-                            "content": PlotUtils.fig_to_base64(fig),
+                            "content": plot_res['base64'],
+                            "metadata": plot_res['structured_data']
                         })
                         plt.close(fig)
             except Exception as plot_ex:
@@ -483,12 +469,10 @@ class CoxPHTool(BaseAnalysisTool):
                 "data": fit_summary
             })
 
-            # === Proportional Hazards tests (programmatic, not just printed) ===
+            # === Proportional Hazards tests ===
             try:
-                # Use rank-based time transform (common choice); alternative: "km", "identity"
                 ph_test = proportional_hazard_test(cph, df_final, time_transform="rank")
                 ph_df = ph_test.summary.reset_index().rename(columns={"index": "variable"})
-                # Round numeric
                 for col in ph_df.columns:
                     if pd.api.types.is_numeric_dtype(ph_df[col]):
                         ph_df[col] = ph_df[col].round(4)
@@ -501,7 +485,6 @@ class CoxPHTool(BaseAnalysisTool):
                     "footer": f"P-values < {self._fmt_num(alpha_ui, nd=2)} suggest violation of the PH assumption."
                 })
 
-                # Optional diagnostic plots (version-agnostic; no plot_covariate_groups dependency)
                 if gen_plots:
                     cov_list = list(cph.summary.index)
                     if cov_list:
@@ -512,10 +495,14 @@ class CoxPHTool(BaseAnalysisTool):
                                     fig, ax = plt.subplots(figsize=(8, 6))
                                     self._plot_ph_schoenfeld(cph, df_final, cov, ax=ax)
                                     plt.tight_layout()
+                                    
+                                    plot_res = PlotUtils.fig_to_base64(fig)
                                     artifacts.append({
-                                        "type": "plot", "id": f"ph_diagnostic_{cov}",
+                                        "type": plot_res['fallback_type'], 
+                                        "id": f"ph_diagnostic_{cov}",
                                         "title": f"PH Assumption Diagnostic for {cov}",
-                                        "content": PlotUtils.fig_to_base64(fig)
+                                        "content": plot_res['base64'],
+                                        "metadata": plot_res['structured_data']
                                     })
                                 finally:
                                     if fig: plt.close(fig)

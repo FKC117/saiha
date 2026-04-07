@@ -51,26 +51,58 @@ class HistogramTool(BaseAnalysisTool):
                     bins = int(bins_str)
                 except (ValueError, TypeError):
                     # If conversion fails, stick with 'auto'.
-                    # This handles cases where bins might be None or an empty string.
                     bins = 'auto'
 
-            if not variable:
-                return {"status": "error", "summary": "A variable to plot is required."}
+            # Identify target columns for batch processing if variable is missing
+            target_cols = []
+            if variable:
+              if variable in df.columns:
+                target_cols = [variable]
+              else:
+                return {"status": "error", "error": f"Column '{variable}' not found in dataset.", "summary": f"Column '{variable}' not found in dataset."}
+            else:
+                # Fallback: All numeric columns
+                target_cols = df.select_dtypes(include=['number']).columns.tolist()
 
-            summary = f"Histogram generated for the variable '{variable}'."
+            if not target_cols:
+                return {"status": "error", "error": "No numeric variables found for plotting histograms.", "summary": "Missing numeric variables."}
+
             artifacts: List[Dict[str, Any]] = []
+            processed_cols = []
 
-            with PlotUtils.setup_plotting():
-                fig, ax = plt.subplots(figsize=(10, 6))
-                sns.histplot(df[variable], bins=bins, kde=True, ax=ax)
-                ax.set_title(f"Distribution of {variable}")
-                ax.set_xlabel(variable)
-                ax.set_ylabel("Frequency")
-                artifacts.append({"type": "plot", "id": "histogram", "title": f"Histogram of {variable}", "content": PlotUtils.fig_to_base64(fig)})
-                plt.close(fig)
+            import numpy as np
+            for col in target_cols:
+                counts, bin_edges = np.histogram(df[col].dropna(), bins=bins if isinstance(bins, int) else 30)
+                
+                chart_data = {
+                    "type": "bar",
+                    "title": f"Distribution of {col}",
+                    "xAxis": [f"{float(b):.2f}" for b in bin_edges[:-1]],
+                    "series": [{"name": "Frequency", "data": [int(c) for c in counts]}],
+                    "metadata": {"yAxisLabel": "Frequency", "xAxisLabel": col}
+                }
 
-            return {"status": "ok", "summary": summary, "artifacts": artifacts, "meta": {"tool_name": self.name, "parameters": kwargs}}
+                with PlotUtils.setup_plotting():
+                    fig, ax = plt.subplots(figsize=(10, 6))
+                    sns.histplot(df[col], bins=bins, kde=True, ax=ax)
+                    ax.set_title(f"Distribution of {col}")
+                    ax.set_xlabel(col)
+                    ax.set_ylabel("Frequency")
+                    plt.tight_layout()
+                    artifacts.append(PlotUtils.to_artifact(fig, f"histogram_{col}", f"Histogram of {col}", data_override=chart_data))
+                    plt.close(fig)
+                
+                processed_cols.append(col)
+
+            summary = f"Generated {len(artifacts)} Histogram(s) for variables: {', '.join(processed_cols)}."
+
+            return {
+                "status": "ok", 
+                "summary": summary, 
+                "artifacts": artifacts, 
+                "meta": {"tool_name": self.name, "parameters": kwargs, "processed_columns": processed_cols}
+            }
 
         except Exception as e:
             self.log_error(e)
-            return {"status": "error", "summary": f"An unexpected error occurred: {str(e)}"}
+            return {"status": "error", "error": str(e), "summary": f"An unexpected error occurred: {str(e)}"}

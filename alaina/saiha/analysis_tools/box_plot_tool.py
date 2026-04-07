@@ -29,11 +29,11 @@ class BoxPlotTool(BaseAnalysisTool):
         params = ToolParameterSet(tool_name=self.name)
         params.add_parameter(ToolParameter(
             name="categorical_variable", parameter_type=ParameterType.CATEGORICAL_COLUMN_SELECT,
-            label="Categorical Variable (X-axis)", description="Select the categorical variable to group by.", required=True
+            label="Categorical Variable (X-axis)", description="Optional variable to group columns. Leave blank for 1D plot.", required=False
         ))
         params.add_parameter(ToolParameter(
             name="numeric_variable", parameter_type=ParameterType.NUMERIC_COLUMN_SELECT,
-            label="Numeric Variable (Y-axis)", description="Select the numeric variable whose distribution will be plotted.", required=True
+            label="Numeric Variable (Y-axis)", description="Numeric variable for the plot.", required=True
         ))
         return params
 
@@ -45,23 +45,100 @@ class BoxPlotTool(BaseAnalysisTool):
             cat_var = kwargs.get('categorical_variable')
             num_var = kwargs.get('numeric_variable')
 
-            if not cat_var or not num_var:
-                return {"status": "error", "summary": "Both a categorical and a numeric variable are required."}
+            # Identify target columns for batch processing if num_var is missing
+            target_cols = []
+            if num_var:
+                target_cols = [num_var]
+            else:
+                # Fallback: All numeric columns
+                target_cols = df.select_dtypes(include=['number']).columns.tolist()
+                # Exclude categorical variable from being treated as a numeric target if it's in the list
+                if cat_var in target_cols:
+                    target_cols.remove(cat_var)
 
-            summary = f"Box plot generated for '{num_var}' grouped by '{cat_var}'."
-            artifacts: List[Dict[str, Any]] = []
+            if not target_cols:
+                return {"status": "error", "error": "No numeric variables found for plotting.", "summary": "Missing numeric variables."}
 
-            with PlotUtils.setup_plotting():
-                fig, ax = plt.subplots(figsize=(12, 7))
-                sns.boxplot(data=df, x=cat_var, y=num_var, ax=ax)
-                ax.set_title(f"Box Plot of {num_var} by {cat_var}")
-                ax.tick_params(axis='x', rotation=45)
-                plt.tight_layout()
-                artifacts.append({"type": "plot", "id": "box_plot", "title": f"Box Plot of {num_var} by {cat_var}", "content": PlotUtils.fig_to_base64(fig)})
-                plt.close(fig)
+            artifacts = []
+            processed_cols = []
 
-            return {"status": "ok", "summary": summary, "artifacts": artifacts, "meta": {"tool_name": self.name, "parameters": kwargs}}
+            for col in target_cols:
+                if not cat_var:
+                    # 1D Box Plot Stats for ECharts
+                    series_data = df[col].dropna()
+                    if series_data.empty:
+                        continue
+                        
+                    stats = [
+                        float(series_data.min()),
+                        float(series_data.quantile(0.25)),
+                        float(series_data.median()),
+                        float(series_data.quantile(0.75)),
+                        float(series_data.max())
+                    ]
+                    chart_data = {
+                        "type": "boxplot",
+                        "title": f"Distribution of {col}",
+                        "categories": [col],
+                        "values": [stats],
+                        "metadata": {"yAxisLabel": col}
+                    }
+                    
+                    with PlotUtils.setup_plotting():
+                        fig, ax = plt.subplots(figsize=(10, 6))
+                        sns.boxplot(y=df[col], ax=ax)
+                        ax.set_title(f"Distribution of {col}")
+                        plt.tight_layout()
+                        artifacts.append(PlotUtils.to_artifact(fig, f"box_plot_1d_{col}", f"Box Plot of {col}", data_override=chart_data))
+                        plt.close(fig)
+                else:
+                    # Comparison Box Plot (Grouped)
+                    categories = sorted(df[cat_var].dropna().unique().tolist())
+                    values = []
+                    for cat in categories:
+                        group = df[df[cat_var] == cat][col].dropna()
+                        if not group.empty:
+                            stats = [
+                                float(group.min()),
+                                float(group.quantile(0.25)),
+                                float(group.median()),
+                                float(group.quantile(0.75)),
+                                float(group.max())
+                            ]
+                            values.append(stats)
+                        else:
+                            values.append([0, 0, 0, 0, 0])
+
+                    chart_data = {
+                        "type": "boxplot",
+                        "title": f"Box Plot of {col} by {cat_var}",
+                        "categories": categories,
+                        "values": values,
+                        "metadata": {"yAxisLabel": col}
+                    }
+
+                    with PlotUtils.setup_plotting():
+                        fig, ax = plt.subplots(figsize=(12, 7))
+                        sns.boxplot(data=df, x=cat_var, y=col, ax=ax)
+                        ax.set_title(f"Box Plot of {col} by {cat_var}")
+                        ax.tick_params(axis='x', rotation=45)
+                        plt.tight_layout()
+                        artifacts.append(PlotUtils.to_artifact(fig, f"box_plot_{col}", f"Box Plot of {col} by {cat_var}", data_override=chart_data))
+                        plt.close(fig)
+                
+                processed_cols.append(col)
+
+            summary = f"Generated {len(artifacts)} Box plot(s) for the following variables: {', '.join(processed_cols)}."
+            if cat_var:
+                summary += f" (Grouped by '{cat_var}')"
+
+            return {
+                "status": "ok", 
+                "summary": summary, 
+                "artifacts": artifacts, 
+                "meta": {"tool_name": self.name, "parameters": kwargs, "processed_columns": processed_cols}
+            }
 
         except Exception as e:
             self.log_error(e)
-            return {"status": "error", "summary": f"An unexpected error occurred: {str(e)}"}
+            return {"status": "error", "error": str(e), "summary": f"An unexpected error occurred: {str(e)}"}

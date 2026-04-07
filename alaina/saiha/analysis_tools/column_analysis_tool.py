@@ -26,7 +26,7 @@ class ColumnAnalysisTool(BaseAnalysisTool):
     
     @property
     def description(self) -> str:
-        return "Generates a detailed statistical and quality summary for selected columns."
+        return "Profiles all column types (numeric AND categorical): missing values, unique counts, distributions, and value frequencies. Use for data exploration and mixed-type profiling. Do NOT use when user asks for skewness, kurtosis, or detailed numeric statistics — use descriptive_statistics instead."
     
     def get_parameters_schema(self) -> ToolParameterSet:
         params = ToolParameterSet(tool_name=self.name)
@@ -66,11 +66,9 @@ class ColumnAnalysisTool(BaseAnalysisTool):
 
             self.validate_dataset_requirement()
             
-            # Load dataset from storage
-            with default_storage.open(self.dataset.processed_file_path, 'rb') as f:
-                df = pd.read_parquet(f)
+            # Use efficient 'Pass-by-Memory' loading (Bug 12)
+            df = self.load_dataset()
             
-            sections: List[Dict[str, Any]] = []
             artifacts: List[Dict[str, Any]] = []
             for col in columns_to_analyze:
                 if col in df.columns:
@@ -82,7 +80,7 @@ class ColumnAnalysisTool(BaseAnalysisTool):
                     if pd.api.types.is_object_dtype(original_dtype):
                         col_data_numeric = pd.to_numeric(col_data, errors='coerce')
                         # If conversion is successful for a good portion, use the numeric version
-                        if col_data_numeric.notna().sum() / col_data.notna().sum() > 0.8:
+                        if col_data.notna().sum() > 0 and col_data_numeric.notna().sum() / col_data.notna().sum() > 0.8:
                             col_data = col_data_numeric
                     
                     # Basic stats for all columns
@@ -92,7 +90,7 @@ class ColumnAnalysisTool(BaseAnalysisTool):
                         'Missing Percentage': f"{(col_data.isnull().sum() / len(col_data) * 100):.2f}%",
                         'Unique Values': int(col_data.nunique()),
                     }
-                    sections.append({
+                    artifacts.append({
                         'type': 'table',
                         'title': f"Basic Statistics for '{col}'",
                         'headers': ['Statistic', 'Value'],
@@ -102,27 +100,47 @@ class ColumnAnalysisTool(BaseAnalysisTool):
                     # Type-specific analysis
                     if pd.api.types.is_numeric_dtype(col_data) and not pd.api.types.is_bool_dtype(col_data):
                         numeric_stats = col_data.describe().round(4).to_dict()
-                        sections.append({
+                        artifacts.append({
                             'type': 'table',
                             'title': f"Descriptive Statistics for '{col}'",
                             'headers': ['Statistic', 'Value'],
                             'data': list(numeric_stats.items())
                         })
                         if gen_plots:
-                            with PlotUtils.setup_plotting():
-                                # Histogram and KDE
-                                fig_hist, ax_hist = plt.subplots(figsize=(10, 6))
-                                sns.histplot(col_data, kde=True, ax=ax_hist)
-                                ax_hist.set_title(f"Distribution of '{col}'")
-                                artifacts.append({"type": "plot", "id": f"hist_{col}", "title": f"Histogram for '{col}'", "content": PlotUtils.fig_to_base64(fig_hist)})
-                                plt.close(fig_hist)
+                            try:
+                                with PlotUtils.setup_plotting():
+                                    # Histogram and KDE
+                                    fig_hist, ax_hist = plt.subplots(figsize=(10, 6))
+                                    sns.histplot(col_data, kde=True, ax=ax_hist)
+                                    ax_hist.set_title(f"Distribution of '{col}'")
+                                    artifacts.append(PlotUtils.to_artifact(fig_hist, f"hist_{col}", f"Histogram for '{col}'"))
+                                    plt.close(fig_hist)
 
-                                # Box Plot
-                                fig_box, ax_box = plt.subplots(figsize=(10, 4))
-                                sns.boxplot(x=col_data, ax=ax_box)
-                                ax_box.set_title(f"Box Plot of '{col}'")
-                                artifacts.append({"type": "plot", "id": f"box_{col}", "title": f"Box Plot for '{col}'", "content": PlotUtils.fig_to_base64(fig_box)})
-                                plt.close(fig_box)
+                                    # Box Plot (With Mandatory Stats for ECharts)
+                                    fig_box, ax_box = plt.subplots(figsize=(10, 4))
+                                    sns.boxplot(x=col_data, ax=ax_box)
+                                    ax_box.set_title(f"Box Plot of '{col}'")
+                                    
+                                    # Calculate 5-number summary for ECharts
+                                    stats = [
+                                        float(col_data.min()),
+                                        float(col_data.quantile(0.25)),
+                                        float(col_data.median()),
+                                        float(col_data.quantile(0.75)),
+                                        float(col_data.max())
+                                    ]
+                                    chart_data = {
+                                        "type": "boxplot",
+                                        "title": f"Box Plot of {col}",
+                                        "categories": [col],
+                                        "values": [stats],
+                                        "metadata": {"xAxisLabel": col}
+                                    }
+                                    
+                                    artifacts.append(PlotUtils.to_artifact(fig_box, f"box_{col}", f"Box Plot for '{col}'", data_override=chart_data))
+                                    plt.close(fig_box)
+                            except Exception as pe:
+                                logger.error(f"Plot generation failed for '{col}': {pe}")
 
                     elif pd.api.types.is_categorical_dtype(col_data) or pd.api.types.is_object_dtype(col_data) or pd.api.types.is_bool_dtype(col_data):
                         freq_table = col_data.value_counts(normalize=True).mul(100).round(2)
@@ -130,13 +148,12 @@ class ColumnAnalysisTool(BaseAnalysisTool):
                         freq_table.columns = ['Value', 'Frequency (%)']
                         
                         # Limit to top 20 for readability
+                        footer = None
                         if len(freq_table) > 20:
                             freq_table = freq_table.head(20)
                             footer = "Showing top 20 most frequent values."
-                        else:
-                            footer = None
 
-                        sections.append({
+                        artifacts.append({
                             'type': 'table',
                             'title': f"Value Frequencies for '{col}'",
                             'headers': freq_table.columns.tolist(),
@@ -144,40 +161,59 @@ class ColumnAnalysisTool(BaseAnalysisTool):
                             'footer': footer
                         })
                         if gen_plots:
-                            with PlotUtils.setup_plotting():
-                                fig, ax = plt.subplots(figsize=(10, 6))
-                                plot_data = col_data.value_counts().nlargest(20)
-                                sns.barplot(x=plot_data.index, y=plot_data.values, ax=ax, palette="viridis")
-                                ax.set_title(f"Top 20 Value Frequencies for '{col}'")
-                                ax.set_ylabel("Count")
-                                ax.tick_params(axis='x', rotation=45)
-                                plt.tight_layout()
-                                artifacts.append({"type": "plot", "id": f"bar_{col}", "title": f"Bar Chart for '{col}'", "content": PlotUtils.fig_to_base64(fig)})
-                                plt.close(fig)
+                            try:
+                                with PlotUtils.setup_plotting():
+                                    fig, ax = plt.subplots(figsize=(10, 6))
+                                    plot_data = col_data.value_counts().nlargest(20)
+                                    sns.barplot(x=plot_data.index.astype(str), y=plot_data.values, ax=ax, palette="viridis")
+                                    ax.set_title(f"Top 20 Value Frequencies for '{col}'")
+                                    ax.set_ylabel("Count")
+                                    ax.tick_params(axis='x', rotation=45)
+                                    plt.tight_layout()
+                                    plot_res = PlotUtils.fig_to_base64(fig)
+                                    artifacts.append({
+                                        "type": plot_res['fallback_type'], 
+                                        "id": f"bar_{col}", 
+                                        "title": f"Bar Chart for '{col}'", 
+                                        "metadata": plot_res['structured_data']
+                                    })
+                                    plt.close(fig)
+                            except Exception as pe:
+                                logger.error(f"Bar plot failed for '{col}': {pe}")
                     
                     elif pd.api.types.is_datetime64_any_dtype(col_data):
                         date_stats = {
                             'Earliest Date': str(col_data.min()),
                             'Latest Date': str(col_data.max()),
                         }
-                        sections.append({
-                            'type': 'table', 'title': f"Date Range for '{col}'",
-                            'headers': ['Statistic', 'Value'], 'data': list(date_stats.items())
+                        artifacts.append({
+                            'type': 'table', 
+                            'title': f"Date Range for '{col}'",
+                            'headers': ['Statistic', 'Value'], 
+                            'data': list(date_stats.items())
                         })
                         if gen_plots:
-                            with PlotUtils.setup_plotting():
-                                fig, ax = plt.subplots(figsize=(12, 6))
-                                col_data.value_counts().sort_index().plot(ax=ax)
-                                ax.set_title(f"Entries over Time for '{col}'")
-                                artifacts.append({"type": "plot", "id": f"timeline_{col}", "title": f"Timeline for '{col}'", "content": PlotUtils.fig_to_base64(fig)})
-                                plt.close(fig)
+                            try:
+                                with PlotUtils.setup_plotting():
+                                    fig, ax = plt.subplots(figsize=(12, 6))
+                                    col_data.value_counts().sort_index().plot(ax=ax)
+                                    ax.set_title(f"Entries over Time for '{col}'")
+                                    plot_res = PlotUtils.fig_to_base64(fig)
+                                    artifacts.append({
+                                        "type": plot_res['fallback_type'], 
+                                        "id": f"timeline_{col}", 
+                                        "title": f"Timeline for '{col}'", 
+                                        "metadata": plot_res['structured_data']
+                                    })
+                                    plt.close(fig)
+                            except Exception as pe:
+                                logger.error(f"Timeline failed for '{col}': {pe}")
             
             summary = f"Completed analysis for {len(columns_to_analyze)} column(s)."
 
             return {
                 "status": "ok",
                 "summary": summary,
-                "sections": sections,
                 "artifacts": artifacts,
                 "meta": {"tool_name": self.name, "parameters": parameters},
             }

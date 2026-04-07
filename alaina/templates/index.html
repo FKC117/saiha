@@ -1057,10 +1057,13 @@
 
     async function renderRichMessage(container, content, metadata = null) {
       if (!container) return;
+      console.log(`[RichMessage] Rendering ID: ${metadata ? metadata.id : 'N/A'}`, metadata);
+      
       const textContent = container.querySelector('.text-content');
       if (textContent && content) textContent.innerHTML = marked.parse(content);
 
       if (metadata && metadata.artifacts) {
+        console.log(`[RichMessage] Detected ${metadata.artifacts.length} artifacts:`, metadata.artifacts);
         const blocksContainer = container.querySelector('.rich-blocks-container');
         if (!blocksContainer) return;
         blocksContainer.innerHTML = '';
@@ -1109,18 +1112,28 @@
               }
             }
           } else if (art.type === 'plot') {
-            const plotData = art.metadata;
-            if (plotData && plotData.base64) {
+            // Defensive extraction: handle new string format AND legacy object/metadata formats
+            let base64 = null;
+            if (typeof art.content === 'string' && art.content.length > 100) {
+              base64 = art.content;
+            } else if (art.metadata && typeof art.metadata.base64 === 'string') {
+              base64 = art.metadata.base64;
+            } else if (art.content && typeof art.content === 'object' && typeof art.content.base64 === 'string') {
+              base64 = art.content.base64;
+            }
+
+            if (base64) {
+              const imgSrc = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
               blocksContainer.insertAdjacentHTML('beforeend', `
-                <div class="rich-block plot-block" style="background: #18181b; border: 1px solid #27272a; border-radius: 12px; overflow: hidden;">
-                  <div class="block-header" style="background: #27272a; padding: 10px 16px;">
+                <div class="rich-block plot-block" style="background: #18181b; border: 1px solid #27272a; border-radius: 12px; overflow: hidden; margin-top: 12px;">
+                  <div class="block-header" style="background: rgba(255,255,255,0.05); padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <div class="block-title-group">
-                      <i data-lucide="image" class="block-icon" size="14"></i>
-                      <span class="block-title">${art.title || "Static Visualization"}</span>
+                      <i data-lucide="image" class="block-icon" size="14" style="color: #8B5CF6;"></i>
+                      <span class="block-title" style="font-weight: 500; font-size: 13px;">${art.title || "Static Visualization"}</span>
                     </div>
                   </div>
                   <div class="photo-frame" style="padding: 20px; background: white; display: flex; justify-content: center;">
-                    <img src="data:image/png;base64,${plotData.base64}" 
+                    <img src="${imgSrc}" 
                          style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
                   </div>
                 </div>

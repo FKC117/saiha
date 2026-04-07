@@ -108,7 +108,7 @@ class OutlierTreatmentTool(BaseAnalysisTool):
                 target_cols = [target_cols]
                 
             if not target_cols:
-                return {"status": "error", "summary": "Please select at least one numeric column."}
+                return {"status": "error", "error": "Please select at least one numeric column for treatment.", "summary": "No numeric columns selected."}
 
             method = parameters.get("method", "winsorize")
             min_p = float(parameters.get("min_percentile", 0.05))

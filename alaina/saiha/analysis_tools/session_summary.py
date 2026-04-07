@@ -1,13 +1,10 @@
 import json
 import logging
 import re
+import time
 from .base_tool import BaseAnalysisTool
 from .tool_parameters import ToolParameterSet
-from saiha.models import AnalysisResult, Tool, LLMUsageLog
-from saiha.dataset_utils import get_dataset_column_types
-from saiha.ai_agents.config import get_model_config
-from saiha.llm_service import generate_gemini_interpretation
-import time
+from ..models import AnalysisResult
 
 logger = logging.getLogger(__name__)
 
@@ -84,14 +81,13 @@ class SessionSummaryTool(BaseAnalysisTool):
         Do not simply repeat the findings from each step. Your value is in connecting the dots and creating a holistic conclusion.
         """
 
-        start_time = time.time()
         # 3. --- LLM INVOCATION & RESPONSE ---
         from ..llm_management.gemini_service import gemini_service
         from ..models import AIAuditLog
         
         start_time = time.time()
         try:
-            llm_full_response = gemini_service.generate_response(prompt, session_id=str(self.session.id))
+            llm_full_response = gemini_service.generate_content(prompt, session_id=str(self.session.id))
             execution_time_ms = int((time.time() - start_time) * 1000)
 
             # Log to the new Audit Trail
@@ -113,24 +109,7 @@ class SessionSummaryTool(BaseAnalysisTool):
             pptx_summary = match.group(1).strip()
 
         execution_time_ms = int((time.time() - start_time) * 1000)
-
-        # --- LOG THE USAGE ---
-        # This log is linked to the session, not a specific analysis result.
-        LLMUsageLog.objects.create(
-            user=self.user,
-            analysis_session=self.session,
-            analysis_result=None, # This is a session-level summary
-            prompt_text=prompt,
-            response_text=final_summary,
-            request_token_count=req_tokens,
-            response_token_count=res_tokens,
-            model_used=model_config.get('model', 'unknown'),
-            execution_time_ms=execution_time_ms
-        )
-        logger.info(
-            f"Session Summary LLM usage logged for user {self.user.id}. "
-            f"Tokens (in/out): {req_tokens}/{res_tokens}. Time: {execution_time_ms}ms."
-        )
+        logger.info(f"SessionSummaryTool LLM call completed in {execution_time_ms}ms for session {self.session.id}.")
 
         return {
             'status': 'ok',

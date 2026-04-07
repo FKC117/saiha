@@ -41,3 +41,167 @@ Traceback (most recent call last):
     status = "success" if result.get('status') in ['ok', 'success'] or result.get('success') else "error"
                           ^^^^^^^^^^
 AttributeError: 'str' object has no attribute 'get'
+ERROR 2026-04-06 17:37:26,713 base_tool 1640 1676 Legacy error in box_plot: Tool requires an active dataset.
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\box_plot_tool.py", line 43, in execute
+    df = self.load_dataset()
+         ^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\analysis_tools\base_tool.py", line 175, in load_dataset
+    raise ValueError("Tool requires an active dataset.")
+ValueError: Tool requires an active dataset.
+ERROR 2026-04-06 17:37:26,714 base_tool 1640 1676 Legacy error in histogram: Tool requires an active dataset.
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\histogram_tool.py", line 44, in execute
+    df = self.load_dataset()
+         ^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\analysis_tools\base_tool.py", line 175, in load_dataset
+    raise ValueError("Tool requires an active dataset.")
+ValueError: Tool requires an active dataset.
+ERROR 2026-04-06 17:37:26,718 base_tool 1640 1676 Legacy error in outlier_detection: Tool requires an active dataset.
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\outlier_detection_tool.py", line 99, in execute
+    df_full = self.load_dataset()
+              ^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\analysis_tools\base_tool.py", line 175, in load_dataset
+    raise ValueError("Tool requires an active dataset.")
+ValueError: Tool requires an active dataset.
+ERROR 2026-04-06 17:37:26,721 base_tool 1640 1676 Legacy error in scatter_plot: Tool requires an active dataset.
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\scatter_plot_tool.py", line 47, in execute
+    df = self.load_dataset()
+         ^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\analysis_tools\base_tool.py", line 175, in load_dataset
+    raise ValueError("Tool requires an active dataset.")
+ValueError: Tool requires an active dataset.
+ERROR 2026-04-06 19:12:07,491 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:07,747 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:07,920 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:08,112 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:08,413 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:08,592 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:08,745 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:08,909 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:09,177 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:09,432 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:09,630 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:09,814 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:10,041 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:10,253 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:10,462 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:10,661 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:10,882 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:11,083 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:11,337 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:11,661 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:11,911 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-06 19:12:12,124 base_tool 19828 21176 Legacy error in one_way_anova: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 107, in execute
+    clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
+                                   ^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'

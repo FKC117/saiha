@@ -30,9 +30,8 @@ class DatasetOverviewTool(BaseAnalysisTool):
         try:
             self.validate_dataset_requirement()
             
-            # Load dataset from storage
-            with default_storage.open(self.dataset.processed_file_path, 'rb') as f:
-                df = pd.read_parquet(f)
+            # Use efficient 'Pass-by-Memory' loading (Bug 12)
+            df = self.load_dataset()
 
             # --- Basic Stats ---
             num_rows, num_cols = df.shape
@@ -49,8 +48,8 @@ class DatasetOverviewTool(BaseAnalysisTool):
                 mem_str = f"{memory_usage} bytes"
 
             basic_stats_data = [
-                ['Number of Rows', num_rows],
-                ['Number of Columns', num_cols],
+                ['Number of Rows', f"{num_rows:,}"],
+                ['Number of Columns', f"{num_cols:,}"],
                 ['Total Memory Usage', mem_str]
             ]
 
@@ -59,40 +58,34 @@ class DatasetOverviewTool(BaseAnalysisTool):
             dtype_counts.columns = ['Data Type', 'Count']
             dtype_counts['Data Type'] = dtype_counts['Data Type'].astype(str)
 
-            # --- Head and Tail ---
+            # --- Head for preview ---
             df_head = df.head(5)
-            df_tail = df.tail(5)
 
-            summary = f"Dataset overview complete. The dataset has {num_rows} rows and {num_cols} columns."
+            summary = f"Dataset overview complete. The dataset contains {num_rows:,} rows across {num_cols} columns with a total size of {mem_str}."
             
-            sections: List[Dict[str, Any]] = [
+            # Standardize on 'artifacts' for the modern UI bridge (Bug 13)
+            artifacts = [
                 {
-                    'type': 'table', 'title': 'Dataset Statistics',
+                    'type': 'table', 'title': 'Dataset Profile',
                     'headers': ['Statistic', 'Value'],
                     'data': basic_stats_data
                 },
                 {
-                    'type': 'table', 'title': 'Column Data Types',
+                    'type': 'table', 'title': 'Column Type Distribution',
                     'headers': dtype_counts.columns.tolist(),
                     'data': dtype_counts.to_numpy().tolist()
                 },
                 {
-                    'type': 'table', 'title': 'First 5 Rows (Head)',
+                    'type': 'table', 'title': 'Data Snapshot (First 5 Rows)',
                     'headers': df_head.columns.tolist(),
-                    'data': df_head.to_numpy().tolist()
-                },
-                {
-                    'type': 'table', 'title': 'Last 5 Rows (Tail)',
-                    'headers': df_tail.columns.tolist(),
-                    'data': df_tail.to_numpy().tolist()
+                    'data': [[str(x) for x in row] for row in df_head.to_numpy().tolist()]
                 }
             ]
 
             return {
                 "status": "ok",
                 "summary": summary,
-                "sections": sections,
-                "artifacts": [],
+                "artifacts": artifacts,
                 "meta": {"tool_name": self.name, "parameters": kwargs},
             }
             

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import base64
 import io
 from contextlib import contextmanager
+from typing import Optional
 
 class PlotUtils:
     """A utility class for creating and handling matplotlib plots."""
@@ -24,10 +25,10 @@ class PlotUtils:
             matplotlib.use(original_backend)  # Restore original backend
 
     @staticmethod
-    def fig_to_base64(fig: plt.Figure) -> dict:
+    def fig_to_base64(fig: plt.Figure, data_override: Optional[dict] = None) -> dict:
         """
         Converts a matplotlib figure to a base64 encoded string
-        AND attempts to extract structured data for frontend rendering (ApexCharts).
+        AND attempts to extract structured data for frontend rendering (ECharts/Apex).
         """
         buf = io.BytesIO()
         fig.savefig(buf, format='png', bbox_inches='tight')
@@ -35,12 +36,28 @@ class PlotUtils:
         img_str = base64.b64encode(buf.read()).decode('utf-8')
         
         # --- Confidence-Gated Extraction ---
-        structured_data = PlotUtils.extract_structured_data(fig)
+        structured_data = data_override or PlotUtils.extract_structured_data(fig)
         
         return {
             "base64": img_str,
             "structured_data": structured_data,
-            "confidence": "high" if structured_data else "low"
+            "confidence": "high" if structured_data else "low",
+            "fallback_type": "chart" if structured_data else "plot"
+        }
+
+    @staticmethod
+    def to_artifact(fig: plt.Figure, id: str, title: str, data_override: Optional[dict] = None) -> dict:
+        """
+        Convenience method to generate a full artifact dictionary from a figure.
+        Ensures all required fields (type, content, metadata) are present.
+        """
+        res = PlotUtils.fig_to_base64(fig, data_override=data_override)
+        return {
+            "type": res['fallback_type'],
+            "id": id,
+            "title": title,
+            "content": res['base64'],
+            "metadata": res['structured_data']
         }
 
     @staticmethod

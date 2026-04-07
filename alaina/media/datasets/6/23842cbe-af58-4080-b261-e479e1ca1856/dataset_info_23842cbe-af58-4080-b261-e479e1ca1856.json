@@ -1,0 +1,311 @@
+{
+  "columns": [
+    {
+      "column_name": "ProductID",
+      "column_index": 0,
+      "data_type": "integer",
+      "null_count": 0,
+      "unique_count": 1000,
+      "sample_values": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ]
+    },
+    {
+      "column_name": "ProductName",
+      "column_index": 1,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 100,
+      "sample_values": [
+        "Headphones",
+        "Headphones",
+        "Smartwatch",
+        "Smartphone",
+        "Laptop"
+      ]
+    },
+    {
+      "column_name": "Category",
+      "column_index": 2,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 25,
+      "sample_values": [
+        "Electronics",
+        "Electronics",
+        "Electronics",
+        "Electronics",
+        "Electronics"
+      ]
+    },
+    {
+      "column_name": "Price",
+      "column_index": 3,
+      "data_type": "float",
+      "null_count": 0,
+      "unique_count": 990,
+      "sample_values": [
+        400.31,
+        235.03,
+        417.9,
+        152.7,
+        394.74
+      ]
+    },
+    {
+      "column_name": "Rating",
+      "column_index": 4,
+      "data_type": "float",
+      "null_count": 0,
+      "unique_count": 41,
+      "sample_values": [
+        1.7,
+        2.3,
+        1.8,
+        3.4,
+        1.8
+      ]
+    },
+    {
+      "column_name": "NumReviews",
+      "column_index": 5,
+      "data_type": "integer",
+      "null_count": 0,
+      "unique_count": 908,
+      "sample_values": [
+        3772,
+        2919,
+        1184,
+        2047,
+        1267
+      ]
+    },
+    {
+      "column_name": "StockQuantity",
+      "column_index": 6,
+      "data_type": "integer",
+      "null_count": 0,
+      "unique_count": 629,
+      "sample_values": [
+        20,
+        663,
+        459,
+        475,
+        831
+      ]
+    },
+    {
+      "column_name": "Discount",
+      "column_index": 7,
+      "data_type": "float",
+      "null_count": 0,
+      "unique_count": 51,
+      "sample_values": [
+        0.08,
+        0.33,
+        0.31,
+        0.49,
+        0.23
+      ]
+    },
+    {
+      "column_name": "Sales",
+      "column_index": 8,
+      "data_type": "integer",
+      "null_count": 0,
+      "unique_count": 766,
+      "sample_values": [
+        466,
+        1332,
+        252,
+        1806,
+        1508
+      ]
+    },
+    {
+      "column_name": "DateAdded",
+      "column_index": 9,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 346,
+      "sample_values": [
+        "2023-11-10",
+        "2023-09-28",
+        "2023-10-20",
+        "2023-12-05",
+        "2023-08-10"
+      ]
+    },
+    {
+      "column_name": "City",
+      "column_index": 10,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 101,
+      "sample_values": [
+        "Albuquerque",
+        "Queens",
+        "Austin",
+        "Dallas",
+        "Tucson"
+      ]
+    }
+  ],
+  "dataset_id": "23842cbe-af58-4080-b261-e479e1ca1856",
+  "created_at": "2026-04-06T13:35:15.056334",
+  "storage_path": "F:\\saiha\\alaina\\media\\datasets\\6\\23842cbe-af58-4080-b261-e479e1ca1856",
+  "storage_format": "parquet",
+  "preview_data": {
+    "columns": [
+      "ProductID",
+      "ProductName",
+      "Category",
+      "Price",
+      "Rating",
+      "NumReviews",
+      "StockQuantity",
+      "Discount",
+      "Sales",
+      "DateAdded",
+      "City"
+    ],
+    "data": [
+      {
+        "ProductID": 1,
+        "ProductName": "Headphones",
+        "Category": "Electronics",
+        "Price": 400.31,
+        "Rating": 1.7,
+        "NumReviews": 3772,
+        "StockQuantity": 20,
+        "Discount": 0.08,
+        "Sales": 466,
+        "DateAdded": "2023-11-10",
+        "City": "Albuquerque"
+      },
+      {
+        "ProductID": 2,
+        "ProductName": "Headphones",
+        "Category": "Electronics",
+        "Price": 235.03,
+        "Rating": 2.3,
+        "NumReviews": 2919,
+        "StockQuantity": 663,
+        "Discount": 0.33,
+        "Sales": 1332,
+        "DateAdded": "2023-09-28",
+        "City": "Queens"
+      },
+      {
+        "ProductID": 3,
+        "ProductName": "Smartwatch",
+        "Category": "Electronics",
+        "Price": 417.9,
+        "Rating": 1.8,
+        "NumReviews": 1184,
+        "StockQuantity": 459,
+        "Discount": 0.31,
+        "Sales": 252,
+        "DateAdded": "2023-10-20",
+        "City": "Austin"
+      },
+      {
+        "ProductID": 4,
+        "ProductName": "Smartphone",
+        "Category": "Electronics",
+        "Price": 152.7,
+        "Rating": 3.4,
+        "NumReviews": 2047,
+        "StockQuantity": 475,
+        "Discount": 0.49,
+        "Sales": 1806,
+        "DateAdded": "2023-12-05",
+        "City": "Dallas"
+      },
+      {
+        "ProductID": 5,
+        "ProductName": "Laptop",
+        "Category": "Electronics",
+        "Price": 394.74,
+        "Rating": 1.8,
+        "NumReviews": 1267,
+        "StockQuantity": 831,
+        "Discount": 0.23,
+        "Sales": 1508,
+        "DateAdded": "2023-08-10",
+        "City": "Tucson"
+      },
+      {
+        "ProductID": 6,
+        "ProductName": "Headphones",
+        "Category": "Electronics",
+        "Price": 93.56,
+        "Rating": 1.3,
+        "NumReviews": 2435,
+        "StockQuantity": 600,
+        "Discount": 0.48,
+        "Sales": 241,
+        "DateAdded": "2023-09-21",
+        "City": "Louisville"
+      },
+      {
+        "ProductID": 7,
+        "ProductName": "Laptop",
+        "Category": "Electronics",
+        "Price": 57.86,
+        "Rating": 3.7,
+        "NumReviews": 1478,
+        "StockQuantity": 427,
+        "Discount": 0.25,
+        "Sales": 1966,
+        "DateAdded": "2024-05-08",
+        "City": "Cleveland"
+      },
+      {
+        "ProductID": 8,
+        "ProductName": "Laptop",
+        "Category": "Electronics",
+        "Price": 201.62,
+        "Rating": 1.7,
+        "NumReviews": 3073,
+        "StockQuantity": 389,
+        "Discount": 0.1,
+        "Sales": 1795,
+        "DateAdded": "2023-08-07",
+        "City": "Houston"
+      },
+      {
+        "ProductID": 9,
+        "ProductName": "Smartphone",
+        "Category": "Electronics",
+        "Price": 485.1,
+        "Rating": 4.1,
+        "NumReviews": 161,
+        "StockQuantity": 201,
+        "Discount": 0.45,
+        "Sales": 269,
+        "DateAdded": "2023-06-27",
+        "City": "Cape Coral"
+      },
+      {
+        "ProductID": 10,
+        "ProductName": "Smartwatch",
+        "Category": "Electronics",
+        "Price": 170.0,
+        "Rating": 3.3,
+        "NumReviews": 1275,
+        "StockQuantity": 701,
+        "Discount": 0.16,
+        "Sales": 719,
+        "DateAdded": "2023-10-19",
+        "City": "Minneapolis"
+      }
+    ],
+    "total_rows": 1000,
+    "preview_rows": 10
+  }
+}

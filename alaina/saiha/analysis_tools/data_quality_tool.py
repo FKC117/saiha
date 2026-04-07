@@ -157,11 +157,14 @@ class DataQualityTool(BaseAnalysisTool):
             else:
                 summary = "Data quality assessment complete. " + " ".join(summary_points)
 
+            # --- KEY FIX: Standardize on 'artifacts' for the modern UI bridge (Bug 13) ---
+            # We rename 'sections' to 'artifacts' to match the InterpretationAgent's expectations.
+            artifacts = sections
+
             return {
                 "status": "ok",
                 "summary": summary,
-                "sections": sections,
-                "artifacts": [],
+                "artifacts": artifacts,
                 "meta": {"tool_name": self.name, "parameters": parameters},
             }
 

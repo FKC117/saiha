@@ -40,12 +40,14 @@ class NotificationConsumer(AsyncWebsocketConsumer):
         # Create a copy to avoid mutating the original event
         payload = dict(event)
         
-        # Standardize 'type' for the frontend as 'notification'
-        # The frontend uses this to route messages.
-        payload['type'] = 'notification'
-        
-        # Clean up internal Channel fields
-        if 'type_orig' in payload: del payload['type_orig']
-        
+        # --- Type Collision Fix (Bug 13) ---
+        # Channels uses 'type' for the method name (send_notification).
+        # But our AI agents use 'event_type' for the actual UI message category.
+        # We map 'event_type' back to 'type' so the frontend JS routing works correctly.
+        if 'event_type' in payload:
+            payload['type'] = payload['event_type']
+        else:
+            payload['type'] = 'notification' # Default fallback
+            
         # Send message to WebSocket
         await self.send(text_data=json.dumps(payload))

@@ -14,7 +14,7 @@ from typing import Dict, Any, List
 
 from .base_tool import BaseAnalysisTool
 from .tool_parameters import ToolParameterSet, ToolParameter, ParameterType
-from saiha.ai_agents.tools.plot_utils import PlotUtils
+from .plot_utils import PlotUtils
 
 class RepeatedMeasuresAnovaTool(BaseAnalysisTool):
     """
@@ -155,9 +155,13 @@ class RepeatedMeasuresAnovaTool(BaseAnalysisTool):
                         sns.heatmap(posthoc_df, annot=True, cmap='coolwarm_r', fmt=".4f", ax=ax_heatmap, cbar_kws={'label': 'P-value'})
                         ax_heatmap.set_title("Post-Hoc P-Value Heatmap (Paired T-Tests)")
                         plt.tight_layout()
+                        plot_res = PlotUtils.fig_to_base64(fig_heatmap)
                         artifacts.append({
-                            "type": "plot", "id": "rm_anova_posthoc_heatmap", "title": "Post-Hoc Heatmap",
-                            "content": PlotUtils.fig_to_base64(fig_heatmap)
+                            "type": plot_res['fallback_type'], 
+                            "id": "rm_anova_posthoc_heatmap", 
+                            "title": "Post-Hoc Heatmap",
+                            "content": plot_res['base64'],
+                            "metadata": plot_res['structured_data']
                         })
                     except Exception as posthoc_ex:
                         sections.append({"type": "text", "title": "Post-Hoc Test Failed", "content": str(posthoc_ex)})
@@ -171,9 +175,14 @@ class RepeatedMeasuresAnovaTool(BaseAnalysisTool):
                 ax.set_xlabel(within)
                 ax.set_ylabel(dv)
                 plt.xticks(rotation=45, ha='right')
+                
+                plot_res = PlotUtils.fig_to_base64(fig)
                 artifacts.append({
-                    "type": "plot", "id": "rm_anova_profile_plot", "title": "Profile Plot",
-                    "content": PlotUtils.fig_to_base64(fig)
+                    "type": plot_res['fallback_type'], 
+                    "id": "rm_anova_profile_plot", 
+                    "title": "Profile Plot",
+                    "content": plot_res['base64'],
+                    "metadata": plot_res['structured_data']
                 })
 
                 # Violin Plot
@@ -183,9 +192,14 @@ class RepeatedMeasuresAnovaTool(BaseAnalysisTool):
                 ax.set_xlabel(within)
                 ax.set_ylabel(dv)
                 plt.xticks(rotation=45, ha='right')
+                
+                plot_res = PlotUtils.fig_to_base64(fig)
                 artifacts.append({
-                    "type": "plot", "id": "rm_anova_violin_plot", "title": "Violin Plot",
-                    "content": PlotUtils.fig_to_base64(fig)
+                    "type": plot_res['fallback_type'], 
+                    "id": "rm_anova_violin_plot", 
+                    "title": "Violin Plot",
+                    "content": plot_res['base64'],
+                    "metadata": plot_res['structured_data']
                 })
 
             # Construct Result Envelope

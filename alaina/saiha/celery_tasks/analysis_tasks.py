@@ -63,13 +63,21 @@ def execute_analysis_task(self, result_id: str, session_id: str, tool_name: str,
         tool.dataset = dataset
         tool.user = session.user
 
-        # 3. Load Data
-        relevant_cols = []
+        # 3. Load Data (Hardened Column Extraction - Bug 13.1)
+        dataset_columns = set(dataset.columns.values_list('column_name', flat=True))
+        raw_relevant = []
         for v in params.values():
-            if isinstance(v, str): relevant_cols.append(v)
-            elif isinstance(v, list): relevant_cols.extend([x for x in v if isinstance(x, str)])
+            if isinstance(v, str): raw_relevant.append(v)
+            elif isinstance(v, list): raw_relevant.extend([x for x in v if isinstance(x, str)])
+        
+        # Whitelist Filtering: Only load strings that are actually valid columns
+        relevant_cols = [c for c in raw_relevant if c in dataset_columns]
         
         df = tool.load_dataset(columns=list(set(relevant_cols)) if relevant_cols else None)
+        
+        # --- Memory Cache Optimization (Bug 12) ---
+        # We pass the pre-filtered DF into the tool instance to prevent redundant I/O
+        tool._df = df
 
         # 4. Execute Analysis
         result_obj = tool.validate_and_run(df, params)
@@ -87,6 +95,7 @@ def execute_analysis_task(self, result_id: str, session_id: str, tool_name: str,
             "message": result_obj.message
         }
         result_record.summary = result_obj.message # Primary narrative target
+        result_record.status = AnalysisResult.Status.SUCCESS
         result_record.save()
 
         # Update Observability to Success

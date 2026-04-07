@@ -33,10 +33,10 @@ class ReportBuilder:
             score += 50
         
         # 2. Tool Type Weighting
-        tool_name = result.tool_name.lower()
-        if 'correlation' in tool_name: score += 40
-        if 'test' in tool_name or 'anova' in tool_name: score += 35
-        if 'descriptive' in tool_name: score += 20
+        tool_used = result.tool_used.lower()
+        if 'correlation' in tool_used: score += 40
+        if 'test' in tool_used or 'anova' in tool_used: score += 35
+        if 'descriptive' in tool_used: score += 20
         
         # 3. Data Richness
         raw_data = data.get('data', {})
@@ -48,11 +48,11 @@ class ReportBuilder:
         """
         Calls Gemini to generate [Title] and [3 Takeaways] for a specific result.
         """
-        tool_name = result.tool_name
+        tool_used = result.tool_used
         data_json = json.dumps(result.result_data.get('data', {}))
         
         system_instruction = f"""
-        You are a senior consulting analyst. Review the output of the '{tool_name}' tool.
+        You are a senior consulting analyst. Review the output of the '{tool_used}' tool.
         
         TASK:
         1. Generate a short, punchy 'Insight-First' title (e.g., 'Price Trends Show Right Skew').
@@ -68,9 +68,9 @@ class ReportBuilder:
         
         try:
             response = gemini_service.get_intent_json(prompt, system_instruction)
-            return response if isinstance(response, dict) else {"title": tool_name, "takeaways": []}
+            return response if isinstance(response, dict) else {"title": tool_used, "takeaways": []}
         except Exception:
-            return {"title": tool_name, "takeaways": []}
+            return {"title": tool_used, "takeaways": []}
 
     def build_narrative_context(self, threshold: int = 40) -> Dict[str, Any]:
         """
@@ -84,8 +84,8 @@ class ReportBuilder:
                 meta = self._generate_insight_metadata(res)
                 high_value_insights.append({
                     "id": str(res.id),
-                    "tool": res.tool_name,
-                    "title": meta.get('title', res.tool_name),
+                    "tool": res.tool_used,
+                    "title": meta.get('title', res.tool_used),
                     "takeaways": meta.get('takeaways', []),
                     "data": res.result_data.get('data', {}),
                     "artifacts": res.result_data.get('artifacts', [])

@@ -79,10 +79,31 @@ class ToolRegistry:
                 except Exception:
                     desc = "Description property calculation failed."
             
+            # Get parameters schema
+            params_schema = []
+            try:
+                # Use a fresh instance for schema extraction
+                instance = tool_class()
+                schema_obj = instance.get_parameters_schema()
+                # parameters is a List, not a Dict. Correct the loop.
+                for p_obj in schema_obj.parameters:
+                    params_schema.append({
+                        "name": str(p_obj.name),
+                        "type": str(p_obj.parameter_type),
+                        "description": str(p_obj.description),
+                        "required": bool(p_obj.required),
+                        "options": p_obj.options if hasattr(p_obj, 'options') else None
+                    })
+            except Exception as e:
+                logger.debug(f"Could not get parameters schema for {name}: {e}")
+
+            # Safety check: ensure name and description are STRINGS, not 'property' objects
+            # getattr(tool_class, 'name') results in the 'property' object if defined at class level.
             metadata.append({
-                "name": name,
+                "name": str(name),
                 "description": str(desc) if desc else "No description available.",
-                "is_hardened": getattr(tool_class, 'input_schema', None) is not None
+                "is_hardened": getattr(tool_class, 'input_schema', None) is not None,
+                "parameters": params_schema
             })
         return metadata
 

@@ -1,0 +1,236 @@
+{
+  "columns": [
+    {
+      "column_name": "TransactionNo",
+      "column_index": 0,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 23204,
+      "sample_values": [
+        "581482",
+        "581475",
+        "581475",
+        "581475",
+        "581475"
+      ]
+    },
+    {
+      "column_name": "Date",
+      "column_index": 1,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 305,
+      "sample_values": [
+        "12/9/2019",
+        "12/9/2019",
+        "12/9/2019",
+        "12/9/2019",
+        "12/9/2019"
+      ]
+    },
+    {
+      "column_name": "ProductNo",
+      "column_index": 2,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 3768,
+      "sample_values": [
+        "22485",
+        "22596",
+        "23235",
+        "23272",
+        "23239"
+      ]
+    },
+    {
+      "column_name": "ProductName",
+      "column_index": 3,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 3768,
+      "sample_values": [
+        "Set Of 2 Wooden Market Crates",
+        "Christmas Star Wish List Chalkboard",
+        "Storage Tin Vintage Leaf",
+        "Tree T-Light Holder Willie Winkie",
+        "Set Of 4 Knick Knack Tins Poppies"
+      ]
+    },
+    {
+      "column_name": "Price",
+      "column_index": 4,
+      "data_type": "float",
+      "null_count": 0,
+      "unique_count": 530,
+      "sample_values": [
+        21.47,
+        10.65,
+        11.53,
+        10.65,
+        11.94
+      ]
+    },
+    {
+      "column_name": "Quantity",
+      "column_index": 5,
+      "data_type": "integer",
+      "null_count": 0,
+      "unique_count": 510,
+      "sample_values": [
+        12,
+        36,
+        12,
+        12,
+        6
+      ]
+    },
+    {
+      "column_name": "CustomerNo",
+      "column_index": 6,
+      "data_type": "float",
+      "null_count": 55,
+      "unique_count": 4738,
+      "sample_values": [
+        17490.0,
+        13069.0,
+        13069.0,
+        13069.0,
+        13069.0
+      ]
+    },
+    {
+      "column_name": "Country",
+      "column_index": 7,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 38,
+      "sample_values": [
+        "United Kingdom",
+        "United Kingdom",
+        "United Kingdom",
+        "United Kingdom",
+        "United Kingdom"
+      ]
+    }
+  ],
+  "dataset_id": "e6c36699-4209-4886-929d-840287c99bcb",
+  "created_at": "2026-04-06T13:39:46.426928",
+  "storage_path": "F:\\saiha\\alaina\\media\\datasets\\7\\e6c36699-4209-4886-929d-840287c99bcb",
+  "storage_format": "parquet",
+  "preview_data": {
+    "columns": [
+      "TransactionNo",
+      "Date",
+      "ProductNo",
+      "ProductName",
+      "Price",
+      "Quantity",
+      "CustomerNo",
+      "Country"
+    ],
+    "data": [
+      {
+        "TransactionNo": "581482",
+        "Date": "12/9/2019",
+        "ProductNo": "22485",
+        "ProductName": "Set Of 2 Wooden Market Crates",
+        "Price": 21.47,
+        "Quantity": 12,
+        "CustomerNo": 17490.0,
+        "Country": "United Kingdom"
+      },
+      {
+        "TransactionNo": "581475",
+        "Date": "12/9/2019",
+        "ProductNo": "22596",
+        "ProductName": "Christmas Star Wish List Chalkboard",
+        "Price": 10.65,
+        "Quantity": 36,
+        "CustomerNo": 13069.0,
+        "Country": "United Kingdom"
+      },
+      {
+        "TransactionNo": "581475",
+        "Date": "12/9/2019",
+        "ProductNo": "23235",
+        "ProductName": "Storage Tin Vintage Leaf",
+        "Price": 11.53,
+        "Quantity": 12,
+        "CustomerNo": 13069.0,
+        "Country": "United Kingdom"
+      },
+      {
+        "TransactionNo": "581475",
+        "Date": "12/9/2019",
+        "ProductNo": "23272",
+        "ProductName": "Tree T-Light Holder Willie Winkie",
+        "Price": 10.65,
+        "Quantity": 12,
+        "CustomerNo": 13069.0,
+        "Country": "United Kingdom"
+      },
+      {
+        "TransactionNo": "581475",
+        "Date": "12/9/2019",
+        "ProductNo": "23239",
+        "ProductName": "Set Of 4 Knick Knack Tins Poppies",
+        "Price": 11.94,
+        "Quantity": 6,
+        "CustomerNo": 13069.0,
+        "Country": "United Kingdom"
+      },
+      {
+        "TransactionNo": "581475",
+        "Date": "12/9/2019",
+        "ProductNo": "21705",
+        "ProductName": "Bag 500g Swirly Marbles",
+        "Price": 10.65,
+        "Quantity": 24,
+        "CustomerNo": 13069.0,
+        "Country": "United Kingdom"
+      },
+      {
+        "TransactionNo": "581475",
+        "Date": "12/9/2019",
+        "ProductNo": "22118",
+        "ProductName": "Joy Wooden Block Letters",
+        "Price": 11.53,
+        "Quantity": 18,
+        "CustomerNo": 13069.0,
+        "Country": "United Kingdom"
+      },
+      {
+        "TransactionNo": "581475",
+        "Date": "12/9/2019",
+        "ProductNo": "22119",
+        "ProductName": "Peace Wooden Block Letters",
+        "Price": 12.25,
+        "Quantity": 12,
+        "CustomerNo": 13069.0,
+        "Country": "United Kingdom"
+      },
+      {
+        "TransactionNo": "581475",
+        "Date": "12/9/2019",
+        "ProductNo": "22217",
+        "ProductName": "T-Light Holder Hanging Lace",
+        "Price": 10.65,
+        "Quantity": 12,
+        "CustomerNo": 13069.0,
+        "Country": "United Kingdom"
+      },
+      {
+        "TransactionNo": "581475",
+        "Date": "12/9/2019",
+        "ProductNo": "22216",
+        "ProductName": "T-Light Holder White Lace",
+        "Price": 10.55,
+        "Quantity": 24,
+        "CustomerNo": 13069.0,
+        "Country": "United Kingdom"
+      }
+    ],
+    "total_rows": 536350,
+    "preview_rows": 10
+  }
+}

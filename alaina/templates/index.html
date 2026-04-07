@@ -321,12 +321,14 @@
       border: none;
       color: white;
       font-size: 15px;
+      line-height: 1.5;
       resize: none;
       outline: none;
-      padding: 4px 8px;
+      padding: 8px;
       width: 100%;
       max-height: 200px;
-      min-height: 24px;
+      min-height: 40px;
+      overflow-y: hidden;
     }
 
     .input-actions {
@@ -819,8 +821,9 @@
               {% endif %}
             </div>
             <div class="message-content" id="msg-{{ msg.id }}" data-rich-msg="true">
+              <div class="rich-blocks-top"></div>
               <div class="text-content">{{ msg.content }}</div>
-              <div class="rich-blocks-container"></div>
+              <div class="rich-blocks-bottom"></div>
             </div>
             {% if msg.metadata %}
             <script type="application/json" id="meta-{{ msg.id }}">{{ msg.metadata_json|safe }}</script>
@@ -838,8 +841,9 @@
               <i data-lucide="zap" size="14" style="color: var(--primary-color);"></i>
             </div>
             <div class="message-content" id="msg-{{ msg.id }}" data-rich-msg="true">
+              <div class="rich-blocks-top"></div>
               <div class="text-content" style="font-weight: 600; color: var(--primary-color);">{{ msg.content }}</div>
-              <div class="rich-blocks-container"></div>
+              <div class="rich-blocks-bottom"></div>
             </div>
             {% if msg.metadata %}
             <script type="application/json" id="meta-{{ msg.id }}">{{ msg.metadata_json|safe }}</script>
@@ -1035,7 +1039,12 @@
     const textarea = document.getElementById('chat-textarea');
     textarea?.addEventListener('input', function () {
       this.style.height = 'auto';
-      this.style.height = (this.scrollHeight) + 'px';
+      const newHeight = this.scrollHeight;
+      this.style.height = newHeight + 'px';
+      
+      // Auto-show scrollbar if max-height reached
+      this.style.overflowY = newHeight > 200 ? 'auto' : 'hidden';
+      
       updateSendBtn();
     });
 
@@ -1064,17 +1073,23 @@
 
       if (metadata && metadata.artifacts) {
         console.log(`[RichMessage] Detected ${metadata.artifacts.length} artifacts:`, metadata.artifacts);
-        const blocksContainer = container.querySelector('.rich-blocks-container');
-        if (!blocksContainer) return;
-        blocksContainer.innerHTML = '';
+        const blocksTop = container.querySelector('.rich-blocks-top');
+        const blocksBottom = container.querySelector('.rich-blocks-bottom') || container.querySelector('.rich-blocks-container');
+        
+        if (blocksTop) blocksTop.innerHTML = '';
+        if (blocksBottom) blocksBottom.innerHTML = '';
         
         for (const [index, art] of metadata.artifacts.entries()) {
+          // Narrative Order: Tables on top, Visuals/Others on bottom
+          const blockContainer = (art.type === 'table' && blocksTop) ? blocksTop : blocksBottom;
+          if (!blockContainer) continue;
+
           if (art.type === 'chart') {
             // 1. Generate Stable Deterministic ID
             const stableId = art.result_id ? `chart-${art.result_id}` : `chart-temp-${Math.random().toString(36).substr(2, 5)}`;
             const chartId = `${stableId}-${index}`;
             
-            blocksContainer.insertAdjacentHTML('beforeend', `
+            blockContainer.insertAdjacentHTML('beforeend', `
               <div class="rich-block chart-block" style="background: rgba(24, 24, 27, 0.4); backdrop-filter: blur(10px); color: white;">
                 <div class="block-header" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                   <div class="block-title-group">
@@ -1124,7 +1139,7 @@
 
             if (base64) {
               const imgSrc = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
-              blocksContainer.insertAdjacentHTML('beforeend', `
+              blockContainer.insertAdjacentHTML('beforeend', `
                 <div class="rich-block plot-block" style="background: #18181b; border: 1px solid #27272a; border-radius: 12px; overflow: hidden; margin-top: 12px;">
                   <div class="block-header" style="background: rgba(255,255,255,0.05); padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                     <div class="block-title-group">
@@ -1140,19 +1155,20 @@
               `);
             }
           } else if (art.type === 'table') {
-            blocksContainer.insertAdjacentHTML('beforeend', `
-              <div class="rich-block table-block">
-                <div class="block-header">
-                  <div class="block-title-group">
-                    <i data-lucide="table" class="block-icon" size="14"></i>
-                    <span class="block-title">${art.title || "Data Insight"}</span>
-                  </div>
+            const tableData = art.data || art.rows || [];
+            const headers = art.headers || [];
+            blockContainer.insertAdjacentHTML('beforeend', `
+              <div class="rich-block table-block" style="margin-top: 12px; border: 1px solid rgba(82, 82, 91, 0.3); border-radius: 12px; overflow: hidden;">
+                <div class="block-header" style="background: rgba(255,255,255,0.03); padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 8px;">
+                  <i data-lucide="table" class="block-icon" size="14" style="color: #8B5CF6;"></i>
+                  <span class="block-title" style="font-weight: 500; font-size: 13px;">${art.title || art.label || "Data Insight"}</span>
                 </div>
-                <div class="table-container" style="overflow-x: auto; font-size: 13px;">
+                <div class="table-container" style="overflow-x: auto; font-size: 12px; background: rgba(9, 9, 11, 0.2);">
                   <table style="width: 100%; border-collapse: collapse;">
-                    <thead><tr style="background: rgba(255,255,255,0.02);"><th style="padding: 12px; text-align: left; border-bottom: 1px solid #27272a;">${art.headers.map(h => h).join('</th><th style="padding: 12px; text-align: left; border-bottom: 1px solid #27272a;">')}</th></tr></thead>
-                    <tbody>${art.data.map(row => `<tr><td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.02);">${row.map(cell => cell).join('</td><td style="padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.02);">')}</td></tr>`).join('')}</tbody>
+                    <thead><tr style="background: rgba(255,255,255,0.02);"><th style="padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a1a1aa; font-weight: 600;">${headers.map(h => h).join('</th><th style="padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a1a1aa; font-weight: 600;">')}</th></tr></thead>
+                    <tbody>${tableData.map(row => `<tr><td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); color: #e4e4e7;">${row.map(cell => cell).join('</td><td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); color: #e4e4e7;">')}</td></tr>`).join('')}</tbody>
                   </table>
+                  ${art.footer ? `<div style="padding: 8px 12px; font-size: 11px; color: #71717a; border-top: 1px solid rgba(255,255,255,0.02); font-style: italic;">${art.footer}</div>` : ''}
                 </div>
               </div>
             `);
@@ -1299,7 +1315,11 @@
                                     <path d="M7 12L12 7L17 12L12 17L7 12Z" fill="white"/>
                                   </svg>`}
                                 </div>
-                                <div class="message-content"><div class="text-content"></div><div class="rich-blocks-container"></div></div>
+                                <div class="message-content">
+                                  <div class="rich-blocks-top"></div>
+                                  <div class="text-content"></div>
+                                  <div class="rich-blocks-bottom"></div>
+                                </div>
                               </div>
                             `);
                 msgEl = document.getElementById(msgId);
@@ -1342,15 +1362,28 @@
 
     document.getElementById('file-input')?.addEventListener('change', function () {
       if (this.files?.length > 0) {
-        document.querySelector('.upload-zone p').innerText = this.files[0].name;
-        document.getElementById('upload-submit-btn').style.display = 'inline-block';
+        const uploadZoneP = this.closest('.upload-zone')?.querySelector('p');
+        if (uploadZoneP) uploadZoneP.innerText = "Processing: " + this.files[0].name;
+
+        // Trigger the standard submit event properly to ensure AJAX handler catches it
+        const form = this.closest('form') || document.getElementById('uploadDatasetForm');
+        if (form) {
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+            } else {
+                form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+        }
       }
     });
 
     document.getElementById('uploadDatasetForm')?.addEventListener('submit', async function (e) {
       e.preventDefault();
       const btn = document.getElementById('upload-submit-btn');
-      btn.innerText = "Processing..."; btn.disabled = true;
+      if (btn) {
+        btn.innerText = "Processing...";
+        btn.disabled = true;
+      }
       try {
         const response = await fetch(this.action, {
           method: 'POST', body: new FormData(this),
@@ -1358,7 +1391,13 @@
         });
         const data = await response.json();
         if (data.dataset_id || data.id) window.location.href = "?dataset_id=" + (data.dataset_id || data.id);
-      } catch (err) { console.error(err); btn.innerText = "Upload Dataset"; btn.disabled = false; }
+      } catch (err) { 
+        console.error(err); 
+        if (btn) {
+            btn.innerText = "Upload Dataset";
+            btn.disabled = false;
+        }
+      }
     });
 
     function openSettingsModal() { document.getElementById('settingsModal').classList.add('open'); }

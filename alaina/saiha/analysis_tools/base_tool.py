@@ -92,71 +92,89 @@ class BaseAnalysisTool(abc.ABC):
             return ToolResult(status="error", error=str(e), message="Analysis failed.")
 
     def _normalize_legacy_result(self, result: Any) -> ToolResult:
-        """Converts legacy dict or string outputs to standardized ToolResult."""
+        """
+        Converts legacy dict or string outputs to standardized ToolResult.
+        Ensures strict JSON safety and narrative ordering.
+        """
         if isinstance(result, str):
-            # Handle tools that return direct Markdown/Text
-            return ToolResult(
-                status="success",
-                message=result,
-                data={},
-                success=True
-            )
+            return ToolResult(status="success", message=result, data={}, success=True)
             
         if not isinstance(result, dict):
-            # Fallback for unexpected types
             return ToolResult(status="error", error=f"Unexpected tool output type: {type(result)}", message="Analysis failed.")
 
         status = "success" if result.get('status') in ['ok', 'success'] or result.get('success') else "error"
         error_msg = result.get('error')
-        
-        # Fallback for error message if status is error but error field is empty
         if status == "error" and not error_msg:
-            error_msg = result.get('summary') or result.get('message') or "Analysis failed without specific error."
+            error_msg = result.get('summary') or result.get('message') or "Analysis failed."
 
-        # Bridge: Map legacy 'sections' and 'data' tables to modern 'artifacts'
-        # This allows all 82 legacy tools to render tables/charts in the AI Chat.
-        artifacts = result.get('artifacts', [])
-        sections = result.get('sections', [])
+        # Extract components
+        raw_artifacts = result.get('artifacts', [])
+        raw_sections = result.get('sections', [])
         data = result.get('data', {})
         
-        if not artifacts:
-            # 1. From Sections
-            if sections:
-                for section in sections:
-                    artifact_type = section.get('type')
-                    if artifact_type in ['table', 'chart', 'plot', 'image']:
-                        artifacts.append({
-                            'type': artifact_type,
-                            'label': section.get('title', 'Analysis Result'),
-                            'headers': section.get('headers', []),
-                            'data': section.get('data', []),
-                            'metadata': section.get('metadata', {})
-                        })
+        # --- Normalization Layer (Strict Contract) ---
+        final_artifacts = []
+
+        # 1. Process Sections first (Narrative Order: Summary/Main tables before plots)
+        for section in raw_sections:
+            artifact_type = section.get('type')
+            if artifact_type in ['table', 'chart', 'plot', 'image', 'text']:
+                norm_art = {
+                    'type': artifact_type,
+                    'title': section.get('title') or section.get('label') or "Analysis Result",
+                    'headers': section.get('headers', []),
+                    'metadata': section.get('metadata', {}),
+                    'content': section.get('content', "")
+                }
+                
+                # Table Data Normalization (JSON Safety)
+                table_rows = section.get('data') or section.get('rows') or []
+                norm_art['data'] = [list(row) if isinstance(row, (list, tuple)) else [row] for row in table_rows]
+                
+                final_artifacts.append(norm_art)
+        
+        # 2. Process existing Artifacts
+        for art in raw_artifacts:
+            # Ensure every artifact has a title (matching frontend 'title' expectation)
+            if 'label' in art and 'title' not in art:
+                art['title'] = art.pop('label')
             
-            # 2. From Data (Scan for tables like 'outlier_table')
-            if isinstance(data, dict):
-                for key, val in data.items():
-                    if isinstance(val, dict) and 'records' in val:
-                        # This looks like a legacy table in data dictionary
-                        headers = val.get('headers')
-                        records = val.get('records', [])
-                        if not headers and records and isinstance(records[0], dict):
-                            headers = list(records[0].keys())
-                            data_rows = [list(r.values()) for r in records]
-                        else:
-                            data_rows = records
-                        
-                        artifacts.append({
-                            'type': 'table',
-                            'label': val.get('title', key.replace('_', ' ').title()),
-                            'headers': headers or [],
-                            'data': data_rows
-                        })
+            # Ensure table rows are lists
+            if art.get('type') == 'table' and 'data' in art:
+                art['data'] = [list(row) if isinstance(row, (list, tuple)) else [row] for row in art['data']]
+                
+            final_artifacts.append(art)
+
+        # 3. Handle Data Tables (Scan for nested legacy structures)
+        if isinstance(data, dict) and not final_artifacts:
+            for key, val in data.items():
+                if isinstance(val, dict) and ('records' in val or 'data' in val):
+                    records = val.get('records') or val.get('data') or []
+                    headers = val.get('headers')
+                    if not headers and records and isinstance(records[0], dict):
+                        headers = list(records[0].keys())
+                        data_rows = [list(r.values()) for r in records]
+                    else:
+                        data_rows = [list(r) if isinstance(r, (list, tuple)) else [r] for r in records]
+                    
+        # 4. Enforce Global Order: Tables -> Texts -> Visualizations
+        # This aligns with user preference for seeing hard data first, then insights, then visuals.
+        type_priority = {
+            'table': 1,
+            'text': 2,
+            'chart': 3,
+            'plot': 3,
+            'boxplot': 3,
+            'bar': 3,
+            'image': 3,
+            'timeline': 3
+        }
+        final_artifacts.sort(key=lambda x: type_priority.get(x.get('type'), 10))
 
         return ToolResult(
             status=status,
             data=data,
-            artifacts=artifacts,
+            artifacts=final_artifacts,
             message=result.get('summary', result.get('message')),
             error=error_msg,
             success=result.get('success')

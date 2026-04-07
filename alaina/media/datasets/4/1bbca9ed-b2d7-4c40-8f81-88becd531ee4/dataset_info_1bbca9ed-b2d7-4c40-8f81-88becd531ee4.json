@@ -1,0 +1,236 @@
+{
+  "columns": [
+    {
+      "column_name": "Entity",
+      "column_index": 0,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 214,
+      "sample_values": [
+        "Afghanistan",
+        "Afghanistan",
+        "Afghanistan",
+        "Afghanistan",
+        "Afghanistan"
+      ]
+    },
+    {
+      "column_name": "Code",
+      "column_index": 1,
+      "data_type": "string",
+      "null_count": 270,
+      "unique_count": 205,
+      "sample_values": [
+        "AFG",
+        "AFG",
+        "AFG",
+        "AFG",
+        "AFG"
+      ]
+    },
+    {
+      "column_name": "Year",
+      "column_index": 2,
+      "data_type": "integer",
+      "null_count": 0,
+      "unique_count": 30,
+      "sample_values": [
+        1990,
+        1991,
+        1992,
+        1993,
+        1994
+      ]
+    },
+    {
+      "column_name": "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized",
+      "column_index": 3,
+      "data_type": "float",
+      "null_count": 0,
+      "unique_count": 6406,
+      "sample_values": [
+        0.22320578,
+        0.22245377,
+        0.22175121,
+        0.22098725,
+        0.22018303
+      ]
+    },
+    {
+      "column_name": "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized",
+      "column_index": 4,
+      "data_type": "float",
+      "null_count": 0,
+      "unique_count": 6416,
+      "sample_values": [
+        4.996118,
+        4.9892898,
+        4.9813457,
+        4.9769583,
+        4.977782
+      ]
+    },
+    {
+      "column_name": "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized",
+      "column_index": 5,
+      "data_type": "float",
+      "null_count": 0,
+      "unique_count": 6417,
+      "sample_values": [
+        4.713314,
+        4.7021,
+        4.683743,
+        4.6735487,
+        4.67081
+      ]
+    },
+    {
+      "column_name": "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized",
+      "column_index": 6,
+      "data_type": "float",
+      "null_count": 0,
+      "unique_count": 6385,
+      "sample_values": [
+        0.70302314,
+        0.7020688,
+        0.700792,
+        0.70008695,
+        0.6998978
+      ]
+    },
+    {
+      "column_name": "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized",
+      "column_index": 7,
+      "data_type": "float",
+      "null_count": 0,
+      "unique_count": 6417,
+      "sample_values": [
+        0.12770003,
+        0.123255946,
+        0.11884415,
+        0.11508888,
+        0.11181468
+      ]
+    }
+  ],
+  "dataset_id": "1bbca9ed-b2d7-4c40-8f81-88becd531ee4",
+  "created_at": "2026-04-07T19:18:21.618130",
+  "storage_path": "F:\\saiha\\alaina\\media\\datasets\\4\\1bbca9ed-b2d7-4c40-8f81-88becd531ee4",
+  "storage_format": "parquet",
+  "preview_data": {
+    "columns": [
+      "Entity",
+      "Code",
+      "Year",
+      "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized",
+      "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized",
+      "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized",
+      "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized",
+      "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized"
+    ],
+    "data": [
+      {
+        "Entity": "Afghanistan",
+        "Code": "AFG",
+        "Year": 1990,
+        "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.22320578,
+        "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.996118,
+        "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.713314,
+        "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.70302314,
+        "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.12770003
+      },
+      {
+        "Entity": "Afghanistan",
+        "Code": "AFG",
+        "Year": 1991,
+        "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.22245377,
+        "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.9892898,
+        "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.7021,
+        "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.7020688,
+        "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.123255946
+      },
+      {
+        "Entity": "Afghanistan",
+        "Code": "AFG",
+        "Year": 1992,
+        "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.22175121,
+        "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.9813457,
+        "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.683743,
+        "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.700792,
+        "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.11884415
+      },
+      {
+        "Entity": "Afghanistan",
+        "Code": "AFG",
+        "Year": 1993,
+        "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.22098725,
+        "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.9769583,
+        "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.6735487,
+        "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.70008695,
+        "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.11508888
+      },
+      {
+        "Entity": "Afghanistan",
+        "Code": "AFG",
+        "Year": 1994,
+        "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.22018303,
+        "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.977782,
+        "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.67081,
+        "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.6998978,
+        "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.11181468
+      },
+      {
+        "Entity": "Afghanistan",
+        "Code": "AFG",
+        "Year": 1995,
+        "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.2194088,
+        "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.978228,
+        "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.6681,
+        "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.6997684,
+        "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.10850699
+      },
+      {
+        "Entity": "Afghanistan",
+        "Code": "AFG",
+        "Year": 1996,
+        "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.21846454,
+        "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.981489,
+        "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.6657586,
+        "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.6996502,
+        "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.10526882
+      },
+      {
+        "Entity": "Afghanistan",
+        "Code": "AFG",
+        "Year": 1997,
+        "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.21728611,
+        "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.9875927,
+        "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.665013,
+        "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.69959736,
+        "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.10153082
+      },
+      {
+        "Entity": "Afghanistan",
+        "Code": "AFG",
+        "Year": 1998,
+        "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.21607415,
+        "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.9968576,
+        "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.6682405,
+        "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.69976467,
+        "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.09805014
+      },
+      {
+        "Entity": "Afghanistan",
+        "Code": "AFG",
+        "Year": 1999,
+        "Schizophrenia_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.21506761,
+        "Depressive_disorders_share_of_population_Sex_Both_Age_Age_standardized": 5.004257,
+        "Anxiety_disorders_share_of_population_Sex_Both_Age_Age_standardized": 4.6735573,
+        "Bipolar_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.700054,
+        "Eating_disorders_share_of_population_Sex_Both_Age_Age_standardized": 0.095722646
+      }
+    ],
+    "total_rows": 6420,
+    "preview_rows": 10
+  }
+}

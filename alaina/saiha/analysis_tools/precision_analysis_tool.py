@@ -89,29 +89,27 @@ class PrecisionAnalysisTool(BaseAnalysisTool):
 
             if test_type == "two_sample":
                 power_analysis = TTestIndPower()
-                effect_size = power_analysis.solve_power(
+                effect_size = float(power_analysis.solve_power(
                     nobs1=sample_size, power=power, alpha=alpha, ratio=1.0, alternative='two-sided'
-                )
+                ))
                 metric = "Cohen's d"
             elif test_type == "anova":
                 power_analysis = FTestAnovaPower()
-                # solve_power for ANOVA takes 'nobs' as total sample size if groups are balanced? 
-                # statsmodels documentation: nobs: number of observations per group
-                effect_size = power_analysis.solve_power(
+                effect_size = float(power_analysis.solve_power(
                     nobs=sample_size, power=power, alpha=alpha, k_groups=k_groups
-                )
+                ))
                 metric = "Cohen's f"
             elif test_type == "chi_square":
                 power_analysis = GofChisquarePower()
-                effect_size = power_analysis.solve_power(
+                effect_size = float(power_analysis.solve_power(
                     nobs=sample_size, power=power, alpha=alpha, n_bins=df+1
-                )
+                ))
                 metric = "Cohen's w"
             else: # one_sample or paired
                 power_analysis = TTestPower()
-                effect_size = power_analysis.solve_power(
+                effect_size = float(power_analysis.solve_power(
                     nobs=sample_size, power=power, alpha=alpha, alternative='two-sided'
-                )
+                ))
                 metric = "Cohen's d"
 
             summary = f"With {sample_size} participants (per group/total) and {power*100:.0f}% power, the smallest effect you can calculate is **{metric} = {effect_size:.3f}**."
@@ -159,13 +157,13 @@ class PrecisionAnalysisTool(BaseAnalysisTool):
                 effects = []
                 for n_val in n_range:
                     if test_type == "two_sample":
-                        es = power_analysis.solve_power(nobs1=n_val, power=power, alpha=alpha)
+                        es = float(power_analysis.solve_power(nobs1=n_val, power=power, alpha=alpha, ratio=1.0, alternative='two-sided'))
                     elif test_type == "anova":
-                        es = power_analysis.solve_power(nobs=n_val, power=power, alpha=alpha, k_groups=k_groups)
+                        es = float(power_analysis.solve_power(nobs=n_val, power=power, alpha=alpha, k_groups=k_groups))
                     elif test_type == "chi_square":
-                        es = power_analysis.solve_power(nobs=n_val, power=power, alpha=alpha, n_bins=df+1)
-                    else:
-                        es = power_analysis.solve_power(nobs=n_val, power=power, alpha=alpha)
+                        es = float(power_analysis.solve_power(nobs=n_val, power=power, alpha=alpha, n_bins=df+1))
+                    else: # one_sample or paired
+                        es = float(power_analysis.solve_power(nobs=n_val, power=power, alpha=alpha, alternative='two-sided'))
                     effects.append(es)
                 
                 ax.plot(n_range, effects, label=f'MDE at {power*100:.0f}% Power', color='purple')

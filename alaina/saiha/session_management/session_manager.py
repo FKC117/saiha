@@ -35,7 +35,7 @@ class SessionManager:
 
             # Create new session if none exists
             if not session_name:
-                session_name = f"Exploration: {dataset.name}"
+                session_name = dataset.name
 
             with transaction.atomic():
                 session = AnalysisSession.objects.create(

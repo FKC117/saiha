@@ -205,3 +205,23 @@ Traceback (most recent call last):
     clean_dependent, clean_group = self.clean_column_names([dependent_var, group_var])
                                    ^^^^^^^^^^^^^^^^^^^^^^^
 AttributeError: 'OneWayAnovaTool' object has no attribute 'clean_column_names'
+ERROR 2026-04-07 12:12:43,178 base_tool 20284 5652 Legacy error in precision_analysis: setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (50,) + inhomogeneous part.
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\precision_analysis_tool.py", line 171, in execute
+    ax.plot(n_range, effects, label=f'MDE at {power*100:.0f}% Power', color='purple')
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\axes\_axes.py", line 1777, in plot
+    lines = [*self._get_lines(self, *args, data=data, **kwargs)]
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\axes\_base.py", line 297, in __call__
+    yield from self._plot_args(
+               ^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\axes\_base.py", line 484, in _plot_args
+    y = _check_1d(xy[1])
+        ^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\cbook.py", line 1368, in _check_1d
+    return np.atleast_1d(x)
+           ^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\numpy\_core\shape_base.py", line 61, in atleast_1d
+    result = asanyarray(arys[0])
+             ^^^^^^^^^^^^^^^^^^^
+ValueError: setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (50,) + inhomogeneous part.

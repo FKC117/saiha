@@ -19,7 +19,7 @@ class StatisticalAnalysisTool(BaseAnalysisTool):
     
     @property
     def description(self) -> str:
-        return "Performs advanced statistical hypothesis tests (t-tests, ANOVA, normality checks) on numeric variables. Use for comparing groups or testing hypotheses — NOT for correlation or descriptive statistics."
+        return "Provides a combined numeric overview: descriptive statistics (count, mean, std, min/max, quartiles) AND a basic Pearson correlation table for all numeric columns. Use for a quick statistical snapshot. For a dedicated correlation heatmap use correlation_matrix; for detailed skewness/kurtosis use descriptive_statistics."
     
     def get_parameters_schema(self) -> ToolParameterSet:
         from .tool_parameters import ToolParameterSet, ToolParameter, ParameterType

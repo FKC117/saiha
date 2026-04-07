@@ -40,7 +40,9 @@ class DatasetProcessor:
         new_columns = {}
         seen_columns = {}
         for col in df.columns:
-            sanitized_col = re.sub(r'[^0-9a-zA-Z_]', '_', str(col))
+            # Strip whitespace from column name before sanitizing
+            col_str = str(col).strip()
+            sanitized_col = re.sub(r'[^0-9a-zA-Z_]', '_', col_str)
             if sanitized_col and sanitized_col[0].isdigit():
                 sanitized_col = '_' + sanitized_col
             sanitized_col = re.sub(r'__+', '_', sanitized_col).strip('_')
@@ -57,13 +59,36 @@ class DatasetProcessor:
     def clean_dataframe(self, df):
         """Cleans the dataframe by stripping whitespace and handling empty rows/cols."""
         df = df.copy()
+        
+        # 1. Strip column names first
+        df.columns = [col.strip() if isinstance(col, str) else col for col in df.columns]
+        
+        # 2. Sanitize to valid Python identifiers
         df = self.sanitize_columns(df)
         
+        # 3. Smart Whitespace Stripping (Strings Only)
         for col in df.columns:
             if df[col].dtype == 'object':
-                df[col] = df[col].astype(str).str.strip()
-                df[col] = df[col].replace({'nan': None, 'None': None, '': None})
+                # Try to strip only if the data is actually string-like
+                try:
+                    df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
+                except Exception:
+                    pass
+                
+                # Replace common null representations
+                df[col] = df[col].replace({'nan': None, 'None': None, '': None, 'NA': None, 'N/A': None})
+
+        # 4. Numeric Coercion (Optional but recommended)
+        # Try to convert object columns back to numeric if they look like numbers after stripping
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                try:
+                    # errors='ignore' ensures we don't break non-numeric columns
+                    df[col] = pd.to_numeric(df[col], errors='ignore')
+                except Exception:
+                    pass
         
+        # 5. Final Row Cleanup
         df = df.dropna(how='all')
         df = df.reset_index(drop=True)
         return df

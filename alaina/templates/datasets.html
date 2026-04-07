@@ -181,10 +181,167 @@
 
     /* Transitions */
     .dataset-row.htmx-swapping { opacity: 0; transform: scale(0.95); transition: all 0.4s ease; }
-  </style>
-</head>
 
-<body>
+    /* Modal Styles */
+    .dataset-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background-color: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .dataset-modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .dataset-modal {
+      width: 500px;
+      background-color: var(--zinc-900);
+      border: 1px solid var(--zinc-800);
+      border-radius: 20px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 80vh;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-header {
+      padding: 24px;
+      border-bottom: 1px solid var(--zinc-800);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+    }
+
+    .close-modal {
+      background: none;
+      border: none;
+      color: var(--zinc-500);
+      cursor: pointer;
+    }
+
+    .modal-content {
+      padding: 24px;
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .modal-tabs {
+      display: flex;
+      padding: 0 24px;
+      border-bottom: 1px solid var(--zinc-800);
+    }
+
+    .modal-tab {
+      padding: 12px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--zinc-500);
+      cursor: pointer;
+      position: relative;
+    }
+
+    .modal-tab.active {
+      color: var(--primary-color);
+    }
+
+    .modal-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background-color: var(--primary-color);
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .upload-zone {
+      height: 180px;
+      border: 2px dashed var(--zinc-800);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .upload-zone:hover {
+      border-color: var(--primary-color);
+      background: rgba(139, 92, 246, 0.05);
+    }
+
+    .upload-btn {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 20px;
+      transition: all 0.2s;
+    }
+
+    .upload-btn:hover {
+      background-color: #7c3aed;
+    }
+
+    .dataset-list-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid transparent;
+      transition: all 0.2s;
+      color: white;
+      text-decoration: none;
+      margin-bottom: 8px;
+    }
+
+    .dataset-list-item:hover {
+      border-color: #8B5CF6;
+      background: rgba(139, 92, 246, 0.05);
+    }
+
+    .dataset-icon {
+      color: #8B5CF6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      background: rgba(139, 92, 246, 0.1);
+      border-radius: 6px;
+      margin-right: 12px;
+    }
+  </style>
+</head><body>
   <div class="dashboard-container">
     <a href="{% url 'saiha:index' %}" class="back-link">
       <i data-lucide="arrow-left" size="16"></i>
@@ -196,6 +353,10 @@
         <h1>Database Explorer</h1>
         <p>Manage your uploaded data structures and analysis assets.</p>
       </div>
+      <button class="btn btn-analyze" onclick="openDatasetModal()" style="padding: 10px 20px;">
+        <i data-lucide="plus" size="18"></i>
+        New Dataset
+      </button>
     </div>
 
     <!-- Quick Stats -->
@@ -294,9 +455,120 @@
     </div>
   </div>
 
+  <!-- Dataset Selection Modal -->
+  <div id="datasetModal" class="dataset-modal-backdrop">
+    <div class="dataset-modal">
+      <div class="modal-header">
+        <h3 class="modal-title">Upload New Dataset</h3>
+        <button class="close-modal" onclick="closeDatasetModal()">
+          <i data-lucide="x" size="20"></i>
+        </button>
+      </div>
+
+      <div class="modal-tabs">
+        <div class="modal-tab active" onclick="switchModalTab('upload-tab')" id="tab-btn-upload">Upload New</div>
+        <div class="modal-tab" onclick="switchModalTab('select-tab')" id="tab-btn-select">Select Existing</div>
+      </div>
+
+      <div class="modal-content">
+        <!-- Upload Tab -->
+        <div id="upload-tab" class="tab-pane active">
+          <form id="uploadDatasetForm" action="{% url 'saiha:upload_dataset' %}" method="post"
+            enctype="multipart/form-data" style="height: 100%;">
+            {% csrf_token %}
+            <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+              <i data-lucide="upload-cloud" size="40" style="color: #a1a1aa; margin-bottom: 16px;"></i>
+              <p style="color: white; font-weight: 500; font-size: 15px; margin-bottom: 4px;">Click or drag file to this area</p>
+              <p style="color: #a1a1aa; font-size: 13px;">Support for a single CSV or Excel file.</p>
+              <input type="file" id="file-input" name="file" style="display: none;" accept=".csv,.xlsx,.xls">
+              <button type="submit" class="upload-btn" id="upload-submit-btn"
+                style="display:none; position: relative; z-index: 10;">Upload Dataset</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Select Tab -->
+        <div id="select-tab" class="tab-pane">
+          {% if datasets %}
+          {% for ds in datasets %}
+          <a href="{% url 'saiha:index' %}?dataset_id={{ ds.id }}" class="dataset-list-item">
+            <div style="display: flex; align-items: center;">
+              <div class="dataset-icon">
+                <i data-lucide="table" size="20"></i>
+              </div>
+              <div>
+                <div style="font-size: 14px; font-weight: 500;">{{ ds.name }}</div>
+                <div style="font-size: 12px; color: #a1a1aa;">{{ ds.rows_count|default:"Unknown" }} rows • {{ ds.upload_date|date:"M d, Y" }}</div>
+              </div>
+            </div>
+            <i data-lucide="chevron-right" size="16" style="color: #a1a1aa;"></i>
+          </a>
+          {% endfor %}
+          {% else %}
+          <div style="height: 100%; display: flex; align-items: center; justify-content: center; color: #a1a1aa; font-size: 14px;">
+            No datasets available.
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     lucide.createIcons();
     
+    // Modal Functions
+    function openDatasetModal() { document.getElementById('datasetModal').classList.add('open'); }
+    function closeDatasetModal() { document.getElementById('datasetModal').classList.remove('open'); }
+    function switchModalTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.modal-tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      document.getElementById(tabId === 'upload-tab' ? 'tab-btn-upload' : 'tab-btn-select').classList.add('active');
+    }
+
+    document.getElementById('file-input')?.addEventListener('change', function () {
+      if (this.files?.length > 0) {
+        const uploadZoneP = this.closest('.upload-zone')?.querySelector('p');
+        if (uploadZoneP) uploadZoneP.innerText = "Processing: " + this.files[0].name;
+
+        // Trigger the standard submit event properly to ensure AJAX handler catches it
+        const form = this.closest('form') || document.getElementById('uploadDatasetForm');
+        if (form) {
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+            } else {
+                form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            }
+        }
+      }
+    });
+
+    document.getElementById('uploadDatasetForm')?.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const btn = document.getElementById('upload-submit-btn');
+      btn.innerText = "Processing..."; btn.disabled = true;
+      try {
+        const response = await fetch(this.action, {
+          method: 'POST', body: new FormData(this),
+          headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+        });
+        const data = await response.json();
+        // Context-Aware Routing: Stay on datasets page if already there
+        if (window.location.pathname.includes('/datasets/')) {
+          window.location.reload();
+        } else if (data.dataset_id || data.id) {
+          window.location.href = "{% url 'saiha:index' %}?dataset_id=" + (data.dataset_id || data.id);
+        }
+      } catch (err) { console.error(err); btn.innerText = "Upload Dataset"; btn.disabled = false; }
+    });
+
+    window.onclick = function (event) {
+      if (event.target.classList.contains('dataset-modal-backdrop')) {
+        event.target.classList.remove('open');
+      }
+    }
+
     // Auto-update Lucide icons after HTMX swaps
     document.body.addEventListener('htmx:afterSwap', function(evt) {
       lucide.createIcons();

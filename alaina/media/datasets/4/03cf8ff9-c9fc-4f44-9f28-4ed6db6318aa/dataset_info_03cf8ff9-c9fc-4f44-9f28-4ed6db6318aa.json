@@ -1,0 +1,186 @@
+{
+  "columns": [
+    {
+      "column_name": "title",
+      "column_index": 0,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 1945,
+      "sample_values": [
+        "XIYUER Women's down jacket Short 90% duck down jacket 2024 high-end new models",
+        "Reebok Men's Softshell Jacket",
+        "Mens Fleece Jacket Soft Plush Zip Up Fall Winter Outdoor Casual work - Black",
+        "Men's Casual Padded Jacket Winter Warm Hooded Soft Comfort Coat Thick Jacket Top",
+        "Men's Casual Padded Jacket Winter Warm Hooded Soft Comfort Coat Thick Jacket Top"
+      ]
+    },
+    {
+      "column_name": "type",
+      "column_index": 1,
+      "data_type": "string",
+      "null_count": 18,
+      "unique_count": 103,
+      "sample_values": [
+        "Coat",
+        "Jacket",
+        "Jacket",
+        "Jacket",
+        "Jacket"
+      ]
+    },
+    {
+      "column_name": "priceWithCurrency",
+      "column_index": 2,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 1282,
+      "sample_values": [
+        "US $229.00",
+        "US $40.00",
+        "US $14.99/ea",
+        "US $35.83/ea",
+        "US $35.83"
+      ]
+    },
+    {
+      "column_name": "lastUpdated",
+      "column_index": 3,
+      "data_type": "string",
+      "null_count": 316,
+      "unique_count": 1615,
+      "sample_values": [
+        "Oct 16, 2024 09:26:58 PDT",
+        "Oct 16, 2024 12:16:32 PDT",
+        "Oct 17, 2024 18:11:06 PDT",
+        "Oct 18, 2024 20:02:23 PDT",
+        "Oct 17, 2024 18:54:55 PDT"
+      ]
+    },
+    {
+      "column_name": "availableText",
+      "column_index": 4,
+      "data_type": "string",
+      "null_count": 189,
+      "unique_count": 331,
+      "sample_values": [
+        "10 available",
+        "5 available",
+        "4 available",
+        "3 available30 sold",
+        "Last one8 sold"
+      ]
+    },
+    {
+      "column_name": "itemLocation",
+      "column_index": 5,
+      "data_type": "string",
+      "null_count": 1507,
+      "unique_count": 279,
+      "sample_values": [
+        "Hurst, Texas, United States",
+        "Alviso, California, United States",
+        "Brooklyn, New York, United States",
+        "Baytown, Texas, United States",
+        "New York, New York, United States"
+      ]
+    }
+  ],
+  "dataset_id": "03cf8ff9-c9fc-4f44-9f28-4ed6db6318aa",
+  "created_at": "2026-04-07T13:17:10.627117",
+  "storage_path": "F:\\saiha\\alaina\\media\\datasets\\4\\03cf8ff9-c9fc-4f44-9f28-4ed6db6318aa",
+  "storage_format": "parquet",
+  "preview_data": {
+    "columns": [
+      "title",
+      "type",
+      "priceWithCurrency",
+      "lastUpdated",
+      "availableText",
+      "itemLocation"
+    ],
+    "data": [
+      {
+        "title": "XIYUER Women's down jacket Short 90% duck down jacket 2024 high-end new models",
+        "type": "Coat",
+        "priceWithCurrency": "US $229.00",
+        "lastUpdated": "Oct 16, 2024 09:26:58 PDT",
+        "availableText": "10 available",
+        "itemLocation": null
+      },
+      {
+        "title": "Reebok Men's Softshell Jacket",
+        "type": null,
+        "priceWithCurrency": "US $40.00",
+        "lastUpdated": null,
+        "availableText": "5 available",
+        "itemLocation": "Hurst, Texas, United States"
+      },
+      {
+        "title": "Mens Fleece Jacket Soft Plush Zip Up Fall Winter Outdoor Casual work - Black",
+        "type": "Jacket",
+        "priceWithCurrency": "US $14.99/ea",
+        "lastUpdated": "Oct 16, 2024 12:16:32 PDT",
+        "availableText": "4 available",
+        "itemLocation": "Alviso, California, United States"
+      },
+      {
+        "title": "Men's Casual Padded Jacket Winter Warm Hooded Soft Comfort Coat Thick Jacket Top",
+        "type": "Jacket",
+        "priceWithCurrency": "US $35.83/ea",
+        "lastUpdated": "Oct 17, 2024 18:11:06 PDT",
+        "availableText": "3 available30 sold",
+        "itemLocation": null
+      },
+      {
+        "title": "Men's Casual Padded Jacket Winter Warm Hooded Soft Comfort Coat Thick Jacket Top",
+        "type": "Jacket",
+        "priceWithCurrency": "US $35.83",
+        "lastUpdated": null,
+        "availableText": "Last one8 sold",
+        "itemLocation": null
+      },
+      {
+        "title": "Warm Mens Casual Padded Hooded Jacket Winter Soft Comfort Coat Thick Jacket",
+        "type": "Jacket",
+        "priceWithCurrency": "US $35.00",
+        "lastUpdated": "Oct 18, 2024 20:02:23 PDT",
+        "availableText": "Last one39 sold",
+        "itemLocation": null
+      },
+      {
+        "title": "Men Winter Warm Thick Fleece Jacket Men Coat Outwear Outdoor Jacket Men",
+        "type": "Coat",
+        "priceWithCurrency": "US $32.64",
+        "lastUpdated": "Oct 17, 2024 18:54:55 PDT",
+        "availableText": "10 available7 sold",
+        "itemLocation": null
+      },
+      {
+        "title": "Men's Waterproof Winter Jacket Warm Winter Coat Outdoor Ski Snow Hooded Jacket",
+        "type": "Jacket",
+        "priceWithCurrency": "US $32.75",
+        "lastUpdated": "Oct 13, 2024 13:30:10 PDT",
+        "availableText": "6 available19 sold",
+        "itemLocation": null
+      },
+      {
+        "title": "Men's Casual Padded Jacket Winter Warm Hooded Soft Comfort Coat Thick Jacket Top",
+        "type": "Jacket",
+        "priceWithCurrency": "US $29.36/ea",
+        "lastUpdated": "Oct 16, 2024 23:31:18 PDT",
+        "availableText": "2 available22 sold",
+        "itemLocation": null
+      },
+      {
+        "title": "Parka Ski Men Thick Winter Puffer Jacket Hooded Quilted Duck Snow Coat Warm Down",
+        "type": "Coat",
+        "priceWithCurrency": "US $6.64/ea",
+        "lastUpdated": "Oct 17, 2024 08:57:04 PDT",
+        "availableText": "50 available40 sold",
+        "itemLocation": null
+      }
+    ],
+    "total_rows": 1999,
+    "preview_rows": 10
+  }
+}

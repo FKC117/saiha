@@ -31,7 +31,7 @@
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'DM Sans', sans-serif; }
-    body { background-color: var(--zinc-950); color: var(--zinc-100); min-height: 100vh; }
+    body { background-color: var(--zinc-950); color: var(--zinc-100); min-height: 100vh; overflow: auto !important; }
 
     .dashboard-container {
       max-width: 1200px;
@@ -514,6 +514,35 @@
     </div>
   </div>
 
+  <!-- Empty Column Warning Modal -->
+  <div id="emptyColumnWarningModal" class="dataset-modal-backdrop">
+    <div class="dataset-modal" style="max-width: 450px;">
+      <div class="modal-header">
+        <h3 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+          <i data-lucide="alert-triangle" size="18" style="color: #f59e0b;"></i>
+          Data Review Required
+        </h3>
+        <button class="close-modal" onclick="closeEmptyColumnModal()">
+          <i data-lucide="x" size="20"></i>
+        </button>
+      </div>
+      <div class="modal-content" style="padding: 24px;">
+        <p style="font-size: 14px; color: #a1a1aa; margin-bottom: 20px; line-height: 1.5;">
+          We detected columns that are entirely empty. These will not provide any value for analysis. Would you like us to drop them for you?
+        </p>
+        
+        <div id="empty-column-list" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; padding: 12px; border-radius: 12px; background: rgba(39, 39, 42, 0.4); border: 1px solid rgba(82, 82, 91, 0.3);">
+          <!-- Columns will be injected here -->
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+          <button onclick="confirmDropEmpty()" class="upload-btn" style="flex: 1; margin: 0; background: #8B5CF6;">Drop & Continue</button>
+          <button onclick="closeEmptyColumnModal()" class="upload-btn" style="flex: 1; margin: 0; background: rgba(39, 39, 42, 0.6); border: 1px solid rgba(82, 82, 91, 0.4);">Cancel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     lucide.createIcons();
     
@@ -544,6 +573,50 @@
       }
     });
 
+    let pendingUploadData = null;
+
+    function closeEmptyColumnModal() {
+        document.getElementById('emptyColumnWarningModal').classList.remove('open');
+        pendingUploadData = null;
+    }
+
+    async function confirmDropEmpty() {
+        if (!pendingUploadData) return;
+        
+        const { form, endpoint } = pendingUploadData;
+        const formData = new FormData(form);
+        formData.append('drop_empty', 'true');
+        
+        document.getElementById('emptyColumnWarningModal').classList.remove('open');
+        const btn = document.getElementById('upload-submit-btn');
+        if (btn) btn.innerText = "Cleaning & Uploading...";
+
+        try {
+            const response = await fetch(endpoint, {
+                method: 'POST', body: formData,
+                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success' || data.dataset_id || data.id) {
+                if (window.location.pathname.includes('/datasets/')) {
+                    window.location.reload();
+                } else {
+                    window.location.href = "{% url 'saiha:index' %}?dataset_id=" + (data.dataset_id || data.id);
+                }
+            } else {
+                alert("Error: " + data.message);
+                if (btn) btn.innerText = "Upload Dataset";
+                if (btn) btn.disabled = false;
+            }
+        } catch (err) {
+            console.error(err);
+            alert("Retry failed.");
+            if (btn) btn.innerText = "Upload Dataset";
+            if (btn) btn.disabled = false;
+        }
+    }
+
     document.getElementById('uploadDatasetForm')?.addEventListener('submit', async function (e) {
       e.preventDefault();
       const btn = document.getElementById('upload-submit-btn');
@@ -554,13 +627,38 @@
           headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
         });
         const data = await response.json();
-        // Context-Aware Routing: Stay on datasets page if already there
-        if (window.location.pathname.includes('/datasets/')) {
-          window.location.reload();
-        } else if (data.dataset_id || data.id) {
-          window.location.href = "{% url 'saiha:index' %}?dataset_id=" + (data.dataset_id || data.id);
+        
+        if (data.status === 'warning' && data.empty_columns) {
+            // Show custom modal
+            pendingUploadData = { form: this, endpoint: this.action };
+            const listEl = document.getElementById('empty-column-list');
+            listEl.innerHTML = data.empty_columns.map(col => `
+                <span style="background: rgba(139, 92, 246, 0.1); color: #c4b5fd; padding: 4px 10px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(139, 92, 246, 0.2);">
+                    ${col}
+                </span>
+            `).join('');
+            document.getElementById('emptyColumnWarningModal').classList.add('open');
+            return;
         }
-      } catch (err) { console.error(err); btn.innerText = "Upload Dataset"; btn.disabled = false; }
+
+        if (data.status === 'success' || data.dataset_id || data.id) {
+            if (window.location.pathname.includes('/datasets/')) {
+                window.location.reload();
+            } else {
+                window.location.href = "{% url 'saiha:index' %}?dataset_id=" + (data.dataset_id || data.id);
+            }
+        } else if (data.status === 'error') {
+            alert("Error: " + data.message);
+        }
+      } catch (err) { 
+        console.error(err); 
+        alert("Upload failed. Please check your network or file format.");
+        btn.innerText = "Upload Dataset"; btn.disabled = false; 
+      } finally {
+        if (!document.getElementById('emptyColumnWarningModal').classList.contains('open')) {
+            btn.innerText = "Upload Dataset"; btn.disabled = false;
+        }
+      }
     });
 
     window.onclick = function (event) {

@@ -32,7 +32,7 @@
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'DM Sans', sans-serif; }
-    body { background-color: var(--zinc-950); color: var(--zinc-100); min-height: 100vh; }
+    body { background-color: var(--zinc-950); color: var(--zinc-100); min-height: 100vh; overflow: auto !important; }
 
     .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
 
@@ -63,13 +63,17 @@
       gap: 24px; 
       align-items: start;
     }
-    .main-content { min-width: 0; }
+    .main-content { 
+      min-width: 0; 
+      width: 100%;
+    }
 
     .card {
       background: rgba(24, 24, 27, 0.4); border: 1px solid var(--zinc-800);
       border-radius: 16px; padding: 24px; margin-bottom: 24px;
-      max-width: 100%;
-      overflow: hidden;
+      width: 100%;
+      min-width: 0;
+      /* removed overflow: hidden to allow table-wrapper to scroll properly */
     }
     .card-title { font-size: 14px; font-weight: 700; color: white; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
 
@@ -89,10 +93,12 @@
 
     /* Table Styles */
     .table-wrapper { 
-      overflow-x: auto; 
+      overflow-x: auto !important; 
+      -webkit-overflow-scrolling: touch;
       border-radius: 8px; 
       background: rgba(0,0,0,0.2);
       width: 100%;
+      display: block;
       position: relative;
     }
     table { width: 100%; border-collapse: collapse; text-align: left; table-layout: auto; }
@@ -104,8 +110,8 @@
       border-bottom: 1px solid var(--zinc-800);
       white-space: nowrap;
     }
-    td { padding: 14px 16px; font-size: 13px; color: var(--zinc-300); border-bottom: 1px solid rgba(82, 82, 91, 0.1); }
-    code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: rgba(255,255,255,0.05); padding: 2px 4px; border-radius: 4px; color: var(--primary-color); }
+    td { padding: 14px 16px; font-size: 13px; color: var(--zinc-300); border-bottom: 1px solid rgba(82, 82, 91, 0.1); white-space: nowrap; min-width: 100px; }
+    code { font-family: 'JetBrains Mono', monospace; font-size: 12px; background: rgba(255,255,255,0.05); padding: 2px 4px; border-radius: 4px; color: var(--primary-color); white-space: nowrap; }
 
     .preview-table { min-width: 100%; }
     .preview-table th, .preview-table td { white-space: nowrap; min-width: 120px; max-width: 300px; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
@@ -117,6 +123,12 @@
     .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; background: var(--primary-color); }
 
     .badge { padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; background: var(--zinc-800); color: var(--zinc-400); }
+
+    /* Custom Scrollbar for Premium Feel */
+    .table-wrapper::-webkit-scrollbar { height: 8px; width: 8px; }
+    .table-wrapper::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 4px; }
+    .table-wrapper::-webkit-scrollbar-thumb { background: var(--zinc-700); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
+    .table-wrapper::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
   </style>
 </head>
 
@@ -174,8 +186,8 @@
                   <td><code>{{ col.data_type }}</code></td>
                   <td>{{ col.null_count }}</td>
                   <td>{{ col.unique_count }}</td>
-                  <td style="font-size: 11px; color: var(--zinc-500);">
-                    {{ col.sample_values|join:", "|truncatechars:30 }}
+                  <td style="font-size: 11px; color: var(--zinc-500); max-width: 400px; overflow: hidden; text-overflow: ellipsis;">
+                    {{ col.sample_values|join:", " }}
                   </td>
                 </tr>
                 {% endfor %}

@@ -601,6 +601,17 @@
       border-bottom: none;
     }
 
+    /* Custom Scrollbar for Premium Feel */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--zinc-950); }
+    ::-webkit-scrollbar-thumb { background: var(--zinc-800); border-radius: 4px; border: 2px solid var(--zinc-950); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--zinc-700); }
+
+    .table-container::-webkit-scrollbar { height: 8px; }
+    .table-container::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
+    .table-container::-webkit-scrollbar-thumb { background: var(--zinc-700); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
+    .table-container::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
+
     /* Typing Indicator */
     .typing-indicator {
       display: flex;
@@ -1194,8 +1205,8 @@
                 </div>
                 <div class="table-container" style="overflow-x: auto; font-size: 12px; background: rgba(9, 9, 11, 0.2);">
                   <table style="width: 100%; border-collapse: collapse;">
-                    <thead><tr style="background: rgba(255,255,255,0.02);"><th style="padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a1a1aa; font-weight: 600;">${headers.map(h => h).join('</th><th style="padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a1a1aa; font-weight: 600;">')}</th></tr></thead>
-                    <tbody>${tableData.map(row => `<tr><td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); color: #e4e4e7;">${row.map(cell => cell).join('</td><td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); color: #e4e4e7;">')}</td></tr>`).join('')}</tbody>
+                    <thead><tr style="background: rgba(255,255,255,0.02);"><th style="padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a1a1aa; font-weight: 600; white-space: nowrap;">${headers.map(h => h).join('</th><th style="padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a1a1aa; font-weight: 600; white-space: nowrap;">')}</th></tr></thead>
+                    <tbody>${tableData.map(row => `<tr><td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); color: #e4e4e7; white-space: nowrap;">${row.map(cell => cell).join('</td><td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); color: #e4e4e7; white-space: nowrap;">')}</td></tr>`).join('')}</tbody>
                   </table>
                   ${art.footer ? `<div style="padding: 8px 12px; font-size: 11px; color: #71717a; border-top: 1px solid rgba(255,255,255,0.02); font-style: italic;">${art.footer}</div>` : ''}
                 </div>

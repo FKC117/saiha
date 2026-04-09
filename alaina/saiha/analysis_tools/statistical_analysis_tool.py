@@ -84,13 +84,9 @@ class StatisticalAnalysisTool(BaseAnalysisTool):
                     'data': [[idx] + [f"{v:.4f}" if not pd.isna(v) else "1.0000" for v in row] for idx, row in corr_matrix.iterrows()]
                 })
 
-            # --- KEY FIX: Link the Interpretation Logic (Bug 12.5.1) ---
-            interpretation = self._add_interpretation(desc_stats, corr_matrix)
-            summary = f"Statistical analysis complete for {len(target_cols)} numeric columns. " + interpretation.replace("**", "").replace("\n", " ").strip()
-            
             return {
                 "status": "ok",
-                "summary": summary,
+                "summary": f"Statistical analysis complete for {len(target_cols)} numeric columns.",
                 "artifacts": artifacts,
                 "data": stats_results, # Keep for backward compatibility
                 "meta": {"tool_name": self.name, "parameters": kwargs}
@@ -100,40 +96,62 @@ class StatisticalAnalysisTool(BaseAnalysisTool):
             self.log_error(e)
             return {"status": "error", "summary": f"Error performing statistical analysis: {str(e)}"}
     
-    def _add_interpretation(self, desc_stats: pd.DataFrame, corr_matrix: pd.DataFrame = None) -> str:
-        """Add interpretation to statistical results."""
-        interpretation = "\n**Key Insights:**\n"
+    def interpret(self, results: Dict[str, Any]) -> Optional[str]:
+        """Provides a narrative interpretation of the statistical results."""
+        if results.get('status') != 'ok':
+            return None
         
-        # Analyze descriptive statistics
-        for col in desc_stats.columns:
-            mean_val = desc_stats.loc['mean', col]
-            std_val = desc_stats.loc['std', col]
-            min_val = desc_stats.loc['min', col]
-            max_val = desc_stats.loc['max', col]
+        try:
+            artifacts = results.get('artifacts', [])
+            if not artifacts:
+                return "No analysis was performed."
             
-            # Check for outliers (values beyond 2 standard deviations)
-            outlier_threshold = 2 * std_val
-            if abs(max_val - mean_val) > outlier_threshold or abs(mean_val - min_val) > outlier_threshold:
-                interpretation += f"- {col}: Potential outliers detected (high variability)\n"
-            else:
-                interpretation += f"- {col}: Relatively normal distribution\n"
-        
-        # Analyze correlations
-        if corr_matrix is not None:
-            interpretation += "\n**Correlation Insights:**\n"
-            high_corr_pairs = []
-            for i, col1 in enumerate(corr_matrix.columns):
-                for j, col2 in enumerate(corr_matrix.columns):
-                    if i < j:  # Avoid duplicates
-                        corr_val = corr_matrix.loc[col1, col2]
-                        if abs(corr_val) > 0.7:
-                            high_corr_pairs.append((col1, col2, corr_val))
+            interpretation = "**Key Insights:**\n"
             
-            if high_corr_pairs:
-                interpretation += "Strong correlations found:\n"
-                for col1, col2, corr_val in high_corr_pairs[:3]:  # Show top 3
-                    interpretation += f"- {col1} ↔ {col2}: {corr_val:.3f}\n"
-            else:
-                interpretation += "- No strong correlations found between variables\n"
-        
-        return interpretation
+            # Find descriptive stats table
+            desc_table = next((a for a in artifacts if a.get('title') == 'Descriptive Statistics Overview'), None)
+            if desc_table:
+                # Map headers to column data
+                cols = desc_table['headers'][1:]
+                desc_data = {row[0]: row[1:] for row in desc_table['data']}
+                
+                for i, col in enumerate(cols):
+                    mean_val = float(desc_data.get('mean', [0]*len(cols))[i])
+                    std_val = float(desc_data.get('std', [0]*len(cols))[i])
+                    min_val = float(desc_data.get('min', [0]*len(cols))[i])
+                    max_val = float(desc_data.get('max', [0]*len(cols))[i])
+                    
+                    # Check for outliers (values beyond 2 standard deviations)
+                    threshold = 2 * std_val
+                    if abs(max_val - mean_val) > threshold or abs(mean_val - min_val) > threshold:
+                        interpretation += f"- **{col}**: Potential outliers detected (high variability)\n"
+                    else:
+                        interpretation += f"- **{col}**: Relatively stable distribution\n"
+            
+            # Find correlation table
+            corr_table = next((a for a in artifacts if a.get('title') == 'Correlation Matrix (Pearson)'), None)
+            if corr_table:
+                interpretation += "\n**Correlation Insights:**\n"
+                vars = corr_table['headers'][1:]
+                high_corr = []
+                
+                for i, row in enumerate(corr_table['data']):
+                    var1 = row[0]
+                    for j, val in enumerate(row[1:]):
+                        var2 = vars[j]
+                        if i < j: # Avoid duplicates and identity
+                            try:
+                                corr_val = float(val)
+                                if abs(corr_val) > 0.7:
+                                    high_corr.append(f"{var1} ↔ {var2} ({corr_val:.3f})")
+                            except ValueError:
+                                continue
+                
+                if high_corr:
+                    interpretation += "Strong correlations found: " + ", ".join(high_corr[:3]) + "\n"
+                else:
+                    interpretation += "- No strong correlations found between variables\n"
+            
+            return interpretation
+        except Exception as e:
+            return f"Could not interpret the statistical results: {e}"

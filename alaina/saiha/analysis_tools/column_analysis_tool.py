@@ -35,7 +35,7 @@ class ColumnAnalysisTool(BaseAnalysisTool):
             parameter_type=ParameterType.MULTISELECT,
             label="Select Columns to Analyze",
             description="Choose one or more columns to get a detailed analysis.",
-            required=True,
+            required=False,
             column_source="all"
         ))
         params.add_parameter(ToolParameter(
@@ -58,9 +58,16 @@ class ColumnAnalysisTool(BaseAnalysisTool):
             gen_plots = str(parameters.get("generate_plots", "true")).lower() in ('true', 'on', '1')
 
             if not columns_to_analyze:
-                return {"status": "error", "summary": "Please select at least one column to analyze."}
+                # Auto-select columns if none provided (Zero-Click optimization)
+                numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+                categorical_cols = df.select_dtypes(include=['object', 'category', 'bool']).columns.tolist()
+                
+                # Limit to top N for sanity
+                columns_to_analyze = numeric_cols[:10] + categorical_cols[:5]
+                
+            if not columns_to_analyze:
+                return {"status": "error", "summary": "No suitable columns found for analysis. Please select columns manually."}
 
-            # Ensure we have a list, even if a single column is passed
             if isinstance(columns_to_analyze, str):
                 columns_to_analyze = [columns_to_analyze]
 
@@ -117,30 +124,34 @@ class ColumnAnalysisTool(BaseAnalysisTool):
                                     plt.close(fig_hist)
 
                                     # Box Plot (With Mandatory Stats for ECharts)
-                                    fig_box, ax_box = plt.subplots(figsize=(10, 4))
-                                    sns.boxplot(x=col_data, ax=ax_box)
-                                    ax_box.set_title(f"Box Plot of '{col}'")
-                                    
-                                    # Calculate 5-number summary for ECharts
-                                    stats = [
-                                        float(col_data.min()),
-                                        float(col_data.quantile(0.25)),
-                                        float(col_data.median()),
-                                        float(col_data.quantile(0.75)),
-                                        float(col_data.max())
-                                    ]
-                                    chart_data = {
-                                        "type": "boxplot",
-                                        "title": f"Box Plot of {col}",
-                                        "categories": [col],
-                                        "values": [stats],
-                                        "metadata": {"xAxisLabel": col}
-                                    }
-                                    
-                                    artifacts.append(PlotUtils.to_artifact(fig_box, f"box_{col}", f"Box Plot for '{col}'", data_override=chart_data))
-                                    plt.close(fig_box)
+                                    # Defensive Check: Skip boxplot if data is essentially constant or too small
+                                    if col_data.nunique() < 2:
+                                        artifacts.append({"type": "text", "title": f"Box Plot for '{col}'", "content": "Skipped: Not enough variance for a box plot."})
+                                    else:
+                                        fig_box, ax_box = plt.subplots(figsize=(10, 4))
+                                        sns.boxplot(x=col_data, ax=ax_box)
+                                        ax_box.set_title(f"Box Plot of '{col}'")
+                                        
+                                        # Calculate 5-number summary for ECharts
+                                        stats = [
+                                            float(col_data.min()),
+                                            float(col_data.quantile(0.25)),
+                                            float(col_data.median()),
+                                            float(col_data.quantile(0.75)),
+                                            float(col_data.max())
+                                        ]
+                                        chart_data = {
+                                            "type": "boxplot",
+                                            "title": f"Box Plot of {col}",
+                                            "categories": [col],
+                                            "values": [stats],
+                                            "metadata": {"xAxisLabel": col}
+                                        }
+                                        
+                                        artifacts.append(PlotUtils.to_artifact(fig_box, f"box_{col}", f"Box Plot for '{col}'", data_override=chart_data))
+                                        plt.close(fig_box)
                             except Exception as pe:
-                                logger.error(f"Plot generation failed for '{col}': {pe}")
+                                self.log_error(pe)
 
                     elif pd.api.types.is_categorical_dtype(col_data) or pd.api.types.is_object_dtype(col_data) or pd.api.types.is_bool_dtype(col_data):
                         freq_table = col_data.value_counts(normalize=True).mul(100).round(2)
@@ -179,7 +190,7 @@ class ColumnAnalysisTool(BaseAnalysisTool):
                                     })
                                     plt.close(fig)
                             except Exception as pe:
-                                logger.error(f"Bar plot failed for '{col}': {pe}")
+                                self.log_error(pe)
                     
                     elif pd.api.types.is_datetime64_any_dtype(col_data):
                         date_stats = {
@@ -207,7 +218,7 @@ class ColumnAnalysisTool(BaseAnalysisTool):
                                     })
                                     plt.close(fig)
                             except Exception as pe:
-                                logger.error(f"Timeline failed for '{col}': {pe}")
+                                self.log_error(pe)
             
             summary = f"Completed analysis for {len(columns_to_analyze)} column(s)."
 
@@ -223,49 +234,36 @@ class ColumnAnalysisTool(BaseAnalysisTool):
             return {"status": "error", "summary": f"An unexpected error occurred: {str(e)}"}
 
     def interpret(self, results: Dict[str, Any]) -> Optional[str]:
-        """
-        Provides a simple, rule-based interpretation of the column analysis results.
-        """
+        """Provides a simple narrative interpretation of the artifacts."""
         if results.get('status') != 'ok':
             return None
 
         try:
-            sections = results.get('sections', [])
-            if not sections:
-                return "No analysis was performed."
+            artifacts = results.get('artifacts', [])
+            if not artifacts:
+                return "No analysis artifacts were generated."
 
-            # Group stats by column name
-            column_stats = {}
-            for section in sections:
-                title = section.get('title', '')
-                match = re.search(r"for '(.+)'", title)
-                if not match:
-                    continue
-                
-                col_name = match.group(1)
-                if col_name not in column_stats:
-                    column_stats[col_name] = {}
+            summaries = []
+            for art in artifacts:
+                if art.get('type') == 'table' and "Basic Statistics" in art.get('title', ''):
+                    # Extract from Basic Stats table
+                    col_name = art['title'].replace("Basic Statistics for '", "").replace("'", "")
+                    stats = {row[0]: row[1] for row in art.get('data', [])}
+                    
+                    dtype = stats.get('Data Type', 'unknown')
+                    unique = stats.get('Unique Values', 'N/A')
+                    missing_pct = stats.get('Missing Percentage', '0%')
+                    
+                    summary = f"**{col_name}** ({dtype}) has {unique} unique values"
+                    if missing_pct != "0.00%":
+                        summary += f" and {missing_pct} missing data."
+                    else:
+                        summary += " and no missing data."
+                    summaries.append(summary)
 
-                for row in section.get('data', []):
-                    stat_name, stat_value = row[0], row[1]
-                    column_stats[col_name][stat_name] = stat_value
+            if not summaries:
+                return "Analyzed columns, but no high-level summary could be extracted."
 
-            # Build interpretation for each column
-            findings = []
-            for col_name, stats in column_stats.items():
-                dtype = stats.get('Data Type', 'unknown')
-                missing_pct = float(str(stats.get('Missing Percentage', '0%')).replace('%', ''))
-                
-                summary_part = f"'{col_name}' ({dtype}) has {stats.get('Unique Values', 'N/A')} unique values"
-                if missing_pct > 0:
-                    summary_part += f" and {missing_pct:.2f}% missing data."
-                else:
-                    summary_part += " and no missing data."
-                findings.append(summary_part)
-
-            if not findings:
-                return "Could not extract key metrics from the analysis results."
-
-            return " ".join(findings)
+            return "\n\n".join(summaries)
         except Exception as e:
-            return f"Could not automatically interpret the column analysis results due to an error: {e}"
+            return f"Could not interpret the analysis results: {e}"

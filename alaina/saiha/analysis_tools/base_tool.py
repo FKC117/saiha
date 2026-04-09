@@ -143,7 +143,7 @@ class BaseAnalysisTool(abc.ABC):
             if art.get('type') == 'table' and 'data' in art:
                 art['data'] = [list(row) if isinstance(row, (list, tuple)) else [row] for row in art['data']]
                 
-            final_artifacts.append(art)
+            final_artifacts.append(self.sanitize_json_data(art))
 
         # 3. Handle Data Tables (Scan for nested legacy structures)
         if isinstance(data, dict) and not final_artifacts:
@@ -173,12 +173,48 @@ class BaseAnalysisTool(abc.ABC):
 
         return ToolResult(
             status=status,
-            data=data,
+            data=self.sanitize_json_data(data),
             artifacts=final_artifacts,
             message=result.get('summary', result.get('message')),
             error=error_msg,
             success=result.get('success')
         )
+
+    def sanitize_json_data(self, obj: Any) -> Any:
+        # Avoid recursion on strings/bytes
+        if isinstance(obj, (str, bytes)):
+            return obj
+            
+        import math
+        import numpy as np
+        
+        # 1. Handle NaN / Inf (The Postgres Killers)
+        try:
+            if isinstance(obj, float):
+                if math.isnan(obj) or math.isinf(obj):
+                    return None
+                return obj
+            
+            # 2. Handle Numpy Types
+            if isinstance(obj, np.generic):
+                if hasattr(obj, 'item'):
+                    val = obj.item()
+                    if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
+                        return None
+                    return val
+                return None
+            
+            # 3. Handle Sequences
+            if isinstance(obj, (list, tuple, set)):
+                return [self.sanitize_json_data(i) for i in obj]
+                
+            # 4. Handle Dictionaries
+            if isinstance(obj, dict):
+                return {str(k): self.sanitize_json_data(v) for k, v in obj.items()}
+                
+            return obj
+        except Exception:
+            return None # Fail safe
 
     def load_dataset(self, columns=None) -> pd.DataFrame:
         """

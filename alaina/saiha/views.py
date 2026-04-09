@@ -9,7 +9,7 @@ from django.core.files.storage import default_storage
 from django.conf import settings
 
 from .models import Dataset, DatasetColumn, AnalysisSession, ChatMessage, AnalysisResult
-from .database_processing_logic.dataset_processor import DatasetProcessor
+from .database_processing_logic.dataset_processor import DatasetProcessor, EmptyColumnsDetected
 from .database_processing_logic.storage_manager_parquet import DatasetStorageManager
 from .session_management.session_manager import SessionManager
 from .agents.analysis_agent import get_analysis_agent
@@ -71,8 +71,9 @@ def upload_dataset(request):
         storage_manager = DatasetStorageManager()
         
         try:
+            drop_empty = request.POST.get('drop_empty') == 'true'
             # 1. Process and Clean File
-            df, metadata = processor.process_file(uploaded_file)
+            df, metadata = processor.process_file(uploaded_file, drop_empty=drop_empty)
             
             # 2. Create Dataset record placeholder to get UUID
             dataset = Dataset.objects.create(
@@ -123,6 +124,12 @@ def upload_dataset(request):
                 'cols': dataset.columns_count
             })
             
+        except EmptyColumnsDetected as e:
+            return JsonResponse({
+                'status': 'warning', 
+                'message': str(e),
+                'empty_columns': e.columns
+            }, status=400)
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
             

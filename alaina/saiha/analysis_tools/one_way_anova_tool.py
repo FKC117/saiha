@@ -8,6 +8,7 @@ import seaborn as sns
 import matplotlib
 import base64
 import io
+import numpy as np
 from django.core.files.storage import default_storage
 from typing import Dict, Any, List
 
@@ -108,16 +109,24 @@ class OneWayAnovaTool(BaseAnalysisTool):
             df.rename(columns={dependent_var: clean_dependent, group_var: clean_group}, inplace=True)
 
             # Validate Data Requirements
-            if df[group_var].nunique() < 2:
+            unique_groups = df[clean_group].nunique()
+            if unique_groups < 2:
                 return {
                     "status": "error",
-                    "summary": f"The grouping variable '{group_var}' must have at least two unique groups (levels) to perform ANOVA. Found: {df[group_var].unique().tolist()}"
+                    "summary": f"The grouping variable '{group_var}' must have at least two unique groups. Found: {unique_groups}"
                 }
             
+            # HARDENING: Limit ANOVA based on complexity
+            if unique_groups > 500:
+                 return {
+                    "status": "error",
+                    "summary": f"The grouping variable '{group_var}' has {unique_groups} unique categories, which is too many for a meaningful One-Way ANOVA and would cause performance issues. Please select a variable with fewer groups."
+                }
+
             if df[dependent_var].nunique() <= 1:
                  return {
                     "status": "error",
-                    "summary": f"The dependent variable '{dependent_var}' must have some variance (more than 1 unique value). All values are identical."
+                    "summary": f"The dependent variable '{dependent_var}' must have some variance (more than 1 unique value)."
                 }
 
             # Perform ANOVA
@@ -127,16 +136,20 @@ class OneWayAnovaTool(BaseAnalysisTool):
                 
                 # Safely extract stats with fallbacks
                 if 'F' in anova_table and len(anova_table['F']) > 0:
-                     f_statistic = anova_table['F'][0]
+                     f_statistic = anova_table['F'].iloc[0]
                 else:
                      f_statistic = np.nan
                      
                 if 'PR(>F)' in anova_table and len(anova_table['PR(>F)']) > 0:
-                    p_value = anova_table['PR(>F)'][0]
+                    p_value = anova_table['PR(>F)'].iloc[0]
                 else:
                     p_value = np.nan
                     
-                is_significant = bool(p_value < alpha) if not pd.isna(p_value) else False
+                if not pd.isna(p_value):
+                    is_significant = bool(p_value < alpha)
+                else:
+                    is_significant = False
+                    p_value = None # JSON Safe
                 
             except Exception as stat_err:
                  return {
@@ -148,34 +161,37 @@ class OneWayAnovaTool(BaseAnalysisTool):
             artifacts: List[Dict[str, Any]] = []
 
             # Perform post-hoc test (Tukey's HSD) if significant
+            post_hoc_skipped = False
             if is_significant and perform_posthoc:
-                try:
-                    tukey = pairwise_tukeyhsd(endog=df[clean_dependent], groups=df[clean_group], alpha=alpha)
-                    post_hoc_df = pd.DataFrame(data=tukey._results_table.data[1:], columns=tukey._results_table.data[0])
-                    
+                if unique_groups > 50:
+                    post_hoc_skipped = True
                     sections.append({
-                        'type': 'table', 'title': "Tukey's HSD Post-Hoc Test",
-                        'headers': post_hoc_df.columns.tolist(),
-                        'data': post_hoc_df.to_numpy().tolist(),
-                        "footer": "Shows pairwise comparisons between groups."
+                        "type": "text", "title": "Post-Hoc Test Skipped", 
+                        "content": f"Pairwise comparisons (Tukey's HSD) were skipped because the '{group_var}' variable has too many unique groups ({unique_groups}). Analysis is only reliable for up to 50 groups."
                     })
+                else:
+                    try:
+                        tukey = pairwise_tukeyhsd(endog=df[clean_dependent], groups=df[clean_group], alpha=alpha)
+                        post_hoc_df = pd.DataFrame(data=tukey._results_table.data[1:], columns=tukey._results_table.data[0])
+                        # Sanitize post-hoc table for JSON
+                        post_hoc_df = post_hoc_df.replace([np.nan, np.inf, -np.inf], None)
+                        
+                        sections.append({
+                            'type': 'table', 'title': "Tukey's HSD Post-Hoc Test",
+                            'headers': post_hoc_df.columns.tolist(),
+                            'data': post_hoc_df.values.tolist(),
+                            "footer": "Shows pairwise comparisons between groups."
+                        })
 
-                    # Generate heatmap visualization from the tukey results
-                    heatmap_df = post_hoc_df.pivot(index='group1', columns='group2', values='p-adj')
-                    fig_heatmap, ax_heatmap = plt.subplots(figsize=(max(8, len(heatmap_df.columns)), max(6, len(heatmap_df.index))))
-                    sns.heatmap(heatmap_df, annot=True, cmap='coolwarm_r', fmt=".4f", ax=ax_heatmap, cbar_kws={'label': 'Adjusted P-value'})
-                    ax_heatmap.set_title("Post-Hoc P-Value Heatmap (Tukey's HSD)")
-                    plt.tight_layout()
-                    plot_res = PlotUtils.fig_to_base64(fig_heatmap)
-                    artifacts.append({
-                        "type": plot_res['fallback_type'], 
-                        "id": "anova_posthoc_heatmap", 
-                        "title": "Post-Hoc Heatmap",
-                        "content": plot_res['base64'],
-                        "metadata": plot_res['structured_data']
-                    })
-                except Exception as posthoc_ex:
-                    sections.append({"type": "text", "title": "Post-Hoc Test Failed", "content": str(posthoc_ex)})
+                        # Generate heatmap visualization from the tukey results
+                        heatmap_df = post_hoc_df.pivot(index='group1', columns='group2', values='p-adj')
+                        fig_heatmap, ax_heatmap = plt.subplots(figsize=(max(8, len(heatmap_df.columns)), max(6, len(heatmap_df.index))))
+                        sns.heatmap(heatmap_df, annot=True, cmap='coolwarm_r', fmt=".4f", ax=ax_heatmap, cbar_kws={'label': 'Adjusted P-value'})
+                        ax_heatmap.set_title("Post-Hoc P-Value Heatmap (Tukey's HSD)")
+                        plt.tight_layout()
+                        artifacts.append(PlotUtils.to_artifact(fig_heatmap, "anova_posthoc_heatmap", "Post-Hoc Heatmap"))
+                    except Exception as posthoc_ex:
+                        sections.append({"type": "text", "title": "Post-Hoc Test Failed", "content": str(posthoc_ex)})
 
             # Generate Visualizations
             with PlotUtils.setup_plotting():
@@ -186,15 +202,7 @@ class OneWayAnovaTool(BaseAnalysisTool):
                 ax.set_xlabel(group_var)
                 ax.set_ylabel(dependent_var)
                 plt.xticks(rotation=45, ha='right')
-                
-                plot_res = PlotUtils.fig_to_base64(fig)
-                artifacts.append({
-                    "type": plot_res['fallback_type'], 
-                    "id": "anova_boxplot", 
-                    "title": "Box Plot",
-                    "content": plot_res['base64'],
-                    "metadata": plot_res['structured_data']
-                })
+                artifacts.append(PlotUtils.to_artifact(fig, "anova_boxplot", "Box Plot"))
 
                 # Violin Plot
                 fig, ax = plt.subplots(figsize=(10, 6))
@@ -203,15 +211,7 @@ class OneWayAnovaTool(BaseAnalysisTool):
                 ax.set_xlabel(group_var)
                 ax.set_ylabel(dependent_var)
                 plt.xticks(rotation=45, ha='right')
-                
-                plot_res = PlotUtils.fig_to_base64(fig)
-                artifacts.append({
-                    "type": plot_res['fallback_type'], 
-                    "id": "anova_violinplot", 
-                    "title": "Violin Plot",
-                    "content": plot_res['base64'],
-                    "metadata": plot_res['structured_data']
-                })
+                artifacts.append(PlotUtils.to_artifact(fig, "anova_violinplot", "Violin Plot"))
 
                 # Means Plot
                 fig, ax = plt.subplots(figsize=(10, 6))
@@ -220,28 +220,26 @@ class OneWayAnovaTool(BaseAnalysisTool):
                 ax.set_xlabel(group_var)
                 ax.set_ylabel(f'Mean of {dependent_var}')
                 plt.xticks(rotation=45, ha='right')
-                
-                plot_res = PlotUtils.fig_to_base64(fig)
-                artifacts.append({
-                    "type": plot_res['fallback_type'], 
-                    "id": "anova_meansplot", 
-                    "title": "Means Plot",
-                    "content": plot_res['base64'],
-                    "metadata": plot_res['structured_data']
-                })
+                artifacts.append(PlotUtils.to_artifact(fig, "anova_meansplot", "Means Plot"))
 
             # Add main ANOVA table to sections
             anova_table_df = anova_table.reset_index().rename(columns={'index': 'Source'})
+            # Sanitize for JSON
+            anova_table_df = anova_table_df.round(4).replace([np.nan, np.inf, -np.inf], None)
+            
             sections.insert(0, {
                 'type': 'table', 'title': 'One-Way ANOVA Results',
                 'headers': anova_table_df.columns.tolist(),
-                'data': anova_table_df.round(4).to_numpy().tolist()
+                'data': anova_table_df.values.tolist()
             })
 
+            # Clean p_value display string
+            p_display = f"{p_value:.4f}" if p_value is not None else "N/A"
+            
             # Construct Result Envelope
             return {
                 "status": "ok",
-                "summary": f"One-Way ANOVA for '{dependent_var}' by '{group_var}' completed. The result is {'significant' if is_significant else 'not significant'} (p={p_value:.4f}).",
+                "summary": f"One-Way ANOVA for '{dependent_var}' by '{group_var}' completed. The result is {'significant' if is_significant else 'not significant'} (p={p_display}).",
                 "sections": sections,
                 "artifacts": artifacts,
                 "meta": {"tool_name": self.name, "parameters": parameters}
@@ -283,26 +281,28 @@ class OneWayAnovaTool(BaseAnalysisTool):
                 return "Could not automatically determine the p-value for interpretation."
 
             if p_value < alpha:
-                post_hoc_ran = any("Post-Hoc Test" in s.get('title', '') for s in results.get('sections', []))
+                post_hoc_ran = any("Tukey's HSD Post-Hoc Test" in s.get('title', '') for s in results.get('sections', []))
+                post_hoc_skipped = any("Post-Hoc Test Skipped" in s.get('title', '') for s in results.get('sections', []))
                 post_hoc_advice = ""
 
-                tukey_results = next((s for s in results.get('sections', []) if "Tukey's HSD Post-Hoc Test (for all group combinations)" in s.get('title', '')), None)
-                significant_pairs = []
-                if tukey_results:
-                    # Look up reject results in Tukey's HSD table and construct the output string
-                    reject_col_index = tukey_results['headers'].index('reject')
-                    group1_col_index = tukey_results['headers'].index('group1')
-                    group2_col_index = tukey_results['headers'].index('group2')
+                if post_hoc_skipped:
+                    post_hoc_advice = " Post-hoc tests were skipped because there are too many unique categories for pairwise analysis."
+                else:
+                    tukey_results = next((s for s in results.get('sections', []) if "Tukey's HSD Post-Hoc Test" in s.get('title', '')), None)
+                    significant_pairs = []
+                    if tukey_results:
+                        # Look up reject results in Tukey's HSD table and construct the output string
+                        reject_col_index = tukey_results['headers'].index('reject')
+                        # ... other indices ...
+                        for row in tukey_results.get('data', []):
+                            if row[reject_col_index] == True:  # If 'reject' is True
+                                significant_pairs.append(f"'{row[0]}' and '{row[1]}'")
 
-                    for row in tukey_results.get('data', []):
-                        if row[reject_col_index] == True:  # If 'reject' is True
-                            significant_pairs.append(f"'{row[0]}' and '{row[1]}'")
-
-                if significant_pairs and post_hoc_ran:
-                    pairings_string = ", ".join(significant_pairs)  # Joining those significant
-                    post_hoc_advice = f" The post-hoc test (Tukey's HSD) shows significant differences between the following group pairings: {pairings_string}."
-                elif post_hoc_ran:
-                     post_hoc_advice = " However, the post-hoc test did not identify any significant differences between specific group pairings at the selected alpha level."
+                    if significant_pairs and post_hoc_ran:
+                        pairings_string = ", ".join(significant_pairs)  # Joining those significant
+                        post_hoc_advice = f" The post-hoc test (Tukey's HSD) shows significant differences between the following group pairings: {pairings_string}."
+                    elif post_hoc_ran:
+                        post_hoc_advice = " However, the post-hoc test did not identify any significant differences between specific group pairings at the selected alpha level."
 
 
                 return f"Since the p-value ({p_value:.4f}) is less than the significance level (α = {alpha}), we reject the null hypothesis. This indicates there is a statistically significant difference in the mean of '{dependent_var}' across the different groups of '{group_var}'.{post_hoc_advice}"

@@ -66,7 +66,8 @@ class BoxPlotTool(BaseAnalysisTool):
                 if not cat_var:
                     # 1D Box Plot Stats for ECharts
                     series_data = df[col].dropna()
-                    if series_data.empty:
+                    if series_data.empty or series_data.nunique() < 2:
+                        artifacts.append({"type": "text", "title": f"Box Plot of {col}", "content": "Skipped: Not enough variance/unique values for a box plot."})
                         continue
                         
                     stats = [
@@ -86,7 +87,7 @@ class BoxPlotTool(BaseAnalysisTool):
                     
                     with PlotUtils.setup_plotting():
                         fig, ax = plt.subplots(figsize=(10, 6))
-                        sns.boxplot(y=df[col], ax=ax)
+                        sns.boxplot(y=series_data, ax=ax)
                         ax.set_title(f"Distribution of {col}")
                         plt.tight_layout()
                         artifacts.append(PlotUtils.to_artifact(fig, f"box_plot_1d_{col}", f"Box Plot of {col}", data_override=chart_data))
@@ -116,6 +117,10 @@ class BoxPlotTool(BaseAnalysisTool):
                         "values": values,
                         "metadata": {"yAxisLabel": col}
                     }
+
+                    if df[col].nunique() < 2:
+                        artifacts.append({"type": "text", "title": f"Box Plot of {col} by {cat_var}", "content": "Skipped: Not enough numeric variance for a box plot."})
+                        continue
 
                     with PlotUtils.setup_plotting():
                         fig, ax = plt.subplots(figsize=(12, 7))

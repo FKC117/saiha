@@ -35,8 +35,8 @@ class OutlierDetectionTool(BaseAnalysisTool):
                 parameter_type=ParameterType.MULTISELECT,
                 label="Select Numeric Columns",
                 description="Choose one or more numeric columns to check for outliers.",
-                required=True,
-                help_text="Select columns to analyze for outliers.",
+                required=False,
+                help_text="Select columns to analyze for outliers. If empty, all numeric columns will be checked.",
                 column_source="numeric",
             )
         )
@@ -118,18 +118,9 @@ class OutlierDetectionTool(BaseAnalysisTool):
             for col in columns:
                 # Coerce to numeric, drop NaNs; if nothing left, skip quietly (matches your previous behavior)
                 work_col = pd.to_numeric(df[col], errors="coerce").dropna()
-                if work_col.empty:
-                    # still render an empty-looking boxplot so UI doesn't look inconsistent
-                    with PlotUtils.setup_plotting():
-                        fig, ax = plt.subplots(figsize=(8, 5))
-                        ax.set_title(f"Box Plot for '{col}' (no numeric data)")
-                        ax.set_xlabel(col)
-                        artifacts.append({
-                            "type": "plot",
-                            "id": f"boxplot_{col}",
-                            "title": f"Box Plot for '{col}'",
-                            "content": PlotUtils.fig_to_base64(fig),
-                        })
+                if work_col.empty or work_col.nunique() < 2:
+                    # Not enough variance for outlier detection or boxplot
+                    artifacts.append({"type": "text", "title": f"Outlier Analysis for '{col}'", "content": "Skipped: Not enough unique numeric values for outlier detection."})
                     continue
 
                 if method == "iqr":
@@ -181,7 +172,7 @@ class OutlierDetectionTool(BaseAnalysisTool):
                     "metadata": {"yAxisLabel": col}
                 }
 
-                # Preserve seaborn boxplot look (unchanged artifact structure)
+                # Preserve seaborn boxplot look (Hardened)
                 with PlotUtils.setup_plotting():
                     fig, ax = plt.subplots(figsize=(8, 5))
                     sns.boxplot(x=work_col, ax=ax)
@@ -190,21 +181,23 @@ class OutlierDetectionTool(BaseAnalysisTool):
                     artifacts.append(PlotUtils.to_artifact(fig, f"boxplot_{col}", f"Box Plot for '{col}'", data_override=chart_data))
                     plt.close(fig)
 
+            # Standardize: Add the summary table as an artifact
+            if outlier_summary_records:
+                artifacts.insert(0, {
+                    "type": "table",
+                    "title": "Outlier Detection Summary",
+                    "headers": ["Column Name", "Number of Outliers", "Percentage of Outliers"],
+                    "data": [[r["Column Name"], r["Number of Outliers"], r["Percentage of Outliers"]] for r in outlier_summary_records]
+                })
+
             summary = (
                 f"Outlier detection complete. Found a total of {total_outliers_found} outliers "
                 f"across {len(columns)} selected column(s) using the '{method.upper()}' method."
             )
 
-            # >>> DO NOT CHANGE OUTPUT SHAPE (tables) <<<
             return {
                 "status": "ok",
                 "summary": summary,
-                "data": {
-                    "outlier_table": {
-                        "title": "Outlier Summary by Column",
-                        "records": outlier_summary_records
-                    }
-                },
                 "artifacts": artifacts,
                 "meta": {
                     "tool_name": self.name,
@@ -217,26 +210,28 @@ class OutlierDetectionTool(BaseAnalysisTool):
             return {"status": "error", "summary": f"An unexpected error occurred: {str(e)}"}
 
     def interpret(self, results: Dict[str, Any]) -> Optional[str]:
-        """
-        Provides a simple, rule-based interpretation of the outlier detection results.
-        """
+        """Provides a simple narrative interpretation of the outlier detection results."""
         if results.get('status') != 'ok':
             return None
 
         try:
-            outlier_records = results.get('data', {}).get('outlier_table', {}).get('records', [])
+            artifacts = results.get('artifacts', [])
             method = results.get('meta', {}).get('parameters', {}).get('method', 'iqr').upper()
-
-            if not outlier_records:
-                return f"No significant outliers were detected in the selected columns using the {method} method. The data appears to be clean in this regard."
-
-            outlier_columns = [rec.get('Column Name') for rec in outlier_records if rec.get('Column Name')]
             
-            if not outlier_columns:
-                return "Outlier analysis was performed, but column names could not be identified in the results."
+            # Find the summary table artifact
+            summary_table = next((a for a in artifacts if a.get('title') == "Outlier Detection Summary"), None)
+            
+            if not summary_table or not summary_table.get('data'):
+                return f"No significant outliers were detected using the {method} method. The data appears stable."
 
-            col_list_str = ", ".join(f"'{col}'" for col in outlier_columns)
-            return f"Using the {method} method, potential outliers were identified in the following column(s): {col_list_str}. It is recommended to review the box plots and consider whether these data points are errors or genuine extreme values."
+            outlier_details = []
+            for row in summary_table['data']:
+                col_name, count, pct = row[0], row[1], row[2]
+                outlier_details.append(f"'{col_name}' ({count} outliers, {pct})")
 
+            return (
+                f"Using the {method} method, potential outliers were identified in: {', '.join(outlier_details)}. "
+                "Consult the box plots to differentiate between data errors and meaningful extreme values."
+            )
         except Exception as e:
-            return f"Could not automatically interpret the outlier results due to an error: {e}"
+            return f"Could not interpret the outlier results: {e}"

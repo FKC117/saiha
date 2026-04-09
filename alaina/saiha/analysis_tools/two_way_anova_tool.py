@@ -140,11 +140,19 @@ class TwoWayAnovaTool(BaseAnalysisTool):
             sections: List[Dict[str, Any]] = []
             artifacts: List[Dict[str, Any]] = []
 
+            # Sanitize for JSON - Round values and replace NaN/Inf with None
+            anova_table_clean = anova_table.copy()
+            # Replace numpy nan/inf with None for JSON safety
+            anova_table_clean = anova_table_clean.replace([pd.NA, pd.NaT, float('inf'), float('-inf')], None)
+            # Find and fix actual NaN values in the dataframe before converting to list
+            import numpy as np
+            anova_table_clean = anova_table_clean.where(pd.notnull(anova_table_clean), None)
+            
             # Add main ANOVA table to sections
             sections.append({
                 'type': 'table', 'title': 'Two-Way ANOVA Results',
-                'headers': anova_table.columns.tolist(),
-                'data': anova_table.round(4).to_numpy().tolist()
+                'headers': anova_table_clean.columns.tolist(),
+                'data': anova_table_clean.round(4).values.tolist()
             })
 
             # Perform post-hoc test if any effect is significant
@@ -156,10 +164,14 @@ class TwoWayAnovaTool(BaseAnalysisTool):
                     tukey = pairwise_tukeyhsd(endog=df[clean_dep], groups=df['interaction_group'], alpha=alpha)
                     post_hoc_df = pd.DataFrame(data=tukey._results_table.data[1:], columns=tukey._results_table.data[0])
                     
+                    # Sanitize post-hoc table for JSON
+                    post_hoc_df = post_hoc_df.replace([pd.NA, pd.NaT, float('inf'), float('-inf')], None)
+                    post_hoc_df = post_hoc_df.where(pd.notnull(post_hoc_df), None)
+                    
                     sections.append({
                         'type': 'table', 'title': "Tukey's HSD Post-Hoc Test (for all group combinations)",
                         'headers': post_hoc_df.columns.tolist(),
-                        'data': post_hoc_df.to_numpy().tolist(),
+                        'data': post_hoc_df.values.tolist(),
                         "footer": "Shows pairwise comparisons between combined factor groups."
                     })
 

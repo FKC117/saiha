@@ -225,3 +225,146 @@ Traceback (most recent call last):
     result = asanyarray(arys[0])
              ^^^^^^^^^^^^^^^^^^^
 ValueError: setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (50,) + inhomogeneous part.
+ERROR 2026-04-07 19:22:44,657 base_tool 3452 13564 Error in tool Generate Session Summary: 'NoneType' object has no attribute 'get'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\base_tool.py", line 84, in validate_and_run
+    legacy_result = self.execute(query="", **validated_params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\analysis_tools\session_summary.py", line 44, in execute
+    elif result.result_data.get('canned_interpretation'):
+         ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'get'
+ERROR 2026-04-07 21:48:57,769 base_tool 24440 11652 Legacy error in one_way_anova: <class 'celery.concurrency.solo.TaskPool'> does not implement kill_job
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 201, in execute
+    sns.violinplot(x=clean_group, y=clean_dependent, data=df, ax=ax, inner="quartile")
+  File "F:\saiha\venv\Lib\site-packages\seaborn\categorical.py", line 1770, in violinplot
+    p.plot_violins(
+  File "F:\saiha\venv\Lib\site-packages\seaborn\categorical.py", line 933, in plot_violins
+    sub_data["weight"] = sub_data.get("weights", 1)
+    ~~~~~~~~^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\pandas\core\frame.py", line 4322, in __setitem__
+    self._set_item(key, value)
+  File "F:\saiha\venv\Lib\site-packages\pandas\core\frame.py", line 4535, in _set_item
+    value, refs = self._sanitize_column(value)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\pandas\core\frame.py", line 5282, in _sanitize_column
+    if is_dict_like(value):
+       ^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\pandas\core\dtypes\inference.py", line 273, in is_dict_like
+    def is_dict_like(obj) -> bool:
+    
+  File "F:\saiha\venv\Lib\site-packages\celery\apps\worker.py", line 306, in _handle_request
+    callback(worker)
+  File "F:\saiha\venv\Lib\site-packages\celery\apps\worker.py", line 359, in during_soft_shutdown
+    worker.consumer.cancel_active_requests()
+  File "F:\saiha\venv\Lib\site-packages\celery\worker\consumer\consumer.py", line 773, in cancel_active_requests
+    request.cancel(self.pool, emit_retry=emit_retry)
+  File "F:\saiha\venv\Lib\site-packages\celery\worker\request.py", line 431, in cancel
+    pool.terminate_job(self.worker_pid, signal)
+  File "F:\saiha\venv\Lib\site-packages\celery\concurrency\base.py", line 113, in terminate_job
+    raise NotImplementedError(
+NotImplementedError: <class 'celery.concurrency.solo.TaskPool'> does not implement kill_job
+ERROR 2026-04-07 21:53:44,416 base_tool 11104 22404 Legacy error in one_way_anova: <class 'celery.concurrency.solo.TaskPool'> does not implement kill_job
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 201, in execute
+    artifacts.append(PlotUtils.to_artifact(fig, "anova_meansplot", "Means Plot"))
+  File "F:\saiha\venv\Lib\site-packages\seaborn\categorical.py", line 1770, in violinplot
+    p.plot_violins(
+  File "F:\saiha\venv\Lib\site-packages\seaborn\categorical.py", line 934, in plot_violins
+    stat_data = kde._transform(sub_data, value_var, [])
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\seaborn\_stats\density.py", line 158, in _transform
+    empty = pd.DataFrame(columns=[*data.columns, "density"], dtype=float)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\pandas\core\frame.py", line 880, in __init__
+    mgr = dict_to_mgr(
+          ^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\pandas\core\internals\construction.py", line 453, in dict_to_mgr
+    if missing.any() and not is_integer_dtype(dtype):
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\pandas\core\dtypes\common.py", line 685, in is_integer_dtype
+    return _is_dtype_type(
+           ^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\pandas\core\dtypes\common.py", line 1463, in _is_dtype_type
+    return condition(arr_or_dtype.type)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\pandas\core\dtypes\common.py", line 133, in <lambda>
+    return lambda tipo: (
+    
+  File "F:\saiha\venv\Lib\site-packages\celery\apps\worker.py", line 306, in _handle_request
+    callback(worker)
+  File "F:\saiha\venv\Lib\site-packages\celery\apps\worker.py", line 359, in during_soft_shutdown
+    worker.consumer.cancel_active_requests()
+  File "F:\saiha\venv\Lib\site-packages\celery\worker\consumer\consumer.py", line 773, in cancel_active_requests
+    request.cancel(self.pool, emit_retry=emit_retry)
+  File "F:\saiha\venv\Lib\site-packages\celery\worker\request.py", line 431, in cancel
+    pool.terminate_job(self.worker_pid, signal)
+  File "F:\saiha\venv\Lib\site-packages\celery\concurrency\base.py", line 113, in terminate_job
+    raise NotImplementedError(
+NotImplementedError: <class 'celery.concurrency.solo.TaskPool'> does not implement kill_job
+ERROR 2026-04-07 22:04:31,992 base_tool 11900 7396 Legacy error in one_way_anova: <class 'celery.concurrency.solo.TaskPool'> does not implement kill_job
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\one_way_anova_tool.py", line 178, in execute
+    })
+  File "F:\saiha\venv\Lib\site-packages\seaborn\categorical.py", line 1634, in boxplot
+    p.plot_boxes(
+  File "F:\saiha\venv\Lib\site-packages\seaborn\categorical.py", line 700, in plot_boxes
+    artists = ax.bxp(**boxplot_kws)
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\_api\deprecation.py", line 453, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\axes\_axes.py", line 4558, in bxp
+    caps.append(do_plot(cap_x, cap_hi, **cap_kw))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\axes\_axes.py", line 4468, in do_plot
+    return self.plot(*[xs, ys][maybe_swap], **kwargs)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\axes\_axes.py", line 1779, in plot
+    self.add_line(line)
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\axes\_base.py", line 2415, in add_line
+    line.set_clip_path(self.patch)
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\artist.py", line 814, in set_clip_path
+    self.clipbox = TransformedBbox(Bbox.unit(),
+                                   ^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\transforms.py", line 789, in unit
+    return Bbox([[0, 0], [1, 1]])
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\transforms.py", line 768, in __init__
+    self._points_orig = self._points.copy()
+                        ^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\celery\apps\worker.py", line 306, in _handle_request
+    callback(worker)
+  File "F:\saiha\venv\Lib\site-packages\celery\apps\worker.py", line 359, in during_soft_shutdown
+    worker.consumer.cancel_active_requests()
+  File "F:\saiha\venv\Lib\site-packages\celery\worker\consumer\consumer.py", line 773, in cancel_active_requests
+    request.cancel(self.pool, emit_retry=emit_retry)
+  File "F:\saiha\venv\Lib\site-packages\celery\worker\request.py", line 431, in cancel
+    pool.terminate_job(self.worker_pid, signal)
+  File "F:\saiha\venv\Lib\site-packages\celery\concurrency\base.py", line 113, in terminate_job
+    raise NotImplementedError(
+NotImplementedError: <class 'celery.concurrency.solo.TaskPool'> does not implement kill_job
+ERROR 2026-04-08 18:48:38,057 base_tool 19128 8964 Legacy error in column_analysis: name 'logger' is not defined
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\column_analysis_tool.py", line 121, in execute
+    sns.boxplot(x=col_data, ax=ax_box)
+  File "F:\saiha\venv\Lib\site-packages\seaborn\categorical.py", line 1634, in boxplot
+    p.plot_boxes(
+  File "F:\saiha\venv\Lib\site-packages\seaborn\categorical.py", line 700, in plot_boxes
+    artists = ax.bxp(**boxplot_kws)
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\_api\deprecation.py", line 453, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\matplotlib\axes\_axes.py", line 4485, in bxp
+    raise ValueError(datashape_message.format("positions"))
+ValueError: List of boxplot statistics and `positions` values must have same the length
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\column_analysis_tool.py", line 143, in execute
+    logger.error(f"Plot generation failed for '{col}': {pe}")
+    ^^^^^^
+NameError: name 'logger' is not defined

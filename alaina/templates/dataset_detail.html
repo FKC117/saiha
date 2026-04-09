@@ -129,6 +129,52 @@
     .table-wrapper::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 4px; }
     .table-wrapper::-webkit-scrollbar-thumb { background: var(--zinc-700); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
     .table-wrapper::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
+
+    /* Mobile Responsive Overrides */
+    @media (max-width: 768px) {
+      .container {
+        padding: 24px 16px;
+      }
+
+      .header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+      }
+
+      .header-info h1 {
+        font-size: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+
+      .tabs {
+        gap: 16px;
+        overflow-x: auto;
+        padding-bottom: 4px;
+      }
+
+      .tab {
+        white-space: nowrap;
+        font-size: 13px;
+      }
+
+      th, td {
+        padding: 10px 12px;
+      }
+    }
   </style>
 </head>
 

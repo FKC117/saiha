@@ -32,6 +32,11 @@
   --header-height: 56px;
   --sidebar-width: 280px;
   --sidebar-collapsed-width: 64px;
+
+  /* Responsive Breakpoints */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
 }
 
 * {

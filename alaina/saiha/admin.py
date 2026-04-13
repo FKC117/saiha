@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import (
+from saiha.models import (
     Dataset, DatasetColumn, ToolCategory, Tool, 
     AnalysisSession, ChatMessage, SiteSettings, 
     AnalysisResult, AIAuditLog

@@ -8,14 +8,14 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.conf import settings
 
-from .models import Dataset, DatasetColumn, AnalysisSession, ChatMessage, AnalysisResult
-from .database_processing_logic.dataset_processor import DatasetProcessor, EmptyColumnsDetected
-from .database_processing_logic.storage_manager_parquet import DatasetStorageManager
-from .session_management.session_manager import SessionManager
-from .agents.analysis_agent import get_analysis_agent
-from .reporting.report_builder import ReportBuilder
-from .reporting.pptx_exporter import PPTXExporter
-from .reporting.docx_exporter import DOCXExporter
+from saiha.models import Dataset, DatasetColumn, AnalysisSession, ChatMessage, AnalysisResult
+from saiha.database_processing_logic.dataset_processor import DatasetProcessor, EmptyColumnsDetected
+from saiha.database_processing_logic.storage_manager_parquet import DatasetStorageManager
+from saiha.session_management.session_manager import SessionManager
+from saiha.agents.analysis_agent import get_analysis_agent
+from saiha.reporting.report_builder import ReportBuilder
+from saiha.reporting.pptx_exporter import PPTXExporter
+from saiha.reporting.docx_exporter import DOCXExporter
 
 logger = logging.getLogger(__name__)
 
@@ -164,7 +164,7 @@ def api_chat_analysis(request):
                 'message': 'Analysis request received and dispatched.'
             })
         except Exception as e:
-            from .celery_tasks.analysis_tasks import send_ws_notification
+            from saiha.celery_tasks.analysis_tasks import send_ws_notification
             logging.getLogger(__name__).error(f"Chat API Error: {e}", exc_info=True)
             
             # BROADCAST ERROR TO UI TO STOP LOADER

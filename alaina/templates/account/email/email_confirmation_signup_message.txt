@@ -1,0 +1,10 @@
+Hi {{ user.first_name|default:user.username }},
+
+Welcome to ChatFlow! Please confirm your email address by clicking the link below:
+
+{{ activate_url }}
+
+If you didn't create an account, you can safely ignore this email.
+
+Thanks,
+The ChatFlow Team

@@ -113,7 +113,11 @@ SITE_ID = 1
 # Using modern settings (v0.61.0+)
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*"]
-ACCOUNT_EMAIL_VERIFICATION = "none" # Set to 'mandatory' for production
+ACCOUNT_FORMS = {'signup': 'saiha.forms.CustomSignupForm'}
+ACCOUNT_ADAPTER = 'saiha.adapter.CustomAccountAdapter'
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
 ACCOUNT_SESSION_REMEMBER = True
 
 LOGIN_REDIRECT_URL = "saiha:index"

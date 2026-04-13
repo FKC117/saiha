@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'DM Sans', sans-serif; background-color: #f4f4f5; padding: 40px; }
+        .card { background: white; border-radius: 12px; padding: 32px; max-width: 500px; margin: 0 auto; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .brand { color: #8B5CF6; font-size: 24px; font-weight: 700; margin-bottom: 24px; text-align: center; }
+        .code { font-size: 36px; font-weight: 700; color: #18181b; letter-spacing: 8px; text-align: center; margin: 32px 0; padding: 20px; background: #f3f0ff; border-radius: 8px; }
+        .footer { font-size: 14px; color: #71717a; text-align: center; margin-top: 32px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="brand">ChatFlow</div>
+        <p>Hi {{ user.first_name|default:user.username }},</p>
+        <p>Welcome to ChatFlow! Use the following code to verify your account:</p>
+        <div class="code">{{ otp_code }}</div>
+        <p>This code will expire in <strong>{{ expiration_minutes }} minutes</strong>. If you didn't request this, you can safely ignore this email.</p>
+        
+        <div style="margin-top: 24px; font-size: 13px; color: #71717a; border-top: 1px solid #e4e4e7; pt: 16px;">
+            <p>Or click this link to verify instantly: <br>
+            <a href="{{ confirm_url }}" style="color: #8B5CF6;">{{ confirm_url }}</a></p>
+        </div>
+        <div class="footer">
+            &copy; 2026 ChatFlow AI. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

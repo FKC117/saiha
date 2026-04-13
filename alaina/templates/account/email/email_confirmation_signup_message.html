@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body { font-family: 'DM Sans', sans-serif; background-color: #f4f4f5; padding: 40px; }
+        .card { background: white; border-radius: 12px; padding: 32px; max-width: 500px; margin: 0 auto; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1); }
+        .brand { color: #8B5CF6; font-size: 24px; font-weight: 700; margin-bottom: 24px; text-align: center; }
+        .btn { display: inline-block; background: #8B5CF6; color: white !important; border-radius: 8px; padding: 14px 24px; font-size: 16px; font-weight: 600; text-decoration: none; margin: 24px 0; }
+        .footer { font-size: 14px; color: #71717a; text-align: center; margin-top: 32px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="brand">ChatFlow</div>
+        <p>Hi {{ user.first_name|default:user.username }},</p>
+        <p>Welcome to ChatFlow! Please click the button below to confirm your email address and activate your account:</p>
+        
+        <div style="text-align: center;">
+            <a href="{{ activate_url }}" class="btn">Confirm Email Address</a>
+        </div>
+        
+        <p>If the button doesn't work, you can copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #71717a; font-size: 13px;">{{ activate_url }}</p>
+        
+        <p>This link will expire in 1 day. If you didn't create an account, you can safely ignore this email.</p>
+        
+        <div class="footer">
+            &copy; 2026 ChatFlow AI. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

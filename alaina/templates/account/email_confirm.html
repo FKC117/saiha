@@ -1,0 +1,94 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Confirmed | ChatFlow</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: #111113;
+            color: #e4e4e7;
+            font-family: 'DM Sans', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .auth-card {
+            background: rgba(24, 24, 27, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(82, 82, 91, 0.4);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            text-align: center;
+        }
+        .icon-container {
+            width: 64px;
+            height: 64px;
+            background: rgba(16, 185, 129, 0.1);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            color: #10B981;
+        }
+        h2 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        p.subtitle {
+            color: #a1a1aa;
+            font-size: 15px;
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+        .btn-primary {
+            display: block;
+            width: 100%;
+            background: #8B5CF6;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+        .btn-primary:hover {
+            background: #7C3AED;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <div class="icon-container">
+            <i data-lucide="party-popper" size="32"></i>
+        </div>
+
+        <h2>Email successfully verified</h2>
+        <p class="subtitle">Thank you for confirming your email address. Your account is now fully active and ready to use.</p>
+
+        <a href="{% url 'saiha:index' %}" class="btn-primary">Go to Dashboard</a>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

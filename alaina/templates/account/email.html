@@ -1,0 +1,177 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Emails | ChatFlow</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: #111113;
+            color: #e4e4e7;
+            font-family: 'DM Sans', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .auth-card {
+            background: rgba(24, 24, 27, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(82, 82, 91, 0.4);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .email-list {
+            margin-bottom: 32px;
+        }
+        .email-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(39, 39, 42, 0.5);
+            border: 1px solid rgba(82, 82, 91, 0.5);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        .email-info {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .email-address {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .badge {
+            font-size: 10px;
+            text-transform: uppercase;
+            padding: 2px 8px;
+            border-radius: 100px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        .badge-verified { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+        .badge-primary { background: rgba(139, 92, 246, 0.1); color: #8B5CF6; }
+        
+        .radio-custom {
+            accent-color: #8B5CF6;
+            cursor: pointer;
+        }
+        
+        .btn-action {
+            width: 100%;
+            background: rgba(39, 39, 42, 0.5);
+            color: white;
+            border: 1px solid rgba(82, 82, 91, 0.5);
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+        .btn-action:hover {
+            background: rgba(39, 39, 42, 0.8);
+        }
+        
+        .btn-primary {
+            width: 100%;
+            background: #8B5CF6;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 24px;
+        }
+        .form-group {
+            margin-top: 32px;
+            border-top: 1px solid rgba(82, 82, 91, 0.3);
+            padding-top: 24px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #d4d4d8;
+        }
+        .form-group input {
+            width: 100%;
+            background: rgba(39, 39, 42, 0.5);
+            border: 1px solid rgba(82, 82, 91, 0.5);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: white;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-card">
+        <h2>Manage Emails</h2>
+
+        <form method="POST" action="{% url 'account_email' %}">
+            {% csrf_token %}
+            <div class="email-list">
+                {% for emailaddress in user.emailaddress_set.all %}
+                <div class="email-item">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <input type="radio" name="email" value="{{ emailaddress.email }}" {% if emailaddress.primary or user.emailaddress_set.count == 1 %}checked{% endif %} class="radio-custom">
+                        <div class="email-info">
+                            <span class="email-address">{{ emailaddress.email }}</span>
+                            <div style="display: flex; gap: 8px;">
+                                {% if emailaddress.verified %}
+                                <span class="badge badge-verified">Verified</span>
+                                {% else %}
+                                <span class="badge" style="background: rgba(239, 68, 68, 0.1); color: #ef4444;">Unverified</span>
+                                {% endif %}
+                                {% if emailaddress.primary %}
+                                <span class="badge badge-primary">Primary</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <button type="submit" name="action_primary" class="btn-action">Make Primary</button>
+            <button type="submit" name="action_send" class="btn-action">Re-send Verification</button>
+            <button type="submit" name="action_remove" class="btn-action" style="color: #ef4444;">Remove</button>
+        </form>
+
+        <form method="POST" action="{% url 'account_email' %}" class="form-group">
+            {% csrf_token %}
+            <label for="email">Add Email Address</label>
+            <input type="email" name="email" placeholder="new.email@example.com" required>
+            <button type="submit" name="action_add" class="btn-primary">Add Email</button>
+        </form>
+    </div>
+    
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

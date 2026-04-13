@@ -271,3 +271,4 @@ class AIAuditLog(models.Model):
     
     def __str__(self):
         return f"AI Audit - {self.model_id} - {self.timestamp}"
+

@@ -1194,7 +1194,7 @@
               <h4 id="usage-plan-name" style="font-size: 18px; color: white;">Free Plan</h4>
             </div>
             <div style="text-align: right;">
-              <p style="font-size: 12px; color: var(--zinc-400);"><span id="usage-tokens-used">0</span> / <span id="usage-tokens-max">0</span> tokens</p>
+              <p style="font-size: 12px; color: var(--zinc-400);"><span id="usage-credits-used">0</span> / <span id="usage-credits-max">0</span> Credits</p>
             </div>
           </div>
           <div style="height: 10px; background: var(--zinc-800); border-radius: 10px; overflow: hidden;">
@@ -1708,11 +1708,11 @@
             if (data.status === 'success') {
                 // Update KPI Cards
                 document.getElementById('usage-plan-name').innerText = data.quota.plan + " Plan";
-                document.getElementById('usage-tokens-used').innerText = data.quota.used.toLocaleString();
-                document.getElementById('usage-tokens-max').innerText = data.quota.max.toLocaleString();
+                document.getElementById('usage-credits-used').innerText = data.quota.used.toFixed(2);
+                document.getElementById('usage-credits-max').innerText = data.quota.max.toFixed(1);
                 document.getElementById('usage-quota-bar').style.width = data.quota.percent + "%";
-                document.getElementById('usage-kpi-today').innerText = data.kpis.today.toLocaleString();
-                document.getElementById('usage-kpi-total').innerText = data.kpis.total.toLocaleString();
+                document.getElementById('usage-kpi-today').innerText = data.kpis.today.toFixed(3);
+                document.getElementById('usage-kpi-total').innerText = data.kpis.total.toFixed(2);
 
                 // Initialize/Update Trends Chart
                 if (!trendChart) trendChart = echarts.init(document.getElementById('usage-trend-chart'));

@@ -354,28 +354,32 @@ def get_usage_data(request):
         formatted_sessions.append({'name': name, 'value': s['total']})
 
     # 4. Totals
-    today_total = AIAuditLog.objects.filter(
+    today_total_tokens = AIAuditLog.objects.filter(
         user=user, 
         timestamp__date=today
     ).aggregate(
         total=Sum('tokens_input') + Sum('tokens_output')
     )['total'] or 0
+    
+    # Get Dynamic Conversion Rate
+    from .models import AppConfiguration
+    rate = float(AppConfiguration.get_rate())
 
     return JsonResponse({
         'status': 'success',
         'quota': {
-            'used': quota.current_tokens_used,
-            'max': quota.max_tokens,
+            'used': quota.credits_used,
+            'max': quota.max_credits,
             'percent': round((quota.current_tokens_used / quota.max_tokens) * 100, 1) if quota.max_tokens > 0 else 0,
             'plan': quota.plan_name
         },
         'kpis': {
-            'today': today_total,
-            'total': quota.current_tokens_used
+            'today': round(today_total_tokens / rate, 3), 
+            'total': quota.credits_used
         },
         'charts': {
             'daily_dates': dates,
-            'daily_values': usage_values,
-            'sessions': formatted_sessions
+            'daily_values': [round(v / rate, 2) for v in usage_values],
+            'sessions': [{'name': s['name'], 'value': round(s['value'] / rate, 2)} for s in formatted_sessions]
         }
     })

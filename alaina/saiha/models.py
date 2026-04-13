@@ -300,3 +300,35 @@ class UserQuota(models.Model):
         from django.utils import timezone
         return timezone.now() > self.expiry_date
 
+    @property
+    def credits_used(self):
+        """Calculates credits based on dynamic config rate."""
+        rate = AppConfiguration.get_rate()
+        return round(self.current_tokens_used / float(rate), 2)
+
+    @property
+    def max_credits(self):
+        """Calculates max credits based on dynamic config rate."""
+        rate = AppConfiguration.get_rate()
+        return round(self.max_tokens / float(rate), 1)
+
+class AppConfiguration(models.Model):
+    """
+    Global application settings reachable via Admin.
+    Follows a singleton-like pattern.
+    """
+    token_to_credit_rate = models.IntegerField(default=10000, help_text="How many tokens equal 1 Credit (e.g., 10000)")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "App Configuration"
+        verbose_name_plural = "App Configurations"
+
+    def __str__(self):
+        return f"Global Config (Rate: {self.token_to_credit_rate})"
+
+    @classmethod
+    def get_rate(cls):
+        config = cls.objects.first()
+        return config.token_to_credit_rate if config else 10000
+

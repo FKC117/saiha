@@ -2,8 +2,17 @@ from django.contrib import admin
 from saiha.models import (
     Dataset, DatasetColumn, ToolCategory, Tool, 
     AnalysisSession, ChatMessage, SiteSettings, 
-    AnalysisResult, AIAuditLog, UserQuota
+    AnalysisResult, AIAuditLog, UserQuota, AppConfiguration
 )
+
+@admin.register(AppConfiguration)
+class AppConfigurationAdmin(admin.ModelAdmin):
+    list_display = ('id', 'token_to_credit_rate', 'updated_at')
+    
+    def has_add_permission(self, request):
+        if AppConfiguration.objects.exists():
+            return False
+        return True
 
 @admin.register(UserQuota)
 class UserQuotaAdmin(admin.ModelAdmin):

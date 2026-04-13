@@ -252,6 +252,7 @@ class AIAuditLog(models.Model):
     Tracks prompts, responses, and costs (tokens).
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ai_audit_logs', null=True, blank=True)
     session = models.ForeignKey(AnalysisSession, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
     prompt = models.TextField()
     response = models.TextField()
@@ -263,6 +264,10 @@ class AIAuditLog(models.Model):
     
     # Timeline
     timestamp = models.DateTimeField(auto_now_add=True)
+
+    @property
+    def tokens_total(self):
+        return self.tokens_input + self.tokens_output
     
     class Meta:
         ordering = ['-timestamp']
@@ -271,4 +276,27 @@ class AIAuditLog(models.Model):
     
     def __str__(self):
         return f"AI Audit - {self.model_id} - {self.timestamp}"
+
+class UserQuota(models.Model):
+    """
+    Stores usage limits and plan information for a user.
+    Enables future package system integration.
+    """
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='quota')
+    plan_name = models.CharField(max_length=50, default="Free")
+    max_tokens = models.IntegerField(default=50000)
+    current_tokens_used = models.IntegerField(default=0)
+    expiry_date = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Quota: {self.user.email} ({self.plan_name})"
+
+    @property
+    def is_expired(self):
+        if not self.expiry_date:
+            return False
+        from django.utils import timezone
+        return timezone.now() > self.expiry_date
 

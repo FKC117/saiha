@@ -60,7 +60,7 @@ class AnalysisAgent:
         column_names = [c.column_name for c in columns_meta]
 
         # 2. Planning (LLM Intent Detection with History)
-        intents = analysis_planner.create_plan(query, schema_text, history=history_data)
+        intents = analysis_planner.create_plan(query, schema_text, session_id=str(self.session.id), user=self.session.user, history=history_data)
         if not intents:
             logger.warning(f"No intents generated for query: '{query}'")
             send_ws_notification(

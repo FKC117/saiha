@@ -248,6 +248,8 @@ class AnalysisPlanner:
         self,
         query: str,
         schema_text: str,
+        session_id: Optional[str] = None,
+        user: Optional[Any] = None,
         history: Optional[List[Dict[str, str]]] = None,
     ) -> List[Dict[str, Any]]:
         """
@@ -317,7 +319,7 @@ class AnalysisPlanner:
         )
 
         try:
-            intents = gemini_service.get_intent_json(prompt, system_instruction)
+            intents = gemini_service.get_intent_json(prompt, system_instruction, session_id=session_id)
 
             # Robustness: handle single dict or nested lists
             if isinstance(intents, dict):

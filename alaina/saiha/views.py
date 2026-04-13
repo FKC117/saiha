@@ -299,3 +299,83 @@ def export_session_report(request, session_id, format):
         filename=filename,
         content_type=content_type
     )
+
+@login_required
+def get_usage_data(request):
+    """
+    API endpoint to fetch token usage statistics for the current user.
+    Aggregates data for charts and KPI cards.
+    """
+    from django.db.models import Sum, Count
+    from django.db.models.functions import TruncDate
+    from django.utils import timezone
+    from datetime import timedelta
+    from .models import AIAuditLog, UserQuota, AnalysisSession
+
+    user = request.user
+    today = timezone.now().date()
+    fourteen_days_ago = today - timedelta(days=14)
+
+    # 1. Quota Info
+    quota, _ = UserQuota.objects.get_or_create(user=user)
+    
+    # 2. Daily Usage (Last 14 days)
+    daily_stats = AIAuditLog.objects.filter(
+        user=user, 
+        timestamp__date__gte=fourteen_days_ago
+    ).annotate(
+        date=TruncDate('timestamp')
+    ).values('date').annotate(
+        total=Sum('tokens_input') + Sum('tokens_output')
+    ).order_by('date')
+
+    # Format for chart
+    dates = []
+    usage_values = []
+    
+    # Fill in gaps with zeros
+    stats_dict = {s['date']: s['total'] for s in daily_stats}
+    current_date = fourteen_days_ago
+    while current_date <= today:
+        dates.append(current_date.strftime('%b %d'))
+        usage_values.append(stats_dict.get(current_date, 0))
+        current_date += timedelta(days=1)
+
+    # 3. Top Sessions
+    top_sessions = AIAuditLog.objects.filter(user=user, session__isnull=False).values(
+        'session__id', 'session__session_name', 'session__dataset__name'
+    ).annotate(
+        total=Sum('tokens_input') + Sum('tokens_output')
+    ).order_by('-total')[:5]
+
+    formatted_sessions = []
+    for s in top_sessions:
+        name = s['session__session_name'] or s['session__dataset__name'] or "Unnamed Session"
+        formatted_sessions.append({'name': name, 'value': s['total']})
+
+    # 4. Totals
+    today_total = AIAuditLog.objects.filter(
+        user=user, 
+        timestamp__date=today
+    ).aggregate(
+        total=Sum('tokens_input') + Sum('tokens_output')
+    )['total'] or 0
+
+    return JsonResponse({
+        'status': 'success',
+        'quota': {
+            'used': quota.current_tokens_used,
+            'max': quota.max_tokens,
+            'percent': round((quota.current_tokens_used / quota.max_tokens) * 100, 1) if quota.max_tokens > 0 else 0,
+            'plan': quota.plan_name
+        },
+        'kpis': {
+            'today': today_total,
+            'total': quota.current_tokens_used
+        },
+        'charts': {
+            'daily_dates': dates,
+            'daily_values': usage_values,
+            'sessions': formatted_sessions
+        }
+    })

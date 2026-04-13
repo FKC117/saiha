@@ -82,21 +82,10 @@ class SessionSummaryTool(BaseAnalysisTool):
         """
 
         # 3. --- LLM INVOCATION & RESPONSE ---
-        from ..llm_management.gemini_service import gemini_service
-        from ..models import AIAuditLog
-        
         start_time = time.time()
         try:
-            llm_full_response = gemini_service.generate_content(prompt, session_id=str(self.session.id))
+            llm_full_response = gemini_service.generate_content(prompt, session_id=str(self.session.id), user=self.session.user)
             execution_time_ms = int((time.time() - start_time) * 1000)
-
-            # Log to the new Audit Trail
-            AIAuditLog.objects.create(
-                session=self.session,
-                prompt=prompt,
-                response=llm_full_response,
-                model_id=gemini_service.model_id
-            )
         except Exception as e:
             logger.error(f"LLM Synthesis failed in SessionSummaryTool: {e}")
             return {'status': 'error', 'summary': f"Detailed synthesis failed: {str(e)}"}

@@ -2,8 +2,13 @@ from django.contrib import admin
 from saiha.models import (
     Dataset, DatasetColumn, ToolCategory, Tool, 
     AnalysisSession, ChatMessage, SiteSettings, 
-    AnalysisResult, AIAuditLog
+    AnalysisResult, AIAuditLog, UserQuota
 )
+
+@admin.register(UserQuota)
+class UserQuotaAdmin(admin.ModelAdmin):
+    list_display = ('user', 'plan_name', 'current_tokens_used', 'max_tokens', 'expiry_date')
+    search_fields = ('user__email', 'plan_name')
 
 @admin.register(SiteSettings)
 class SiteSettingsAdmin(admin.ModelAdmin):

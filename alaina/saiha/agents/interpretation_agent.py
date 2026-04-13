@@ -61,7 +61,7 @@ class InterpretationAgent:
             
             prompt = f"TOOL OUTPUT JSON: {slim_data}\nGenerate the report."
 
-            interpretation = gemini_service.generate_content(prompt, system_instruction)
+            interpretation = gemini_service.generate_content(prompt, system_instruction, session_id=str(session.id), user=session.user)
             
             # Update the result record
             result.ai_interpretation = interpretation

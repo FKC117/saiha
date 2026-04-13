@@ -126,7 +126,6 @@ class SmartRecommendationsTool(BaseAnalysisTool):
 
         # 5. Call the LLM (Using the new hardened GeminiService)
         from ..llm_management.gemini_service import gemini_service
-        from ..models import AIAuditLog
         
         llm_response_str = ""
         pptx_summary = ""
@@ -134,16 +133,8 @@ class SmartRecommendationsTool(BaseAnalysisTool):
 
         try:
             start_time = time.time()
-            llm_full_response = gemini_service.generate_content(prompt, session_id=str(self.session.id))
+            llm_full_response = gemini_service.generate_content(prompt, session_id=str(self.session.id), user=self.session.user)
             execution_time_ms = int((time.time() - start_time) * 1000)
-
-            # Log to the new Audit Trail
-            AIAuditLog.objects.create(
-                session=self.session,
-                prompt=prompt,
-                response=llm_full_response,
-                model_id=gemini_service.model_id
-            )
             
             # Parse pptx summary
             match_pptx = re.search(r'<pptx_summary>(.*?)</pptx_summary>', llm_full_response, re.DOTALL)

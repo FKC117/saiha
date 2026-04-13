@@ -2,18 +2,12 @@ import json
 import logging
 import pandas as pd
 import numpy as np
-from .base_tool import BaseAnalysisTool
+from saiha.analysis_tools.base_tool import BaseAnalysisTool
 import re
 import time
 from django.db import models
-from .tool_parameters import ToolParameterSet
-from ..models import Tool, AnalysisResult
-
-logger = logging.getLogger(__name__)
-
-# ... (omitted code) ...
-
-
+from saiha.analysis_tools.tool_parameters import ToolParameterSet
+from saiha.models import Tool, AnalysisResult
 
 logger = logging.getLogger(__name__)
 
@@ -125,7 +119,7 @@ class SmartRecommendationsTool(BaseAnalysisTool):
 
 
         # 5. Call the LLM (Using the new hardened GeminiService)
-        from ..llm_management.gemini_service import gemini_service
+        from saiha.llm_management.gemini_service import gemini_service
         
         llm_response_str = ""
         pptx_summary = ""

@@ -8,6 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.conf import settings
 
+from django.contrib.auth.models import User
 from saiha.models import Dataset, DatasetColumn, AnalysisSession, ChatMessage, AnalysisResult
 from saiha.database_processing_logic.dataset_processor import DatasetProcessor, EmptyColumnsDetected
 from saiha.database_processing_logic.storage_manager_parquet import DatasetStorageManager
@@ -383,3 +384,144 @@ def get_usage_data(request):
             'sessions': [{'name': s['name'], 'value': round(s['value'] / rate, 2)} for s in formatted_sessions]
         }
     })
+
+# --- CORPORATE ADMIN PANEL VIEWS ---
+
+from functools import wraps
+from django.core.exceptions import PermissionDenied
+from .models import Corporate, CorporateProfile, CorporateInvitation, UserQuota
+from .corporate_service import CorporateService
+
+def corporate_admin_required(view_func):
+    @wraps(view_func)
+    @login_required
+    def _wrapped_view(request, *args, **kwargs):
+        # Check if user has a CorporateProfile with Role.ADMIN
+        profile = getattr(request.user, 'corp_profile', None)
+        if not profile or profile.role != CorporateProfile.Role.ADMIN:
+            raise PermissionDenied("Access to Corporate Dashboard is restricted to Administrators.")
+        return view_func(request, *args, **kwargs)
+    return _wrapped_view
+
+@corporate_admin_required
+def corporate_dashboard(request):
+    """
+    Main management portal for Corporate Admins.
+    """
+    corporate = request.user.corp_profile.corporate
+    members = CorporateProfile.objects.filter(corporate=corporate).select_related('user', 'user__quota')
+    
+    # Calculate aggregate stats
+    total_spent = sum(m.user.quota.credits_used for m in members)
+    
+    context = {
+        'corporate': corporate,
+        'members': members,
+        'total_spent': round(total_spent, 2),
+        'unallocated': corporate.rem_credits
+    }
+    return render(request, 'corporate/dashboard.html', context)
+
+@csrf_exempt
+@corporate_admin_required
+def corporate_add_member(request):
+    """
+    API to add a member to the corporate pool.
+    """
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        corporate = request.user.corp_profile.corporate
+        
+        try:
+            # Check if user exists
+            user = User.objects.filter(email=email).first()
+            if not user:
+                # Future: send invitation email
+                return JsonResponse({'status': 'error', 'message': 'User with this email not found. Invitations coming soon.'})
+            
+            CorporateService.add_user_directly(corporate, user)
+            return JsonResponse({'status': 'success', 'message': f'Member {email} added successfully.'})
+        except ValueError as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
+    return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
+
+@csrf_exempt
+@corporate_admin_required
+def corporate_reallocate_credits(request):
+    """
+    API to change a member's credit limit.
+    """
+    if request.method == 'POST':
+        user_id = request.POST.get('user_id')
+        new_limit = float(request.POST.get('credits', 0))
+        corporate = request.user.corp_profile.corporate
+        
+        try:
+            target_user = get_object_or_404(User, id=user_id)
+            CorporateService.reallocate_credits(corporate, target_user, new_limit)
+            return JsonResponse({'status': 'success', 'message': 'Credits updated.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+            
+    return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
+
+from allauth.account.forms import LoginForm
+from django.contrib.auth import login as auth_login
+from .adapter import CustomAccountAdapter
+
+def corporate_login(request):
+    """
+    Dedicated login view for the Corporate Portal.
+    Restricts access to users with a CorporateProfile.
+    """
+    if request.user.is_authenticated:
+        return redirect(CustomAccountAdapter(request).get_login_redirect_url(request))
+
+    form = LoginForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        user = form.user
+        # High-security check: Only users with a CorporateProfile allowed here
+        if not getattr(user, 'corp_profile', None):
+            return render(request, 'corporate/login.html', {
+                'form': form,
+                'error': 'Access Restricted. This portal is for Corporate members only.'
+            })
+        
+        # Log the user in
+        auth_login(request, user)
+        
+        # Use our adapter for smart redirection
+        return redirect(CustomAccountAdapter(request).get_login_redirect_url(request))
+
+    return render(request, 'corporate/login.html', {'form': form})
+
+def corporate_join(request, token):
+    """
+    Landing page for users accepting an invitation to join a corporation.
+    """
+    invitation = get_object_or_404(CorporateInvitation, id=token, is_accepted=False)
+    
+    if invitation.expires_at < timezone.now():
+        return render(request, 'corporate/join.html', {'error': 'This invitation has expired.'})
+
+    if request.method == 'POST':
+        if not request.user.is_authenticated:
+            # Store invitation token in session so we can link it after they signup/login
+            request.session['pending_invite_token'] = str(token)
+            return redirect('account_signup')
+        
+        # If already logged in, link immediately
+        try:
+            CorporateService.add_user_directly(
+                invitation.corporate, 
+                request.user, 
+                initial_credits=invitation.initial_credits
+            )
+            invitation.is_accepted = True
+            invitation.save()
+            return redirect(CustomAccountAdapter(request).get_login_redirect_url(request))
+        except ValueError as e:
+            return render(request, 'corporate/join.html', {'invitation': invitation, 'error': str(e)})
+
+    return render(request, 'corporate/join.html', {'invitation': invitation})

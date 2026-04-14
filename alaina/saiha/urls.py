@@ -14,4 +14,11 @@ urlpatterns = [
     path("usage/stats/", views.get_usage_data, name="get_usage_stats"),
     path("api/analysis-result/<uuid:result_id>/", views.get_analysis_result, name="get_analysis_result"),
     path("api/export/session/<uuid:session_id>/<str:format>/", views.export_session_report, name="export_session_report"),
+
+    # Corporate Admin Panel
+    path("corporate/login/", views.corporate_login, name="corporate_login"),
+    path("corporate/join/<uuid:token>/", views.corporate_join, name="corporate_join"),
+    path("corporate/dashboard/", views.corporate_dashboard, name="corporate_dashboard"),
+    path("corporate/members/add/", views.corporate_add_member, name="corporate_add_member"),
+    path("corporate/members/reallocate/", views.corporate_reallocate_credits, name="corporate_reallocate_credits"),
 ]

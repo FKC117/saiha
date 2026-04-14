@@ -1,0 +1,636 @@
+{
+  "columns": [
+    {
+      "column_name": "index",
+      "column_index": 0,
+      "data_type": "integer",
+      "null_count": 0,
+      "unique_count": 128975,
+      "sample_values": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    {
+      "column_name": "Order_ID",
+      "column_index": 1,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 120378,
+      "sample_values": [
+        "405-8078784-5731545",
+        "171-9198151-1101146",
+        "404-0687676-7273146",
+        "403-9615377-8133951",
+        "407-1069790-7240320"
+      ]
+    },
+    {
+      "column_name": "Date",
+      "column_index": 2,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 91,
+      "sample_values": [
+        "04-30-22",
+        "04-30-22",
+        "04-30-22",
+        "04-30-22",
+        "04-30-22"
+      ]
+    },
+    {
+      "column_name": "Status",
+      "column_index": 3,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 13,
+      "sample_values": [
+        "Cancelled",
+        "Shipped - Delivered to Buyer",
+        "Shipped",
+        "Cancelled",
+        "Shipped"
+      ]
+    },
+    {
+      "column_name": "Fulfilment",
+      "column_index": 4,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 2,
+      "sample_values": [
+        "Merchant",
+        "Merchant",
+        "Amazon",
+        "Merchant",
+        "Amazon"
+      ]
+    },
+    {
+      "column_name": "Sales_Channel",
+      "column_index": 5,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 2,
+      "sample_values": [
+        "Amazon.in",
+        "Amazon.in",
+        "Amazon.in",
+        "Amazon.in",
+        "Amazon.in"
+      ]
+    },
+    {
+      "column_name": "ship_service_level",
+      "column_index": 6,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 2,
+      "sample_values": [
+        "Standard",
+        "Standard",
+        "Expedited",
+        "Standard",
+        "Expedited"
+      ]
+    },
+    {
+      "column_name": "Style",
+      "column_index": 7,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 1377,
+      "sample_values": [
+        "SET389",
+        "JNE3781",
+        "JNE3371",
+        "J0341",
+        "JNE3671"
+      ]
+    },
+    {
+      "column_name": "SKU",
+      "column_index": 8,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 7195,
+      "sample_values": [
+        "SET389-KR-NP-S",
+        "JNE3781-KR-XXXL",
+        "JNE3371-KR-XL",
+        "J0341-DR-L",
+        "JNE3671-TU-XXXL"
+      ]
+    },
+    {
+      "column_name": "Category",
+      "column_index": 9,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 9,
+      "sample_values": [
+        "Set",
+        "kurta",
+        "kurta",
+        "Western Dress",
+        "Top"
+      ]
+    },
+    {
+      "column_name": "Size",
+      "column_index": 10,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 11,
+      "sample_values": [
+        "S",
+        "3XL",
+        "XL",
+        "L",
+        "3XL"
+      ]
+    },
+    {
+      "column_name": "ASIN",
+      "column_index": 11,
+      "data_type": "string",
+      "null_count": 0,
+      "unique_count": 7190,
+      "sample_values": [
+        "B09KXVBD7Z",
+        "B09K3WFS32",
+        "B07WV4JV4D",
+        "B099NRCT7B",
+        "B098714BZP"
+      ]
+    },
+    {
+      "column_name": "Courier_Status",
+      "column_index": 12,
+      "data_type": "string",
+      "null_count": 6872,
+      "unique_count": 3,
+      "sample_values": [
+        "Shipped",
+        "Shipped",
+        "Shipped",
+        "Shipped",
+        "Shipped"
+      ]
+    },
+    {
+      "column_name": "Qty",
+      "column_index": 13,
+      "data_type": "integer",
+      "null_count": 0,
+      "unique_count": 10,
+      "sample_values": [
+        0,
+        1,
+        1,
+        0,
+        1
+      ]
+    },
+    {
+      "column_name": "currency",
+      "column_index": 14,
+      "data_type": "string",
+      "null_count": 7795,
+      "unique_count": 1,
+      "sample_values": [
+        "INR",
+        "INR",
+        "INR",
+        "INR",
+        "INR"
+      ]
+    },
+    {
+      "column_name": "Amount",
+      "column_index": 15,
+      "data_type": "float",
+      "null_count": 7795,
+      "unique_count": 1410,
+      "sample_values": [
+        647.62,
+        406.0,
+        329.0,
+        753.33,
+        574.0
+      ]
+    },
+    {
+      "column_name": "ship_city",
+      "column_index": 16,
+      "data_type": "string",
+      "null_count": 33,
+      "unique_count": 8955,
+      "sample_values": [
+        "MUMBAI",
+        "BENGALURU",
+        "NAVI MUMBAI",
+        "PUDUCHERRY",
+        "CHENNAI"
+      ]
+    },
+    {
+      "column_name": "ship_state",
+      "column_index": 17,
+      "data_type": "string",
+      "null_count": 33,
+      "unique_count": 69,
+      "sample_values": [
+        "MAHARASHTRA",
+        "KARNATAKA",
+        "MAHARASHTRA",
+        "PUDUCHERRY",
+        "TAMIL NADU"
+      ]
+    },
+    {
+      "column_name": "ship_postal_code",
+      "column_index": 18,
+      "data_type": "float",
+      "null_count": 33,
+      "unique_count": 9459,
+      "sample_values": [
+        400081.0,
+        560085.0,
+        410210.0,
+        605008.0,
+        600073.0
+      ]
+    },
+    {
+      "column_name": "ship_country",
+      "column_index": 19,
+      "data_type": "string",
+      "null_count": 33,
+      "unique_count": 1,
+      "sample_values": [
+        "IN",
+        "IN",
+        "IN",
+        "IN",
+        "IN"
+      ]
+    },
+    {
+      "column_name": "promotion_ids",
+      "column_index": 20,
+      "data_type": "string",
+      "null_count": 49153,
+      "unique_count": 5787,
+      "sample_values": [
+        "Amazon PLCC Free-Financing Universal Merchant AAT-WNKTBO3K27EJC,Amazon PLCC Free-Financing Universal Merchant AAT-QX3UCCJESKPA2,Amazon PLCC Free-Financing Universal Merchant AAT-5QQ7BIYYQEDN2,Amazon PLCC Free-Financing Universal Merchant AAT-DSJ2QRXXWXVMQ,Amazon PLCC Free-Financing Universal Merchant AAT-CXJHMC2YJUK76,Amazon PLCC Free-Financing Universal Merchant AAT-CC4FAVTYR4X7C,Amazon PLCC Free-Financing Universal Merchant AAT-XXRCW6NZEPZI4,Amazon PLCC Free-Financing Universal Merchant AAT-CXNSLNBROFDW4,Amazon PLCC Free-Financing Universal Merchant AAT-R7GXNZWISTRFA,Amazon PLCC Free-Financing Universal Merchant AAT-WSJLDN3X7KEMO,Amazon PLCC Free-Financing Universal Merchant AAT-VL6FGQVGQVXUS,Amazon PLCC Free-Financing Universal Merchant AAT-EOKPWFWYW7Y6I,Amazon PLCC Free-Financing Universal Merchant AAT-ZYL5UPUNW6T62,Amazon PLCC Free-Financing Universal Merchant AAT-XVPICCHRWDCAI,Amazon PLCC Free-Financing Universal Merchant AAT-ETXQ3XXWMRXBG,Amazon PLCC Free-Financing Universal Merchant AAT-7X3XCTYG64VBE,Amazon PLCC Free-Financing Universal Merchant AAT-7CHGD3WTS3MHM,Amazon PLCC Free-Financing Universal Merchant AAT-26ZDKNME27X42,Amazon PLCC Free-Financing Universal Merchant AAT-4ZF5KN6E4LJK4,Amazon PLCC Free-Financing Universal Merchant AAT-7RCXIKUAX7DDY,Amazon PLCC Free-Financing Universal Merchant AAT-BRSZZ45H6MHAO,Amazon PLCC Free-Financing Universal Merchant AAT-MKLXOOZWQL7GO,Amazon PLCC Free-Financing Universal Merchant AAT-CB7UNXEXGIJTC,Amazon PLCC Free-Financing Universal Merchant #MP-gzasho-1593152694811,Amazon PLCC Free-Financing Universal Merchant AAT-WLBA4GZ52EAH4",
+        "IN Core Free Shipping 2015/04/08 23-48-5-108",
+        "IN Core Free Shipping 2015/04/08 23-48-5-108",
+        "IN Core Free Shipping 2015/04/08 23-48-5-108",
+        "Amazon PLCC Free-Financing Universal Merchant AAT-WNKTBO3K27EJC,Amazon PLCC Free-Financing Universal Merchant AAT-QX3UCCJESKPA2,Amazon PLCC Free-Financing Universal Merchant AAT-5QQ7BIYYQEDN2,Amazon PLCC Free-Financing Universal Merchant AAT-DSJ2QRXXWXVMQ,Amazon PLCC Free-Financing Universal Merchant AAT-CXJHMC2YJUK76,Amazon PLCC Free-Financing Universal Merchant AAT-CC4FAVTYR4X7C,Amazon PLCC Free-Financing Universal Merchant AAT-XXRCW6NZEPZI4,Amazon PLCC Free-Financing Universal Merchant AAT-EOKPWFWYW7Y6I,Amazon PLCC Free-Financing Universal Merchant AAT-ZYL5UPUNW6T62,Amazon PLCC Free-Financing Universal Merchant AAT-ETXQ3XXWMRXBG,Amazon PLCC Free-Financing Universal Merchant AAT-7X3XCTYG64VBE,Amazon PLCC Free-Financing Universal Merchant AAT-7CHGD3WTS3MHM,Amazon PLCC Free-Financing Universal Merchant AAT-26ZDKNME27X42,Amazon PLCC Free-Financing Universal Merchant AAT-4ZF5KN6E4LJK4,Amazon PLCC Free-Financing Universal Merchant AAT-7RCXIKUAX7DDY,Amazon PLCC Free-Financing Universal Merchant AAT-BRSZZ45H6MHAO,Amazon PLCC Free-Financing Universal Merchant AAT-MKLXOOZWQL7GO,Amazon PLCC Free-Financing Universal Merchant AAT-CB7UNXEXGIJTC,Amazon PLCC Free-Financing Universal Merchant #MP-gzasho-1593152694811,Amazon PLCC Free-Financing Universal Merchant AAT-WLBA4GZ52EAH4"
+      ]
+    },
+    {
+      "column_name": "B2B",
+      "column_index": 21,
+      "data_type": "boolean",
+      "null_count": 0,
+      "unique_count": 2,
+      "sample_values": [
+        false,
+        false,
+        true,
+        false,
+        false
+      ]
+    },
+    {
+      "column_name": "fulfilled_by",
+      "column_index": 22,
+      "data_type": "string",
+      "null_count": 89698,
+      "unique_count": 1,
+      "sample_values": [
+        "Easy Ship",
+        "Easy Ship",
+        "Easy Ship",
+        "Easy Ship",
+        "Easy Ship"
+      ]
+    },
+    {
+      "column_name": "Unnamed_22",
+      "column_index": 23,
+      "data_type": "float",
+      "null_count": 49050,
+      "unique_count": 1,
+      "sample_values": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "dataset_id": "6844e98a-4c2b-4e04-8d7c-810eebd30586",
+  "created_at": "2026-04-14T14:21:06.770396",
+  "storage_path": "F:\\saiha\\alaina\\media\\datasets\\1\\6844e98a-4c2b-4e04-8d7c-810eebd30586",
+  "storage_format": "parquet",
+  "preview_data": {
+    "columns": [
+      "index",
+      "Order_ID",
+      "Date",
+      "Status",
+      "Fulfilment",
+      "Sales_Channel",
+      "ship_service_level",
+      "Style",
+      "SKU",
+      "Category",
+      "Size",
+      "ASIN",
+      "Courier_Status",
+      "Qty",
+      "currency",
+      "Amount",
+      "ship_city",
+      "ship_state",
+      "ship_postal_code",
+      "ship_country",
+      "promotion_ids",
+      "B2B",
+      "fulfilled_by",
+      "Unnamed_22"
+    ],
+    "data": [
+      {
+        "index": 0,
+        "Order_ID": "405-8078784-5731545",
+        "Date": "04-30-22",
+        "Status": "Cancelled",
+        "Fulfilment": "Merchant",
+        "Sales_Channel": "Amazon.in",
+        "ship_service_level": "Standard",
+        "Style": "SET389",
+        "SKU": "SET389-KR-NP-S",
+        "Category": "Set",
+        "Size": "S",
+        "ASIN": "B09KXVBD7Z",
+        "Courier_Status": null,
+        "Qty": 0,
+        "currency": "INR",
+        "Amount": 647.62,
+        "ship_city": "MUMBAI",
+        "ship_state": "MAHARASHTRA",
+        "ship_postal_code": 400081.0,
+        "ship_country": "IN",
+        "promotion_ids": null,
+        "B2B": false,
+        "fulfilled_by": "Easy Ship",
+        "Unnamed_22": NaN
+      },
+      {
+        "index": 1,
+        "Order_ID": "171-9198151-1101146",
+        "Date": "04-30-22",
+        "Status": "Shipped - Delivered to Buyer",
+        "Fulfilment": "Merchant",
+        "Sales_Channel": "Amazon.in",
+        "ship_service_level": "Standard",
+        "Style": "JNE3781",
+        "SKU": "JNE3781-KR-XXXL",
+        "Category": "kurta",
+        "Size": "3XL",
+        "ASIN": "B09K3WFS32",
+        "Courier_Status": "Shipped",
+        "Qty": 1,
+        "currency": "INR",
+        "Amount": 406.0,
+        "ship_city": "BENGALURU",
+        "ship_state": "KARNATAKA",
+        "ship_postal_code": 560085.0,
+        "ship_country": "IN",
+        "promotion_ids": "Amazon PLCC Free-Financing Universal Merchant AAT-WNKTBO3K27EJC,Amazon PLCC Free-Financing Universal Merchant AAT-QX3UCCJESKPA2,Amazon PLCC Free-Financing Universal Merchant AAT-5QQ7BIYYQEDN2,Amazon PLCC Free-Financing Universal Merchant AAT-DSJ2QRXXWXVMQ,Amazon PLCC Free-Financing Universal Merchant AAT-CXJHMC2YJUK76,Amazon PLCC Free-Financing Universal Merchant AAT-CC4FAVTYR4X7C,Amazon PLCC Free-Financing Universal Merchant AAT-XXRCW6NZEPZI4,Amazon PLCC Free-Financing Universal Merchant AAT-CXNSLNBROFDW4,Amazon PLCC Free-Financing Universal Merchant AAT-R7GXNZWISTRFA,Amazon PLCC Free-Financing Universal Merchant AAT-WSJLDN3X7KEMO,Amazon PLCC Free-Financing Universal Merchant AAT-VL6FGQVGQVXUS,Amazon PLCC Free-Financing Universal Merchant AAT-EOKPWFWYW7Y6I,Amazon PLCC Free-Financing Universal Merchant AAT-ZYL5UPUNW6T62,Amazon PLCC Free-Financing Universal Merchant AAT-XVPICCHRWDCAI,Amazon PLCC Free-Financing Universal Merchant AAT-ETXQ3XXWMRXBG,Amazon PLCC Free-Financing Universal Merchant AAT-7X3XCTYG64VBE,Amazon PLCC Free-Financing Universal Merchant AAT-7CHGD3WTS3MHM,Amazon PLCC Free-Financing Universal Merchant AAT-26ZDKNME27X42,Amazon PLCC Free-Financing Universal Merchant AAT-4ZF5KN6E4LJK4,Amazon PLCC Free-Financing Universal Merchant AAT-7RCXIKUAX7DDY,Amazon PLCC Free-Financing Universal Merchant AAT-BRSZZ45H6MHAO,Amazon PLCC Free-Financing Universal Merchant AAT-MKLXOOZWQL7GO,Amazon PLCC Free-Financing Universal Merchant AAT-CB7UNXEXGIJTC,Amazon PLCC Free-Financing Universal Merchant #MP-gzasho-1593152694811,Amazon PLCC Free-Financing Universal Merchant AAT-WLBA4GZ52EAH4",
+        "B2B": false,
+        "fulfilled_by": "Easy Ship",
+        "Unnamed_22": NaN
+      },
+      {
+        "index": 2,
+        "Order_ID": "404-0687676-7273146",
+        "Date": "04-30-22",
+        "Status": "Shipped",
+        "Fulfilment": "Amazon",
+        "Sales_Channel": "Amazon.in",
+        "ship_service_level": "Expedited",
+        "Style": "JNE3371",
+        "SKU": "JNE3371-KR-XL",
+        "Category": "kurta",
+        "Size": "XL",
+        "ASIN": "B07WV4JV4D",
+        "Courier_Status": "Shipped",
+        "Qty": 1,
+        "currency": "INR",
+        "Amount": 329.0,
+        "ship_city": "NAVI MUMBAI",
+        "ship_state": "MAHARASHTRA",
+        "ship_postal_code": 410210.0,
+        "ship_country": "IN",
+        "promotion_ids": "IN Core Free Shipping 2015/04/08 23-48-5-108",
+        "B2B": true,
+        "fulfilled_by": null,
+        "Unnamed_22": NaN
+      },
+      {
+        "index": 3,
+        "Order_ID": "403-9615377-8133951",
+        "Date": "04-30-22",
+        "Status": "Cancelled",
+        "Fulfilment": "Merchant",
+        "Sales_Channel": "Amazon.in",
+        "ship_service_level": "Standard",
+        "Style": "J0341",
+        "SKU": "J0341-DR-L",
+        "Category": "Western Dress",
+        "Size": "L",
+        "ASIN": "B099NRCT7B",
+        "Courier_Status": null,
+        "Qty": 0,
+        "currency": "INR",
+        "Amount": 753.33,
+        "ship_city": "PUDUCHERRY",
+        "ship_state": "PUDUCHERRY",
+        "ship_postal_code": 605008.0,
+        "ship_country": "IN",
+        "promotion_ids": null,
+        "B2B": false,
+        "fulfilled_by": "Easy Ship",
+        "Unnamed_22": NaN
+      },
+      {
+        "index": 4,
+        "Order_ID": "407-1069790-7240320",
+        "Date": "04-30-22",
+        "Status": "Shipped",
+        "Fulfilment": "Amazon",
+        "Sales_Channel": "Amazon.in",
+        "ship_service_level": "Expedited",
+        "Style": "JNE3671",
+        "SKU": "JNE3671-TU-XXXL",
+        "Category": "Top",
+        "Size": "3XL",
+        "ASIN": "B098714BZP",
+        "Courier_Status": "Shipped",
+        "Qty": 1,
+        "currency": "INR",
+        "Amount": 574.0,
+        "ship_city": "CHENNAI",
+        "ship_state": "TAMIL NADU",
+        "ship_postal_code": 600073.0,
+        "ship_country": "IN",
+        "promotion_ids": null,
+        "B2B": false,
+        "fulfilled_by": null,
+        "Unnamed_22": NaN
+      },
+      {
+        "index": 5,
+        "Order_ID": "404-1490984-4578765",
+        "Date": "04-30-22",
+        "Status": "Shipped",
+        "Fulfilment": "Amazon",
+        "Sales_Channel": "Amazon.in",
+        "ship_service_level": "Expedited",
+        "Style": "SET264",
+        "SKU": "SET264-KR-NP-XL",
+        "Category": "Set",
+        "Size": "XL",
+        "ASIN": "B08YN7XDSG",
+        "Courier_Status": "Shipped",
+        "Qty": 1,
+        "currency": "INR",
+        "Amount": 824.0,
+        "ship_city": "GHAZIABAD",
+        "ship_state": "UTTAR PRADESH",
+        "ship_postal_code": 201102.0,
+        "ship_country": "IN",
+        "promotion_ids": "IN Core Free Shipping 2015/04/08 23-48-5-108",
+        "B2B": false,
+        "fulfilled_by": null,
+        "Unnamed_22": NaN
+      },
+      {
+        "index": 6,
+        "Order_ID": "408-5748499-6859555",
+        "Date": "04-30-22",
+        "Status": "Shipped",
+        "Fulfilment": "Amazon",
+        "Sales_Channel": "Amazon.in",
+        "ship_service_level": "Expedited",
+        "Style": "J0095",
+        "SKU": "J0095-SET-L",
+        "Category": "Set",
+        "Size": "L",
+        "ASIN": "B08CMHNWBN",
+        "Courier_Status": "Shipped",
+        "Qty": 1,
+        "currency": "INR",
+        "Amount": 653.0,
+        "ship_city": "CHANDIGARH",
+        "ship_state": "CHANDIGARH",
+        "ship_postal_code": 160036.0,
+        "ship_country": "IN",
+        "promotion_ids": "IN Core Free Shipping 2015/04/08 23-48-5-108",
+        "B2B": false,
+        "fulfilled_by": null,
+        "Unnamed_22": NaN
+      },
+      {
+        "index": 7,
+        "Order_ID": "406-7807733-3785945",
+        "Date": "04-30-22",
+        "Status": "Shipped - Delivered to Buyer",
+        "Fulfilment": "Merchant",
+        "Sales_Channel": "Amazon.in",
+        "ship_service_level": "Standard",
+        "Style": "JNE3405",
+        "SKU": "JNE3405-KR-S",
+        "Category": "kurta",
+        "Size": "S",
+        "ASIN": "B081WX4G4Q",
+        "Courier_Status": "Shipped",
+        "Qty": 1,
+        "currency": "INR",
+        "Amount": 399.0,
+        "ship_city": "HYDERABAD",
+        "ship_state": "TELANGANA",
+        "ship_postal_code": 500032.0,
+        "ship_country": "IN",
+        "promotion_ids": "Amazon PLCC Free-Financing Universal Merchant AAT-WNKTBO3K27EJC,Amazon PLCC Free-Financing Universal Merchant AAT-QX3UCCJESKPA2,Amazon PLCC Free-Financing Universal Merchant AAT-5QQ7BIYYQEDN2,Amazon PLCC Free-Financing Universal Merchant AAT-DSJ2QRXXWXVMQ,Amazon PLCC Free-Financing Universal Merchant AAT-CXJHMC2YJUK76,Amazon PLCC Free-Financing Universal Merchant AAT-CC4FAVTYR4X7C,Amazon PLCC Free-Financing Universal Merchant AAT-XXRCW6NZEPZI4,Amazon PLCC Free-Financing Universal Merchant AAT-EOKPWFWYW7Y6I,Amazon PLCC Free-Financing Universal Merchant AAT-ZYL5UPUNW6T62,Amazon PLCC Free-Financing Universal Merchant AAT-ETXQ3XXWMRXBG,Amazon PLCC Free-Financing Universal Merchant AAT-7X3XCTYG64VBE,Amazon PLCC Free-Financing Universal Merchant AAT-7CHGD3WTS3MHM,Amazon PLCC Free-Financing Universal Merchant AAT-26ZDKNME27X42,Amazon PLCC Free-Financing Universal Merchant AAT-4ZF5KN6E4LJK4,Amazon PLCC Free-Financing Universal Merchant AAT-7RCXIKUAX7DDY,Amazon PLCC Free-Financing Universal Merchant AAT-BRSZZ45H6MHAO,Amazon PLCC Free-Financing Universal Merchant AAT-MKLXOOZWQL7GO,Amazon PLCC Free-Financing Universal Merchant AAT-CB7UNXEXGIJTC,Amazon PLCC Free-Financing Universal Merchant #MP-gzasho-1593152694811,Amazon PLCC Free-Financing Universal Merchant AAT-WLBA4GZ52EAH4",
+        "B2B": false,
+        "fulfilled_by": "Easy Ship",
+        "Unnamed_22": NaN
+      },
+      {
+        "index": 8,
+        "Order_ID": "407-5443024-5233168",
+        "Date": "04-30-22",
+        "Status": "Cancelled",
+        "Fulfilment": "Amazon",
+        "Sales_Channel": "Amazon.in",
+        "ship_service_level": "Expedited",
+        "Style": "SET200",
+        "SKU": "SET200-KR-NP-A-XXXL",
+        "Category": "Set",
+        "Size": "3XL",
+        "ASIN": "B08L91ZZXN",
+        "Courier_Status": "Cancelled",
+        "Qty": 0,
+        "currency": null,
+        "Amount": NaN,
+        "ship_city": "HYDERABAD",
+        "ship_state": "TELANGANA",
+        "ship_postal_code": 500008.0,
+        "ship_country": "IN",
+        "promotion_ids": "IN Core Free Shipping 2015/04/08 23-48-5-108",
+        "B2B": false,
+        "fulfilled_by": null,
+        "Unnamed_22": NaN
+      },
+      {
+        "index": 9,
+        "Order_ID": "402-4393761-0311520",
+        "Date": "04-30-22",
+        "Status": "Shipped",
+        "Fulfilment": "Amazon",
+        "Sales_Channel": "Amazon.in",
+        "ship_service_level": "Expedited",
+        "Style": "JNE3461",
+        "SKU": "JNE3461-KR-XXL",
+        "Category": "kurta",
+        "Size": "XXL",
+        "ASIN": "B08B3XF5MH",
+        "Courier_Status": "Shipped",
+        "Qty": 1,
+        "currency": "INR",
+        "Amount": 363.0,
+        "ship_city": "Chennai",
+        "ship_state": "TAMIL NADU",
+        "ship_postal_code": 600041.0,
+        "ship_country": "IN",
+        "promotion_ids": null,
+        "B2B": false,
+        "fulfilled_by": null,
+        "Unnamed_22": NaN
+      }
+    ],
+    "total_rows": 128975,
+    "preview_rows": 10
+  }
+}

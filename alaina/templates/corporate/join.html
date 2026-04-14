@@ -1,0 +1,127 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Accept Invitation | {{ invitation.corporate.name }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            background-color: #0c0a09; /* Stone 950 */
+            color: #f5f5f4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            font-family: 'DM Sans', sans-serif;
+            margin: 0;
+            padding: 24px;
+        }
+
+        .join-card {
+            max-width: 480px;
+            width: 100%;
+            background: linear-gradient(145deg, rgba(28, 25, 23, 0.9) 0%, rgba(12, 10, 9, 0.9) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 32px;
+            padding: 56px;
+            text-align: center;
+            box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.8);
+        }
+
+        .corp-logo-placeholder {
+            width: 80px;
+            height: 80px;
+            background: #8B5CF6;
+            color: white;
+            border-radius: 20px;
+            display: grid;
+            place-items: center;
+            margin: 0 auto 32px;
+            box-shadow: 0 0 30px rgba(139, 92, 246, 0.3);
+        }
+
+        h1 { font-size: 28px; font-weight: 700; margin-bottom: 12px; }
+        p.desc { color: #a8a29e; line-height: 1.6; margin-bottom: 32px; }
+
+        .benefit-card {
+            background: rgba(41, 37, 36, 0.5);
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            text-align: left;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+            margin-bottom: 40px;
+        }
+
+        .btn-join {
+            width: 100%;
+            background: #8B5CF6;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .btn-join:hover {
+            background: #7C3AED;
+            transform: translateY(-1px);
+        }
+
+        .error-state {
+            color: #f87171;
+            background: rgba(248, 113, 113, 0.1);
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="join-card">
+        {% if error %}
+            <div class="error-state">
+                <i data-lucide="alert-triangle" style="margin-bottom: 12px;"></i>
+                <div>{{ error }}</div>
+                <a href="/" style="display:block; margin-top:16px; color:#8B5CF6; text-decoration:none;">Back to Home</a>
+            </div>
+        {% else %}
+            <div class="corp-logo-placeholder">
+                <i data-lucide="building-2" size="40"></i>
+            </div>
+            <h1>Join {{ invitation.corporate.name }}</h1>
+            <p class="desc">You've been invited by your organization to access specialized AI analysis tools.</p>
+            
+            <div class="benefit-card">
+                <div style="background:rgba(139, 92, 246, 0.2); width:48px; height:48px; border-radius:12px; display:grid; place-items:center; color:#A78BFA;">
+                    <i data-lucide="zap"></i>
+                </div>
+                <div>
+                    <div style="font-weight:700; font-size:15px;">{{ invitation.initial_credits }} Credits Included</div>
+                    <div style="font-size:13px; color:#78716c;">Ready for immediate analysis</div>
+                </div>
+            </div>
+
+            <form method="POST">
+                {% csrf_token %}
+                <button type="submit" class="btn-join">Accept Invitation</button>
+            </form>
+            
+            <p style="font-size:12px; color:#57534e; margin-top:24px;">
+                Secure invitation for <strong>{{ invitation.email }}</strong>
+            </p>
+        {% endif %}
+    </div>
+
+    <script>lucide.createIcons();</script>
+</body>
+</html>

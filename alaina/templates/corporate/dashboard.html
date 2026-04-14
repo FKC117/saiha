@@ -1,0 +1,270 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corporate Admin Dashboard | {{ corporate.name }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --zinc-950: #09090b;
+            --zinc-900: #18181b;
+            --zinc-800: #27272a;
+            --zinc-700: #3f3f46;
+            --zinc-500: #71717a;
+            --zinc-100: #f4f4f5;
+            --primary-color: #8B5CF6;
+        }
+
+        body {
+            background-color: var(--zinc-950);
+            color: var(--zinc-100);
+            font-family: 'DM Sans', sans-serif;
+            margin: 0;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--zinc-900);
+            border-right: 1px solid var(--zinc-800);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .card {
+            background: rgba(24, 24, 27, 0.4);
+            border: 1px solid var(--zinc-800);
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+
+        .member-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .member-table th {
+            text-align: left;
+            color: var(--zinc-500);
+            font-size: 12px;
+            text-transform: uppercase;
+            padding: 12px;
+            border-bottom: 1px solid var(--zinc-800);
+        }
+
+        .member-table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid var(--zinc-800);
+            font-size: 14px;
+        }
+
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover { opacity: 0.9; }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--zinc-700);
+            color: var(--zinc-100);
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: var(--zinc-400);
+        }
+
+        .input-group input {
+            width: 100%;
+            background: var(--zinc-900);
+            border: 1px solid var(--zinc-800);
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-admin { background: rgba(139, 92, 246, 0.2); color: #A78BFA; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div style="background:var(--primary-color); width:32px; height:32px; border-radius:8px; display:grid; place-items:center;">
+                <i data-lucide="building-2" style="color:white; width:18px; height:18px;"></i>
+            </div>
+            <span style="font-weight:700; font-size:18px;">{{ corporate.name }}</span>
+        </div>
+        
+        <nav style="display:flex; flex-direction:column; gap:8px; margin-top:20px;">
+            <a href="#" style="background:var(--zinc-800); color:white; padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px;">
+                <i data-lucide="users" size="18"></i> Team Management
+            </a>
+            <a href="#" style="color:var(--zinc-400); padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px;">
+                <i data-lucide="pie-chart" size="18"></i> Usage Analytics
+            </a>
+            <a href="/accounts/logout/" style="color:var(--zinc-400); padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px; margin-top:auto;">
+                <i data-lucide="log-out" size="18"></i> Sign Out
+            </a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+            <div>
+                <h1 style="font-size:28px; font-weight:700;">Team Management</h1>
+                <p style="color:var(--zinc-500);">Manage seats and credit allocation for your organization.</p>
+            </div>
+            <button class="btn" onclick="openAddMemberModal()">
+                <i data-lucide="plus" size="18"></i> Add Member
+            </button>
+        </header>
+
+        <div class="stat-grid">
+            <div class="card">
+                <p style="color:var(--zinc-500); font-size:13px; font-weight:700; text-transform:uppercase;">Total Team Usage</p>
+                <h2 style="font-size:32px; margin:12px 0;">{{ total_spent }} <small style="font-size:14px; color:var(--zinc-500);">Credits</small></h2>
+            </div>
+            <div class="card">
+                <p style="color:var(--zinc-500); font-size:13px; font-weight:700; text-transform:uppercase;">Unallocated Pool</p>
+                <h2 style="font-size:32px; margin:12px 0;">{{ unallocated }} <small style="font-size:14px; color:var(--zinc-500);">Credits</small></h2>
+            </div>
+            <div class="card">
+                <p style="color:var(--zinc-500); font-size:13px; font-weight:700; text-transform:uppercase;">Active Seats</p>
+                <h2 style="font-size:32px; margin:12px 0;">{{ members.count }} / {{ corporate.max_users }}</h2>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3 style="font-size:16px; margin-bottom:20px;">Team Members</h3>
+            <table class="member-table">
+                <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>Role</th>
+                        <th>Usage</th>
+                        <th>Allocation</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for member in members %}
+                    <tr>
+                        <td>
+                            <div style="font-weight:500;">{{ member.user.username }}</div>
+                            <div style="font-size:12px; color:var(--zinc-500);">{{ member.user.email }}</div>
+                        </td>
+                        <td>
+                            {% if member.role == 'ADMIN' %}
+                                <span class="badge badge-admin">Admin</span>
+                            {% else %}
+                                <span class="badge" style="background:var(--zinc-800); color:var(--zinc-400);">Member</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="font-weight:700;">{{ member.user.quota.credits_used }} <small style="color:var(--zinc-500);">Credits</small></div>
+                        </td>
+                        <td>
+                            <div style="font-weight:700;">{{ member.user.quota.max_credits }} <small style="color:var(--zinc-500);">Credits</small></div>
+                        </td>
+                        <td>
+                            {% if member.role != 'ADMIN' %}
+                            <button class="btn btn-outline" style="padding:6px 10px; font-size:12px;" onclick="openAllocModal('{{ member.user.id }}', '{{ member.user.email }}', {{ member.user.quota.max_credits }})">
+                                Reallocate
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modals omitted for brevity, will include basic JS for interactivity -->
+    <script>
+        lucide.createIcons();
+
+        function openAddMemberModal() {
+            const email = prompt("Enter team member's email address:");
+            if (email) {
+                const formData = new FormData();
+                formData.append('email', email);
+                fetch('/corporate/members/add/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(r => r.json())
+                .then(d => {
+                    alert(d.message);
+                    if (d.status === 'success') location.reload();
+                });
+            }
+        }
+
+        function openAllocModal(userId, email, currentLimit) {
+            const newLimit = prompt(`Adjust Credit Allocation for ${email}. Current: ${currentLimit}\nNew limit (Credits):`, currentLimit);
+            if (newLimit) {
+                const formData = new FormData();
+                formData.append('user_id', userId);
+                formData.append('credits', newLimit);
+                fetch('/corporate/members/reallocate/', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(r => r.json())
+                .then(d => {
+                    alert(d.message);
+                    if (d.status === 'success') location.reload();
+                });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -2,8 +2,25 @@ from django.contrib import admin
 from saiha.models import (
     Dataset, DatasetColumn, ToolCategory, Tool, 
     AnalysisSession, ChatMessage, SiteSettings, 
-    AnalysisResult, AIAuditLog, UserQuota, AppConfiguration
+    AnalysisResult, AIAuditLog, UserQuota, AppConfiguration,
+    Corporate, CorporateProfile, CorporateInvitation
 )
+
+@admin.register(Corporate)
+class CorporateAdmin(admin.ModelAdmin):
+    list_display = ('name', 'total_credits', 'rem_credits', 'max_users', 'created_at')
+    search_fields = ('name',)
+
+@admin.register(CorporateProfile)
+class CorporateProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'corporate', 'role', 'is_active')
+    list_filter = ('role', 'corporate')
+    search_fields = ('user__email', 'corporate__name')
+
+@admin.register(CorporateInvitation)
+class CorporateInvitationAdmin(admin.ModelAdmin):
+    list_display = ('email', 'corporate', 'is_accepted', 'expires_at')
+    list_filter = ('is_accepted', 'corporate')
 
 @admin.register(AppConfiguration)
 class AppConfigurationAdmin(admin.ModelAdmin):

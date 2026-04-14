@@ -332,3 +332,63 @@ class AppConfiguration(models.Model):
         config = cls.objects.first()
         return config.token_to_credit_rate if config else 10000
 
+class Corporate(models.Model):
+    """
+    Enterprise entity that owns a pool of credits and managed users.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=255)
+    max_users = models.IntegerField(default=5, help_text="Maximum number of seat licenses.")
+    total_credits = models.FloatField(default=0, help_text="Total credits assigned to this corporation.")
+    rem_credits = models.FloatField(default=0, help_text="Remaining UNALLOCATED credits in the corporate pool.")
+    
+    # Customization (Future)
+    logo = models.ImageField(upload_to='corporate/logos/', null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Corporate"
+        verbose_name_plural = "Corporates"
+
+    def __str__(self):
+        return f"{self.name} ({self.rem_credits} Credits Rem.)"
+
+class CorporateProfile(models.Model):
+    """
+    Extends the User with Corporate-specific roles and relationships.
+    """
+    class Role(models.TextChoices):
+        ADMIN = 'ADMIN', 'Corporate Admin'
+        MEMBER = 'MEMBER', 'Standard Member'
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='corp_profile')
+    corporate = models.ForeignKey(Corporate, on_delete=models.CASCADE, related_name='members')
+    role = models.CharField(max_length=20, choices=Role.choices, default=Role.MEMBER)
+    
+    is_active = models.BooleanField(default=True)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.email} - {self.corporate.name} ({self.role})"
+
+class CorporateInvitation(models.Model):
+    """
+    Tracks pending email invitations to join a corporate account.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    corporate = models.ForeignKey(Corporate, on_delete=models.CASCADE, related_name='invitations')
+    email = models.EmailField()
+    token = models.CharField(max_length=100, unique=True)
+    
+    # Allocation for this invited user
+    initial_credits = models.FloatField(default=5.0)
+    
+    is_accepted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    def __str__(self):
+        return f"Invite: {self.email} to {self.corporate.name}"
+

@@ -3,6 +3,16 @@ from django.urls import reverse
 
 class CustomAccountAdapter(DefaultAccountAdapter):
     def get_login_redirect_url(self, request):
-        # We can still keep the safety check if we want, 
-        # but allauth 'mandatory' verification usually does this automatically.
-        return super().get_login_redirect_url(request)
+        """
+        Smart redirection after login.
+        Corporate Admins -> Corporate Dashboard
+        Everyone else -> Standard Index
+        """
+        user = request.user
+        
+        # Check for Corporate Profile
+        profile = getattr(user, 'corp_profile', None)
+        if profile and profile.role == 'ADMIN':
+            return reverse("saiha:corporate_dashboard")
+            
+        return reverse("saiha:index")

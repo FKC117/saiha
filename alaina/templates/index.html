@@ -857,12 +857,18 @@
         <div class="conv-item" style="margin-top: 4px; justify-content: space-between;">
           <div style="display: flex; align-items: center; gap: 8px;">
             <div class="avatar"
-              style="width: 28px; height: 28px; background: linear-gradient(to bottom right, #8B5CF6, #6366F1); display: flex; align-items: center; justify-content: center;">
-              <span id="sidebar-user-initials" style="font-size: 11px; font-weight: 600; color: white;">{{ user.first_name|default:user.email|slice:":1"|upper }}</span>
+              style="width: 28px; height: 28px; {% if user.corp_profile and user.corp_profile.is_active and user.corp_profile.corporate.logo %}background-image: url('{{ user.corp_profile.corporate.logo.url }}'); background-size: cover; background-position: center;{% else %}background: linear-gradient(to bottom right, #8B5CF6, #6366F1);{% endif %} display: flex; align-items: center; justify-content: center;">
+              {% if not user.corp_profile or not user.corp_profile.is_active or not user.corp_profile.corporate.logo %}
+                <span id="sidebar-user-initials" style="font-size: 11px; font-weight: 600; color: white;">{{ user.first_name|default:user.email|slice:":1"|upper }}</span>
+              {% endif %}
             </div>
             <div class="conv-title" style="display: flex; flex-direction: column;">
               <span id="sidebar-user-name" style="font-weight: 500; font-size: 13px; color: #e4e4e7;">{{ user.first_name|default:user.email }}</span>
-              <span style="font-size: 11px; color: #71717a;">Logged in</span>
+              {% if user.corp_profile and user.corp_profile.is_active %}
+                <span style="font-size: 10px; color: #8B5CF6; font-weight: 600; opacity: 0.8;">{{ user.corp_profile.corporate.name }} Member</span>
+              {% else %}
+                <span style="font-size: 11px; color: #71717a;">Logged in</span>
+              {% endif %}
             </div>
           </div>
           <form method="POST" action="{% url 'account_logout' %}" id="logout-form" style="display: none;">{% csrf_token %}</form>

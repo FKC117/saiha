@@ -3,7 +3,7 @@ from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
 import uuid
-from .models import Corporate, CorporateProfile, CorporateInvitation, UserQuota, User
+from saiha.models import Corporate, CorporateProfile, CorporateInvitation, UserQuota, User, AppConfiguration
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class CorporateService:
         Defensively checks seat limits.
         """
         # 1. Check seat limit
-        current_members = corporate.members.count()
+        current_members = corporate.members.filter(role=CorporateProfile.Role.MEMBER).count()
         pending_invites = corporate.invitations.filter(is_accepted=False, expires_at__gt=timezone.now()).count()
         
         if current_members + pending_invites >= corporate.max_users:
@@ -54,7 +54,8 @@ class CorporateService:
         if CorporateProfile.objects.filter(user=user).exists():
             raise ValueError("User is already a member of a corporation.")
         
-        if corporate.members.count() >= corporate.max_users:
+        # Only count MEMBERS against the seat limit
+        if corporate.members.filter(role=CorporateProfile.Role.MEMBER).count() >= corporate.max_users:
             raise ValueError(f"Corporate seat limit reached ({corporate.max_users}).")
             
         if corporate.rem_credits < initial_credits:
@@ -74,10 +75,9 @@ class CorporateService:
             role=role
         )
 
-        # 4. Setup Quota
+        # 3. Setup Quota
         quota, _ = UserQuota.objects.get_or_create(user=user)
         
-        from .models import AppConfiguration
         rate = AppConfiguration.get_rate()
         
         # Convert credits to tokens
@@ -102,7 +102,6 @@ class CorporateService:
         profile = CorporateProfile.objects.get(user=target_user, corporate=corporate)
         quota = UserQuota.objects.get(user=target_user)
         
-        from .models import AppConfiguration
         rate = AppConfiguration.get_rate()
         
         current_credits = quota.max_tokens / float(rate)
@@ -176,3 +175,38 @@ class CorporateService:
         except Exception as e:
             logger.error(f"Failed to send invitation email to {invitation.email}: {e}")
             return False
+
+    @staticmethod
+    @transaction.atomic
+    def discontinue_member(corporate, user):
+        """
+        Removes a member from the corporation.
+        Recovers unspent credits and records the departure time.
+        """
+        profile = CorporateProfile.objects.get(user=user, corporate=corporate, is_active=True)
+        quota = UserQuota.objects.get(user=user)
+        
+        # 1. Calculate unmanaged/unspent credits
+        # We look at the actual credits remaining on their quota
+        rate = float(AppConfiguration.get_rate())
+        
+        # credits_used is lifetime. We need to know how much of the CURRENT allocation is unspent.
+        # However, for simplicity, we treat the remaining quota capacity as the recoverable amount.
+        rem_quota_tokens = quota.max_tokens - quota.current_tokens_used
+        rem_credits = max(0, rem_quota_tokens / rate)
+        
+        # 2. Add back to corporate pool
+        corporate.rem_credits += float(rem_credits)
+        corporate.save()
+        
+        # 3. Soft-deactivate the profile
+        profile.is_active = False
+        profile.left_at = timezone.now()
+        profile.save()
+        
+        # 4. Reset User Quota to a default "Individual" state (e.g. 0 managed credits)
+        quota.max_tokens = 0 
+        quota.save()
+        
+        logger.info(f"Discontinued user {user.email} from {corporate.name}. Recovered {rem_credits} credits.")
+        return True

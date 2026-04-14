@@ -412,7 +412,7 @@ def corporate_dashboard(request):
     Main management portal for Corporate Admins.
     """
     corporate = request.user.corp_profile.corporate
-    members = CorporateProfile.objects.filter(corporate=corporate).select_related('user', 'user__quota')
+    members = CorporateProfile.objects.filter(corporate=corporate, is_active=True).select_related('user', 'user__quota')
     pending_invites = CorporateInvitation.objects.filter(corporate=corporate, is_accepted=False).order_by('-created_at')
     
     from django.db.models import Sum
@@ -423,6 +423,7 @@ def corporate_dashboard(request):
     total_spent = 0
     member_stats = []
     
+    # 1. Active Members
     for m in members:
         # Sum only logs that happened AFTER they joined this corp
         usage_tokens = AIAuditLog.objects.filter(
@@ -441,14 +442,55 @@ def corporate_dashboard(request):
             'total_allocation': m.user.quota.max_credits
         })
     
+    # 2. Former Members (Historical consumption & Archive UI)
+    former_members = CorporateProfile.objects.filter(corporate=corporate, is_active=False).select_related('user')
+    former_member_stats = []
+    
+    for fm in former_members:
+        # Sum logs within their tenure window
+        usage_tokens = AIAuditLog.objects.filter(
+            user=fm.user,
+            timestamp__gte=fm.joined_at,
+            timestamp__lte=fm.left_at
+        ).aggregate(
+            total=Sum('tokens_input') + Sum('tokens_output')
+        )['total'] or 0
+        
+        usage_credits = round(usage_tokens / rate, 2)
+        total_spent += usage_credits # Still count in total
+        
+        former_member_stats.append({
+            'profile': fm,
+            'tenure_usage': usage_credits
+        })
+    
     context = {
         'corporate': corporate,
         'member_stats': member_stats,
+        'former_member_stats': former_member_stats,
         'pending_invites': pending_invites,
         'total_spent': round(total_spent, 2),
-        'unallocated': corporate.rem_credits
+        'unallocated': corporate.rem_credits,
+        'active_seats': members.filter(role='MEMBER').count()
     }
     return render(request, 'corporate/dashboard.html', context)
+
+@csrf_exempt
+@corporate_admin_required
+def corporate_remove_member(request):
+    """
+    API to discontinue a member.
+    """
+    if request.method == 'POST':
+        user_id = request.POST.get('user_id')
+        user = get_object_or_404(User, id=user_id)
+        corporate = request.user.corp_profile.corporate
+        
+        try:
+            CorporateService.discontinue_member(corporate, user)
+            return JsonResponse({'status': 'success', 'message': f'Member {user.email} discontinued successfully.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
 
 @csrf_exempt
 @corporate_admin_required
@@ -604,17 +646,40 @@ def corporate_analytics(request):
     Renders the Corporate-wide usage analytics dashboard.
     """
     corporate = request.user.corp_profile.corporate
+    
+    from django.db.models import Sum
+    members = CorporateProfile.objects.filter(corporate=corporate, is_active=True)
+    rate = float(AppConfiguration.get_rate())
+    
+    total_spent = 0
+    for m in members:
+        usage_tokens = AIAuditLog.objects.filter(
+            user=m.user,
+            timestamp__gte=m.joined_at
+        ).aggregate(total=Sum('tokens_input') + Sum('tokens_output'))['total'] or 0
+        total_spent += (usage_tokens / rate)
+    
+    former_members = CorporateProfile.objects.filter(corporate=corporate, is_active=False)
+    for fm in former_members:
+        usage_tokens = AIAuditLog.objects.filter(
+            user=fm.user,
+            timestamp__gte=fm.joined_at,
+            timestamp__lte=fm.left_at
+        ).aggregate(total=Sum('tokens_input') + Sum('tokens_output'))['total'] or 0
+        total_spent += (usage_tokens / rate)
+
     context = {
         'corporate': corporate,
+        'total_spent': round(total_spent, 2)
     }
     return render(request, 'corporate/analytics.html', context)
 
 @corporate_admin_required
 def get_corporate_usage_data(request):
     """
-    API endpoint that aggregates usage for the entire organization.
+    API endpoint that aggregates usage for the entire organization with 30-day backfilling.
     """
-    from django.db.models import Sum, Count
+    from django.db.models import Sum
     from django.db.models.functions import TruncDate
     from datetime import timedelta
     
@@ -624,19 +689,18 @@ def get_corporate_usage_data(request):
     today = timezone.now().date()
     thirty_days_ago = today - timedelta(days=30)
     
-    # We must aggregate daily totals by summing user-specific logs after their join date
     daily_stats = {}
-    member_stats = {}
+    member_stats_map = {}
 
     for profile in profiles:
-        # Fetch logs for this user AFTER they joined
-        logs = AIAuditLog.objects.filter(
-            user=profile.user,
-            timestamp__date__gte=thirty_days_ago,
-            timestamp__gte=profile.joined_at
-        ).annotate(
-            date=TruncDate('timestamp')
-        ).values('date').annotate(
+        # Sum logs only for their tenure
+        query = AIAuditLog.objects.filter(user=profile.user, timestamp__date__gte=thirty_days_ago)
+        if profile.is_active:
+            query = query.filter(timestamp__gte=profile.joined_at)
+        else:
+            query = query.filter(timestamp__gte=profile.joined_at, timestamp__lte=profile.left_at)
+            
+        logs = query.annotate(date=TruncDate('timestamp')).values('date').annotate(
             day_total=Sum('tokens_input') + Sum('tokens_output')
         )
 
@@ -644,39 +708,32 @@ def get_corporate_usage_data(request):
             dt_str = log['date'].strftime('%Y-%m-%d')
             daily_stats[dt_str] = daily_stats.get(dt_str, 0) + log['day_total']
         
-        # Total for the breakdown
-        total_tokens = AIAuditLog.objects.filter(
-            user=profile.user,
-            timestamp__gte=profile.joined_at
-        ).aggregate(
-            total=Sum('tokens_input') + Sum('tokens_output')
-        )['total'] or 0
-        
-        member_stats[profile.user.username] = total_tokens
+        # Calculate total for pie chart
+        total_tokens = query.aggregate(total=Sum('tokens_input') + Sum('tokens_output'))['total'] or 0
+        member_stats_map[profile.user.username] = total_tokens
 
-    # Format for ECharts
-    chart_data = sorted([
-        {'date': datetime.datetime.strptime(k, '%Y-%m-%d'), 'total': v} 
-        for k, v in daily_stats.items()
-    ], key=lambda x: x['date'])
-    
+    # BACKFILL: Ensure every day in the last 30 days exists for ECharts
     rate = float(AppConfiguration.get_rate())
+    usage_dates = []
+    usage_values = []
     
-    # Convert totals to credits for the charts
-    usage_dates = [item['date'].strftime('%Y-%m-%d') for item in chart_data]
-    usage_credits = [round(item['total'] / rate, 2) for item in chart_data]
-    
-    # Member breakdown already contains tokens, convert that too
+    for i in range(31):
+        dt = thirty_days_ago + timedelta(days=i)
+        dt_str = dt.strftime('%Y-%m-%d')
+        usage_dates.append(dt_str)
+        tokens = daily_stats.get(dt_str, 0)
+        usage_values.append(round(tokens / rate, 2))
+
     final_breakdown = [
         {'name': name, 'value': round(tokens / rate, 2)}
-        for name, tokens in member_stats.items()
+        for name, tokens in member_stats_map.items()
     ]
 
     return JsonResponse({
         'status': 'success',
         'charts': {
             'daily_dates': usage_dates,
-            'daily_values': usage_credits,
+            'daily_values': usage_values,
             'member_breakdown': final_breakdown
         }
     })

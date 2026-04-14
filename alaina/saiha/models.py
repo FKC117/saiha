@@ -369,6 +369,7 @@ class CorporateProfile(models.Model):
     
     is_active = models.BooleanField(default=True)
     joined_at = models.DateTimeField(auto_now_add=True)
+    left_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.email} - {self.corporate.name} ({self.role})"

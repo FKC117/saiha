@@ -177,7 +177,7 @@
             </div>
             <div class="card">
                 <p style="color:var(--zinc-500); font-size:13px; font-weight:700; text-transform:uppercase;">Active Seats</p>
-                <h2 style="font-size:32px; margin:12px 0;">{{ members.count }} / {{ corporate.max_users }}</h2>
+                <h2 style="font-size:32px; margin:12px 0;">{{ active_seats }} / {{ corporate.max_users }}</h2>
             </div>
         </div>
 
@@ -215,14 +215,21 @@
                         </td>
                         <td>
                             {% if stat.profile.role != 'ADMIN' %}
-                            <button class="btn btn-outline" 
-                                    style="padding:6px 10px; font-size:12px;" 
-                                    data-user-id="{{ stat.profile.user.id }}"
-                                    data-email="{{ stat.profile.user.email }}"
-                                    data-limit="{{ stat.profile.user.quota.max_credits }}"
-                                    onclick="handleAllocClick(this)">
-                                Reallocate
-                            </button>
+                            <div style="display:flex; gap:8px;">
+                                <button class="btn btn-outline" 
+                                        style="padding:6px 10px; font-size:12px;" 
+                                        data-user-id="{{ stat.profile.user.id }}"
+                                        data-email="{{ stat.profile.user.email }}"
+                                        data-limit="{{ stat.profile.user.quota.max_credits }}"
+                                        onclick="handleAllocClick(this)">
+                                    Reallocate
+                                </button>
+                                <button class="btn btn-outline" 
+                                        style="padding:6px 10px; font-size:12px; border-color:rgba(239, 68, 68, 0.2); color:#EF4444;" 
+                                        onclick="discontinueMember('{{ stat.profile.user.id }}', '{{ stat.profile.user.email }}')">
+                                    <i data-lucide="user-x" size="14"></i>
+                                </button>
+                            </div>
                             {% endif %}
                         </td>
                     </tr>
@@ -231,7 +238,50 @@
             </table>
         </div>
 
-        <div class="card">
+        {% if former_member_stats %}
+        <div class="card" style="margin-top:24px; border-color:rgba(255,255,255,0.05); background:rgba(28,25,23,0.3);">
+            <header style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h3 style="font-size:16px; display:flex; align-items:center; gap:8px; color:var(--zinc-400);">
+                    <i data-lucide="archive" size="18"></i> Historical Archive (Past Members)
+                </h3>
+            </header>
+            <table class="member-table">
+                <thead>
+                    <tr>
+                        <th>Member</th>
+                        <th>Role</th>
+                        <th>Joined</th>
+                        <th>Tenure End</th>
+                        <th>Total Consumption</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stat in former_member_stats %}
+                    <tr style="opacity:0.7;">
+                        <td>
+                            <div style="font-weight:500; color:var(--zinc-300);">{{ stat.profile.user.username }}</div>
+                            <div style="font-size:12px; color:var(--zinc-500);">{{ stat.profile.user.email }}</div>
+                        </td>
+                        <td>
+                            <span class="badge" style="background:transparent; border:1px solid var(--zinc-800); color:var(--zinc-500);">Former {{ stat.profile.role|title }}</span>
+                        </td>
+                        <td>
+                            <div style="font-size:13px; color:var(--zinc-500);">{{ stat.profile.joined_at|date:"M d, Y" }}</div>
+                        </td>
+                        <td>
+                            <div style="font-size:13px; color:var(--zinc-500);">{{ stat.profile.left_at|date:"M d, Y" }}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:700; color:var(--zinc-400);">{{ stat.tenure_usage }} <small>Credits</small></div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <div class="card" style="margin-top:24px;">
             <h3 style="font-size:16px; margin-bottom:20px;">Pending Invitations</h3>
             {% if pending_invites %}
             <table class="member-table">
@@ -334,6 +384,19 @@
                 alert(d.message);
                 if (d.status === 'success') location.reload();
             });
+        }
+
+        function discontinueMember(userId, email) {
+            if (confirm(`Are you sure you want to remove ${email} from the organization? Unspent credits will be returned to the corporate pool, but historical usage will remain tracked.`)) {
+                const formData = new FormData();
+                formData.append('user_id', userId);
+                fetch('/corporate/members/remove/', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(d => {
+                    alert(d.message);
+                    if (d.status === 'success') location.reload();
+                });
+            }
         }
 
         function handleAllocClick(btn) {

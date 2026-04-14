@@ -22,6 +22,7 @@ urlpatterns = [
     path("corporate/analytics/", views.corporate_analytics, name="corporate_analytics"),
     path("corporate/api/usage/", views.get_corporate_usage_data, name="get_corporate_usage_data"),
     path("corporate/members/add/", views.corporate_add_member, name="corporate_add_member"),
+    path("corporate/members/remove/", views.corporate_remove_member, name="corporate_remove_member"),
     path("corporate/members/resend/", views.corporate_resend_invite, name="corporate_resend_invite"),
     path("corporate/members/reallocate/", views.corporate_reallocate_credits, name="corporate_reallocate_credits"),
 ]

@@ -374,3 +374,9 @@ Traceback (most recent call last):
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
                    ^^
 UnboundLocalError: cannot access local variable 'df' where it is not associated with a value
+ERROR 2026-04-14 16:42:19,950 base_tool 1424 25092 Legacy error in column_analysis: cannot access local variable 'df' where it is not associated with a value
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\column_analysis_tool.py", line 62, in execute
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+                   ^^
+UnboundLocalError: cannot access local variable 'df' where it is not associated with a value

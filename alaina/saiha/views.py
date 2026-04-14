@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from saiha.models import (
     Dataset, DatasetColumn, AnalysisSession, ChatMessage, AnalysisResult,
-    AIAuditLog, UserQuota, AppConfiguration, Corporate, CorporateProfile, CorporateInvitation
+    AIAuditLog, UserQuota, AppConfiguration, Corporate, CorporateProfile, CorporateInvitation, CreditPackage
 )
 from saiha.corporate_service import CorporateService
 from saiha.adapter import CustomAccountAdapter
@@ -412,6 +412,10 @@ def corporate_dashboard(request):
     Main management portal for Corporate Admins.
     """
     corporate = request.user.corp_profile.corporate
+    
+    # 1. Sync Expiry and Rollover
+    corporate = CorporateService.sync_corporate_credits(corporate)
+    
     members = CorporateProfile.objects.filter(corporate=corporate, is_active=True).select_related('user', 'user__quota')
     pending_invites = CorporateInvitation.objects.filter(corporate=corporate, is_accepted=False).order_by('-created_at')
     
@@ -464,13 +468,22 @@ def corporate_dashboard(request):
             'tenure_usage': usage_credits
         })
     
+    # 3. Invitations
+    pending_invites = CorporateInvitation.objects.filter(corporate=corporate, is_accepted=False, expires_at__gt=timezone.now())
+
+    # 4. Purchase Packages
+    credit_packages = CreditPackage.objects.filter(is_active=True)
+
     context = {
         'corporate': corporate,
         'member_stats': member_stats,
         'former_member_stats': former_member_stats,
         'pending_invites': pending_invites,
+        'credit_packages': credit_packages,
         'total_spent': round(total_spent, 2),
         'unallocated': corporate.rem_credits,
+        'expired_credits': corporate.expired_credits,
+        'expiry_date': corporate.expiry_date,
         'active_seats': members.filter(role='MEMBER').count()
     }
     return render(request, 'corporate/dashboard.html', context)
@@ -505,6 +518,30 @@ def corporate_resend_invite(request):
             return JsonResponse({'status': 'success', 'message': 'Invitation resent successfully.'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
+
+@csrf_exempt
+@corporate_admin_required
+def corporate_topup(request):
+    """
+    API to process credit top-ups using dynamic packages.
+    """
+    if request.method == 'POST':
+        package_id = request.POST.get('package_id')
+        corporate = request.user.corp_profile.corporate
+        
+        try:
+            package = get_object_or_404(CreditPackage, id=package_id, is_active=True)
+            amount = float(package.credits)
+            
+            total_added = CorporateService.recharge_corporate(corporate, amount)
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'Payment Successful! {package.name} ({amount} Credits) added. Any expired balance has been carried forward.'
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+            
+    return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
 
 @csrf_exempt
 @corporate_admin_required
@@ -704,7 +741,12 @@ def get_corporate_usage_data(request):
     from datetime import timedelta
     
     corporate = request.user.corp_profile.corporate
-    profiles = CorporateProfile.objects.filter(corporate=corporate)
+    
+    # 1. Sync Expiry and Rollover
+    corporate = CorporateService.sync_corporate_credits(corporate)
+    
+    # 2. Member Statistics for Charts
+    members = CorporateProfile.objects.filter(corporate=corporate)
     
     today = timezone.now().date()
     thirty_days_ago = today - timedelta(days=30)
@@ -712,7 +754,7 @@ def get_corporate_usage_data(request):
     daily_stats = {}
     member_stats_map = {}
 
-    for profile in profiles:
+    for profile in members:
         # Sum logs only for their tenure
         query = AIAuditLog.objects.filter(user=profile.user, timestamp__date__gte=thirty_days_ago)
         if profile.is_active:

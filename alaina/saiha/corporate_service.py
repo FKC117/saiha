@@ -241,3 +241,43 @@ class CorporateService:
 
         logger.info(f"Corporate {corporate.name} purchased {count} seats for {total_cost} credits.")
         return True
+
+    @staticmethod
+    def sync_corporate_credits(corporate):
+        """
+        Checks if the corporate pool has expired and moves credits to the resuable pool.
+        """
+        from django.utils import timezone
+        if corporate.expiry_date and timezone.now() > corporate.expiry_date:
+            if corporate.rem_credits > 0:
+                corporate.expired_credits += corporate.rem_credits
+                corporate.rem_credits = 0
+                corporate.save()
+                logger.info(f"Corporate {corporate.name} credits expired. Moved {corporate.expired_credits} to rescue pool.")
+        return corporate
+
+    @staticmethod
+    @transaction.atomic
+    def recharge_corporate(corporate, amount_credits, days_valid=30):
+        """
+        Main entry point for adding credits. Performs the 'Rescue & Rollover'.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        
+        # 1. Prepare rescue
+        rescued = corporate.expired_credits
+        total_to_add = amount_credits + rescued
+        
+        # 2. Update Pool
+        corporate.rem_credits += total_to_add
+        corporate.total_credits += amount_credits # Total ledger only increases by the new purchase
+        corporate.expired_credits = 0
+        
+        # 3. Extend Expiry
+        new_expiry = timezone.now() + timedelta(days=days_valid)
+        corporate.expiry_date = new_expiry
+        
+        corporate.save()
+        logger.info(f"Recharged {corporate.name}: Added {amount_credits}, Rescued {rescued}. New Total: {corporate.rem_credits}")
+        return total_to_add

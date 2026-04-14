@@ -286,6 +286,7 @@ class UserQuota(models.Model):
     plan_name = models.CharField(max_length=50, default="Free")
     max_tokens = models.IntegerField(default=50000)
     current_tokens_used = models.IntegerField(default=0)
+    expired_tokens = models.IntegerField(default=0, help_text="Tokens from a previous cycle that can be rescued.")
     expiry_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -333,6 +334,28 @@ class AppConfiguration(models.Model):
         config = cls.objects.first()
         return config.token_to_credit_rate if config else 10000
 
+class CreditPackage(models.Model):
+    """
+    Standard credit amounts that users can purchase.
+    Managed by administrators via the Django Admin.
+    """
+    name = models.CharField(max_length=100, help_text="e.g. Starter, Professional, Enterprise")
+    credits = models.FloatField(help_text="Amount of credits granted in this package.")
+    price_usd = models.DecimalField(max_digits=10, decimal_places=2, help_text="Total price in USD (e.g. 5.00)")
+    price_bdt = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Total price in BDT (e.g. 600.00)")
+    is_popular = models.BooleanField(default=False, help_text="If True, this package is highlighted in the Storefront.")
+    is_active = models.BooleanField(default=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['price_usd']
+        verbose_name = "Credit Package"
+        verbose_name_plural = "Credit Packages"
+
+    def __str__(self):
+        return f"{self.name} ({self.credits} Credits - ${self.price_usd})"
+
 class Corporate(models.Model):
     """
     Enterprise entity that owns a pool of credits and managed users.
@@ -342,12 +365,21 @@ class Corporate(models.Model):
     max_users = models.IntegerField(default=5, help_text="Maximum number of seat licenses.")
     total_credits = models.FloatField(default=0, help_text="Total credits assigned to this corporation.")
     rem_credits = models.FloatField(default=0, help_text="Remaining UNALLOCATED credits in the corporate pool.")
+    expired_credits = models.FloatField(default=0, help_text="Unspent credits that have passed their expiry date.")
+    expiry_date = models.DateTimeField(null=True, blank=True)
     
     # Customization (Future)
     logo = models.ImageField(upload_to='corporate/logos/', null=True, blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def is_expired(self):
+        if not self.expiry_date:
+            return False
+        from django.utils import timezone
+        return timezone.now() > self.expiry_date
 
     class Meta:
         verbose_name = "Corporate"

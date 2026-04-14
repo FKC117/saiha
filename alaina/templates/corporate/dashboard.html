@@ -96,6 +96,32 @@
 
         .btn:hover { opacity: 0.9; }
 
+        .package-card {
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid var(--zinc-800);
+            background: var(--zinc-900);
+        }
+        .package-card:hover {
+            border-color: var(--zinc-600);
+            transform: translateY(-2px);
+        }
+        .package-card.popular {
+            border-color: var(--primary-color);
+            background: rgba(139, 92, 246, 0.05);
+        }
+        .package-tier {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            color: var(--zinc-500);
+        }
+        .package-card.popular .package-tier {
+            color: var(--primary-color);
+        }
+
         .btn-outline {
             background: transparent;
             border: 1px solid var(--zinc-700);
@@ -176,8 +202,38 @@
                 <h2 style="font-size:32px; margin:12px 0;">{{ total_spent }} <small style="font-size:14px; color:var(--zinc-500);">Credits</small></h2>
             </div>
             <div class="card">
-                <p style="color:var(--zinc-500); font-size:13px; font-weight:700; text-transform:uppercase;">Unallocated Pool</p>
+                <div style="display:flex; justify-content:space-between; align-items:start;">
+                    <p style="color:var(--zinc-500); font-size:13px; font-weight:700; text-transform:uppercase;">Unallocated Pool</p>
+                    <button class="btn btn-outline" style="padding:4px 8px; font-size:11px;" onclick="openRechargeModal()">
+                        <i data-lucide="plus" size="12"></i> Recharge
+                    </button>
+                </div>
                 <h2 style="font-size:32px; margin:12px 0;">{{ unallocated }} <small style="font-size:14px; color:var(--zinc-500);">Credits</small></h2>
+                
+                <div style="display:flex; align-items:center; gap:6px; margin-top:12px;">
+                    <i data-lucide="calendar" size="14" style="color:var(--zinc-500);"></i>
+                    <span style="font-size:12px; color:var(--zinc-400);">
+                        {% if expiry_date %}
+                            Expires: <b>{{ expiry_date|date:"M d, Y" }}</b>
+                        {% else %}
+                            No Expiry Set
+                        {% endif %}
+                    </span>
+                </div>
+
+                {% if expired_credits > 0 %}
+                <div style="background:rgba(245, 158, 11, 0.1); border:1px solid rgba(245, 158, 11, 0.2); padding:10px; border-radius:8px; margin-top:16px;">
+                    <div style="display:flex; align-items:center; gap:8px; color:#F59E0B; font-size:12px; font-weight:700;">
+                        <i data-lucide="shield-check" size="14"></i> EXPIRED: {{ expired_credits }} CREDITS
+                    </div>
+                    <p style="font-size:11px; color:var(--zinc-400); margin-top:4px;">
+                        Recharge now to <b>Rescue & Carry Forward</b> these credits!
+                    </p>
+                    <button class="btn" style="width:100%; margin-top:10px; padding:6px; font-size:11px; background:#F59E0B; color:black;" onclick="simulateRecharge()">
+                        <i data-lucide="zap" size="12"></i> Quick Rescue (Simulated)
+                    </button>
+                </div>
+                {% endif %}
             </div>
             <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:start;">
@@ -332,6 +388,83 @@
         </div>
     </div>
 
+    <!-- Recharge Selection Modal -->
+    <div id="rechargeModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; align-items:center; justify-content:center; padding:20px;">
+        <div class="card" style="max-width:600px; width:100%; border-color:var(--zinc-700); background:var(--zinc-900);">
+            <header style="display:flex; justify-content:space-between; margin-bottom:24px;">
+                <div>
+                    <h1 style="font-size:20px; font-weight:700;">Recharge Credits</h1>
+                    <p style="color:var(--zinc-500); font-size:13px;">Select a package to fuel your team's AI analysis.</p>
+                </div>
+                <button onclick="closeModal('rechargeModal')" style="background:none; border:none; color:var(--zinc-500); cursor:pointer;"><i data-lucide="x"></i></button>
+            </header>
+
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-bottom:24px;">
+                {% for p in credit_packages %}
+                <div class="card package-card {% if p.is_popular %}popular{% endif %}" 
+                     data-id="{{ p.id }}" 
+                     data-credits="{{ p.credits }}" 
+                     data-price-usd="{{ p.price_usd }}" 
+                     data-name="{{ p.name }}" 
+                     data-price-bdt="{{ p.price_bdt }}"
+                     onclick="handlePackageClick(this)">
+                    
+                    <div class="package-tier">
+                        {% if p.is_popular %}Popular{% else %}{{ p.name }}{% endif %}
+                    </div>
+                    <div style="font-size:24px; font-weight:700; margin-bottom:4px;">{{ p.credits|floatformat:0 }}</div>
+                    <div style="color:var(--zinc-500); font-size:12px;">Credits</div>
+                    <div style="margin-top:16px; font-weight:700; color:white;">
+                        ${{ p.price_usd }} <span style="color:var(--zinc-500); font-weight:400; margin:0 4px;">/</span> ৳{{ p.price_bdt|floatformat:0 }}
+                    </div>
+                </div>
+                {% empty %}
+                <div style="grid-column: span 3; padding:24px; text-align:center; color:var(--zinc-500);">
+                    No credit packages available.
+                </div>
+                {% endfor %}
+            </div>
+
+            <div style="background:rgba(139, 92, 246, 0.1); border-left:4px solid var(--primary-color); padding:12px; border-radius:4px;">
+                <p style="font-size:12px; color:var(--zinc-300); margin:0;">
+                    <i data-lucide="info" size="14" style="vertical-align:middle; margin-right:4px;"></i>
+                    <b>Rollover Benefit:</b> Any unused credits from your previous balance will be carried forward automatically.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div id="checkoutModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:110; align-items:center; justify-content:center; padding:20px;">
+        <div class="card" style="max-width:400px; width:100%; border-color:var(--zinc-700); background:var(--zinc-950); padding:32px;">
+            <header style="text-align:center; margin-bottom:32px;">
+                <div style="background:var(--primary-color); width:48px; height:48px; border-radius:12px; display:grid; place-items:center; margin:0 auto 16px;">
+                    <i data-lucide="shopping-cart" style="color:white;"></i>
+                </div>
+                <h3 style="font-size:20px; font-weight:700;">Complete Purchase</h3>
+                <p style="color:var(--zinc-500); font-size:13px;">Secure payment for <span id="checkout-tier" style="color:white; font-weight:700;">Professionl</span></p>
+            </header>
+
+            <div style="margin-bottom:32px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px; color:var(--zinc-400);">
+                    <span>Credit Amount</span>
+                    <span id="checkout-amount" style="color:white; font-weight:700;">250</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px; color:var(--zinc-500);">
+                    <span>Local Price (BDT)</span>
+                    <span style="color:var(--zinc-300); font-weight:600;">৳<span id="checkout-bdt">3000</span></span>
+                </div>
+                <div style="display:flex; justify-content:space-between; padding-top:12px; border-top:1px solid var(--zinc-800);">
+                    <span style="font-weight:700; color:white;">Total (USD)</span>
+                    <span id="checkout-cost" style="font-size:24px; font-weight:700; color:var(--primary-color);">$25.00</span>
+                </div>
+            </div>
+
+            <button class="btn" onclick="completePurchase()" style="width:100%; justify-content:center; padding:14px; font-size:16px;">Pay & Recharge Now</button>
+            <button onclick="closeModal('checkoutModal')" style="width:100%; background:none; border:none; color:var(--zinc-500); margin-top:16px; cursor:pointer; font-size:13px;">Cancel</button>
+        </div>
+    </div>
+
     <div id="upgradeSeatsModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; align-items:center; justify-content:center; padding:20px;">
         <div class="card" style="max-width:400px; width:100%; border-color:var(--zinc-700); background:var(--zinc-900);">
             <header style="display:flex; justify-content:space-between; margin-bottom:24px;">
@@ -400,6 +533,41 @@
 
         function openAddMemberModal() { openModal('addMemberModal'); }
         function openUpgradeSeatsModal() { openModal('upgradeSeatsModal'); }
+        function openRechargeModal() { openModal('rechargeModal'); }
+
+        let activePackage = { id: '', amount: 0, cost: 0 };
+
+        function handlePackageClick(el) {
+            const id = el.dataset.id;
+            const amount = el.dataset.credits;
+            const cost = parseFloat(el.dataset.priceUsd);
+            const tier = el.dataset.name;
+            const bdt = el.dataset.priceBdt;
+            selectPackage(id, amount, cost, tier, bdt);
+        }
+
+        function selectPackage(id, amount, cost, tier, bdt) {
+            activePackage = { id, amount, cost };
+            document.getElementById('checkout-tier').innerText = tier;
+            document.getElementById('checkout-amount').innerText = amount;
+            document.getElementById('checkout-cost').innerText = '$' + cost.toFixed(2);
+            document.getElementById('checkout-bdt').innerText = bdt;
+            
+            closeModal('rechargeModal');
+            openModal('checkoutModal');
+        }
+
+        function completePurchase() {
+            const formData = new FormData();
+            formData.append('package_id', activePackage.id);
+            
+            fetch('/corporate/topup/', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(d => {
+                alert(d.message);
+                if (d.status === 'success') location.reload();
+            });
+        }
 
         function updateSeatCost() {
             const count = document.getElementById('seat_count').value;
@@ -412,6 +580,19 @@
                 const formData = new FormData();
                 formData.append('count', count);
                 fetch('/corporate/members/purchase-seats/', { method: 'POST', body: formData })
+                .then(r => r.json())
+                .then(d => {
+                    alert(d.message);
+                    if (d.status === 'success') location.reload();
+                });
+            }
+        }
+
+        function simulateRecharge() {
+            if (confirm("Simulate a top-up of 50 Credits? This will also RESCUE any expired credits in your pool.")) {
+                const formData = new FormData();
+                formData.append('amount', 50);
+                fetch('/corporate/simulate-recharge/', { method: 'POST', body: formData })
                 .then(r => r.json())
                 .then(d => {
                     alert(d.message);

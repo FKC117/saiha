@@ -3,8 +3,14 @@ from saiha.models import (
     Dataset, DatasetColumn, ToolCategory, Tool, 
     AnalysisSession, ChatMessage, SiteSettings, 
     AnalysisResult, AIAuditLog, UserQuota, AppConfiguration,
-    Corporate, CorporateProfile, CorporateInvitation
+    Corporate, CorporateProfile, CorporateInvitation, CreditPackage
 )
+
+@admin.register(CreditPackage)
+class CreditPackageAdmin(admin.ModelAdmin):
+    list_display = ('name', 'credits', 'price_usd', 'price_bdt', 'is_popular', 'is_active')
+    list_editable = ('price_usd', 'price_bdt', 'is_popular', 'is_active')
+    search_fields = ('name',)
 
 @admin.register(Corporate)
 class CorporateAdmin(admin.ModelAdmin):

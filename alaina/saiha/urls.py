@@ -26,4 +26,5 @@ urlpatterns = [
     path("corporate/members/resend/", views.corporate_resend_invite, name="corporate_resend_invite"),
     path("corporate/members/reallocate/", views.corporate_reallocate_credits, name="corporate_reallocate_credits"),
     path("corporate/members/purchase-seats/", views.corporate_purchase_seats, name="corporate_purchase_seats"),
+    path("corporate/topup/", views.corporate_topup, name="corporate_topup"),
 ]

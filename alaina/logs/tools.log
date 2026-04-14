@@ -380,3 +380,26 @@ Traceback (most recent call last):
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
                    ^^
 UnboundLocalError: cannot access local variable 'df' where it is not associated with a value
+ERROR 2026-04-14 18:19:38,444 base_tool 1424 25092 Legacy error in two_way_anova: array must not contain infs or NaNs
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\two_way_anova_tool.py", line 136, in execute
+    anova_table = sm.stats.anova_lm(model, typ=2)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\statsmodels\stats\anova.py", line 353, in anova_lm
+    return anova_single(model, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\statsmodels\stats\anova.py", line 84, in anova_single
+    return anova2_lm_single(model, design_info, n_rows, test, pr_test,
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\statsmodels\stats\anova.py", line 207, in anova2_lm_single
+    orth_compl,_ = linalg.qr(LVL)
+                   ^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\scipy\_lib\_util.py", line 1181, in wrapper
+    return f(*arrays, *other_args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\scipy\linalg\_decomp_qr.py", line 142, in qr
+    a1 = np.asarray_chkfinite(a)
+         ^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\numpy\lib\_function_base_impl.py", line 673, in asarray_chkfinite
+    raise ValueError(
+ValueError: array must not contain infs or NaNs

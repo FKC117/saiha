@@ -194,28 +194,33 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for member in members %}
+                    {% for stat in member_stats %}
                     <tr>
                         <td>
-                            <div style="font-weight:500;">{{ member.user.username }}</div>
-                            <div style="font-size:12px; color:var(--zinc-500);">{{ member.user.email }}</div>
+                            <div style="font-weight:500;">{{ stat.profile.user.username }}</div>
+                            <div style="font-size:12px; color:var(--zinc-500);">{{ stat.profile.user.email }}</div>
                         </td>
                         <td>
-                            {% if member.role == 'ADMIN' %}
+                            {% if stat.profile.role == 'ADMIN' %}
                                 <span class="badge badge-admin">Admin</span>
                             {% else %}
                                 <span class="badge" style="background:var(--zinc-800); color:var(--zinc-400);">Member</span>
                             {% endif %}
                         </td>
                         <td>
-                            <div style="font-weight:700;">{{ member.user.quota.credits_used }} <small style="color:var(--zinc-500);">Credits</small></div>
+                            <div style="font-weight:700;">{{ stat.org_usage }} <small style="color:var(--zinc-500);">Credits</small></div>
                         </td>
                         <td>
-                            <div style="font-weight:700;">{{ member.user.quota.max_credits }} <small style="color:var(--zinc-500);">Credits</small></div>
+                            <div style="font-weight:700;">{{ stat.profile.user.quota.max_credits }} <small style="color:var(--zinc-500);">Credits</small></div>
                         </td>
                         <td>
-                            {% if member.role != 'ADMIN' %}
-                            <button class="btn btn-outline" style="padding:6px 10px; font-size:12px;" onclick="openAllocModal('{{ member.user.id }}', '{{ member.user.email }}', {{ member.user.quota.max_credits }})">
+                            {% if stat.profile.role != 'ADMIN' %}
+                            <button class="btn btn-outline" 
+                                    style="padding:6px 10px; font-size:12px;" 
+                                    data-user-id="{{ stat.profile.user.id }}"
+                                    data-email="{{ stat.profile.user.email }}"
+                                    data-limit="{{ stat.profile.user.quota.max_credits }}"
+                                    onclick="handleAllocClick(this)">
                                 Reallocate
                             </button>
                             {% endif %}
@@ -225,27 +230,117 @@
                 </tbody>
             </table>
         </div>
+
+        <div class="card">
+            <h3 style="font-size:16px; margin-bottom:20px;">Pending Invitations</h3>
+            {% if pending_invites %}
+            <table class="member-table">
+                <thead>
+                    <tr>
+                        <th>Recipient</th>
+                        <th>Sent Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invite in pending_invites %}
+                    <tr>
+                        <td>
+                            <div style="font-weight:500;">{{ invite.first_name }} {{ invite.last_name }}</div>
+                            <div style="font-size:12px; color:var(--zinc-500);">{{ invite.email }}</div>
+                        </td>
+                        <td>
+                            <div style="font-size:13px;">{{ invite.sent_at|date:"M d, Y H:i"|default:"Never" }}</div>
+                        </td>
+                        <td>
+                            <span class="badge" style="background:rgba(245, 158, 11, 0.1); color:#F59E0B;">{{ invite.status }}</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-outline" style="padding:6px 10px; font-size:12px;" onclick="resendInvite('{{ invite.id }}')">
+                                <i data-lucide="send" size="14"></i> Resend
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p style="color:var(--zinc-500); font-size:14px; padding:20px; text-align:center; border:1px dashed var(--zinc-800); border-radius:8px;">
+                No pending invitations.
+            </p>
+            {% endif %}
+        </div>
     </div>
 
-    <!-- Modals omitted for brevity, will include basic JS for interactivity -->
+    <div id="addMemberModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; align-items:center; justify-content:center; padding:20px;">
+        <div class="card" style="max-width:400px; width:100%; border-color:var(--zinc-700); background:var(--zinc-900);">
+            <header style="display:flex; justify-content:space-between; margin-bottom:24px;">
+                <h3 style="font-size:18px;">Add Team Member</h3>
+                <button onclick="closeModal('addMemberModal')" style="background:none; border:none; color:var(--zinc-500); cursor:pointer;"><i data-lucide="x"></i></button>
+            </header>
+            
+            <form id="memberForm">
+                <div class="input-group">
+                    <label>Work Email</label>
+                    <input type="email" id="mem_email" placeholder="name@company.com" required>
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div class="input-group">
+                        <label>First Name</label>
+                        <input type="text" id="mem_fn" placeholder="Jane">
+                    </div>
+                    <div class="input-group">
+                        <label>Last Name</label>
+                        <input type="text" id="mem_ln" placeholder="Doe">
+                    </div>
+                </div>
+                <div style="margin-top:12px;">
+                    <button type="submit" class="btn" style="width:100%; justify-content:center;">Add or Invite Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         lucide.createIcons();
 
-        function openAddMemberModal() {
-            const email = prompt("Enter team member's email address:");
-            if (email) {
-                const formData = new FormData();
-                formData.append('email', email);
-                fetch('/corporate/members/add/', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(r => r.json())
-                .then(d => {
-                    alert(d.message);
-                    if (d.status === 'success') location.reload();
-                });
-            }
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        function openAddMemberModal() { openModal('addMemberModal'); }
+
+        document.getElementById('memberForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData();
+            formData.append('email', document.getElementById('mem_email').value);
+            formData.append('first_name', document.getElementById('mem_fn').value);
+            formData.append('last_name', document.getElementById('mem_ln').value);
+
+            fetch('/corporate/members/add/', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(d => {
+                alert(d.message);
+                if (d.status === 'success') location.reload();
+            });
+        });
+
+        function resendInvite(inviteId) {
+            const formData = new FormData();
+            formData.append('invite_id', inviteId);
+            fetch('/corporate/members/resend/', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(d => {
+                alert(d.message);
+                if (d.status === 'success') location.reload();
+            });
+        }
+
+        function handleAllocClick(btn) {
+            const userId = btn.getAttribute('data-user-id');
+            const email = btn.getAttribute('data-email');
+            const currentLimit = btn.getAttribute('data-limit');
+            openAllocModal(userId, email, currentLimit);
         }
 
         function openAllocModal(userId, email, currentLimit) {

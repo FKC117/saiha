@@ -411,23 +411,57 @@ def corporate_dashboard(request):
     """
     corporate = request.user.corp_profile.corporate
     members = CorporateProfile.objects.filter(corporate=corporate).select_related('user', 'user__quota')
+    pending_invites = CorporateInvitation.objects.filter(corporate=corporate, is_accepted=False).order_by('-created_at')
     
-    # Calculate aggregate stats safely
+    from django.db.models import Sum
+    from .models import AIAuditLog, AppConfiguration
+
+    rate = float(AppConfiguration.get_rate())
+    
+    # Calculate isolated organization usage
     total_spent = 0
+    member_stats = []
+    
     for m in members:
-        try:
-            total_spent += m.user.quota.credits_used
-        except Exception:
-            # Fallback for users missing quota (though signals should prevent this)
-            continue
+        # Sum only logs that happened AFTER they joined this corp
+        usage_tokens = AIAuditLog.objects.filter(
+            user=m.user,
+            timestamp__gte=m.joined_at
+        ).aggregate(
+            total=Sum('tokens_input') + Sum('tokens_output')
+        )['total'] or 0
+        
+        usage_credits = round(usage_tokens / rate, 2)
+        total_spent += usage_credits
+        
+        member_stats.append({
+            'profile': m,
+            'org_usage': usage_credits,
+            'total_allocation': m.user.quota.max_credits
+        })
     
     context = {
         'corporate': corporate,
-        'members': members,
+        'member_stats': member_stats,
+        'pending_invites': pending_invites,
         'total_spent': round(total_spent, 2),
         'unallocated': corporate.rem_credits
     }
     return render(request, 'corporate/dashboard.html', context)
+
+@csrf_exempt
+@corporate_admin_required
+def corporate_resend_invite(request):
+    """
+    API to resend an invitation.
+    """
+    if request.method == 'POST':
+        invite_id = request.POST.get('invite_id')
+        try:
+            CorporateService.resend_invitation(request, invite_id)
+            return JsonResponse({'status': 'success', 'message': 'Invitation resent successfully.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
 
 @csrf_exempt
 @corporate_admin_required
@@ -437,16 +471,25 @@ def corporate_add_member(request):
     """
     if request.method == 'POST':
         email = request.POST.get('email')
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
         corporate = request.user.corp_profile.corporate
         
         try:
             # Check if user exists
             user = User.objects.filter(email=email).first()
             if not user:
-                # Future: send invitation email
-                return JsonResponse({'status': 'error', 'message': 'User with this email not found. Invitations coming soon.'})
+                # Store invitation
+                invitation = CorporateService.invite_user(corporate, email, first_name=first_name, last_name=last_name)
+                # Send the branded email
+                CorporateService.send_invitation_email(request, invitation)
+                
+                return JsonResponse({
+                    'status': 'success', 
+                    'message': f'Invitation sent to {email}.'
+                })
             
-            CorporateService.add_user_directly(corporate, user)
+            CorporateService.add_user_directly(corporate, user, first_name=first_name, last_name=last_name)
             return JsonResponse({'status': 'success', 'message': f'Member {email} added successfully.'})
         except ValueError as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
@@ -512,25 +555,47 @@ def corporate_join(request, token):
         return render(request, 'corporate/join.html', {'error': 'This invitation has expired.'})
 
     if request.method == 'POST':
+        action = request.POST.get('action')
+        
         if not request.user.is_authenticated:
             # Store invitation token in session so we can link it after they signup/login
             request.session['pending_invite_token'] = str(token)
             return redirect('account_signup')
         
-        # If already logged in, link immediately
+        # Identity Guard: Check if logged-in user matches invitation email
+        email_mismatch = request.user.email.lower() != invitation.email.lower()
+        
+        if email_mismatch and action != 'force_link':
+            # Redirect to render the landing page with mismatch warning
+            return render(request, 'corporate/join.html', {
+                'invitation': invitation,
+                'email_mismatch': True,
+                'current_email': request.user.email
+            })
+
+        # If already logged in and (emails match OR user forced link)
         try:
             CorporateService.add_user_directly(
                 invitation.corporate, 
                 request.user, 
-                initial_credits=invitation.initial_credits
+                initial_credits=invitation.initial_credits,
+                first_name=invitation.first_name,
+                last_name=invitation.last_name
             )
             invitation.is_accepted = True
+            invitation.status = CorporateInvitation.Status.ACCEPTED
             invitation.save()
-            return redirect(CustomAccountAdapter(request).get_login_redirect_url(request))
-        except ValueError as e:
+            return redirect('corporate_dashboard')
+        except Exception as e:
             return render(request, 'corporate/join.html', {'invitation': invitation, 'error': str(e)})
 
-    return render(request, 'corporate/join.html', {'invitation': invitation})
+    # GET request
+    context = {'invitation': invitation}
+    if request.user.is_authenticated:
+        context['email_mismatch'] = request.user.email.lower() != invitation.email.lower()
+        context['current_email'] = request.user.email
+        
+    return render(request, 'corporate/join.html', context)
 
 @corporate_admin_required
 def corporate_analytics(request):
@@ -553,32 +618,44 @@ def get_corporate_usage_data(request):
     from datetime import timedelta
     
     corporate = request.user.corp_profile.corporate
-    member_ids = CorporateProfile.objects.filter(corporate=corporate).values_list('user_id', flat=True)
+    profiles = CorporateProfile.objects.filter(corporate=corporate)
     
     today = timezone.now().date()
     thirty_days_ago = today - timedelta(days=30)
     
-    # 1. Total Organization Usage (Last 30 days)
-    logs = AIAuditLog.objects.filter(
-        user_id__in=member_ids,
-        timestamp__date__gte=thirty_days_ago
-    ).annotate(
-        date=TruncDate('timestamp')
-    ).values('date').annotate(
-        total=Sum('tokens_input') + Sum('tokens_output')
-    ).order_by('date')
+    # We must aggregate daily totals by summing user-specific logs after their join date
+    daily_stats = {}
+    member_stats = {}
 
-    # 2. Breakdown by Member
-    member_usage = AIAuditLog.objects.filter(
-        user_id__in=member_ids
-    ).values('user__username').annotate(
-        total=Sum('tokens_input') + Sum('tokens_output')
-    ).order_by('-total')
+    for profile in profiles:
+        # Fetch logs for this user AFTER they joined
+        logs = AIAuditLog.objects.filter(
+            user=profile.user,
+            timestamp__date__gte=thirty_days_ago,
+            timestamp__gte=profile.joined_at
+        ).annotate(
+            date=TruncDate('timestamp')
+        ).values('date').annotate(
+            day_total=Sum('tokens_input') + Sum('tokens_output')
+        )
 
-    # Formatting for ECharts
-    dates = [(thirty_days_ago + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(31)]
-    usage_map = {log['date'].strftime('%Y-%m-%d'): log['total'] for log in logs}
-    usage_values = [usage_map.get(date, 0) for date in dates]
+        for log in logs:
+            dt_str = log['date'].strftime('%Y-%m-%d')
+            daily_stats[dt_str] = daily_stats.get(dt_str, 0) + log['day_total']
+        
+        # Total for the breakdown
+        total_tokens = AIAuditLog.objects.filter(
+            user=profile.user,
+            timestamp__gte=profile.joined_at
+        ).aggregate(
+            total=Sum('tokens_input') + Sum('tokens_output')
+        )['total'] or 0
+        
+        member_stats[profile.user.username] = total_tokens
+
+    # Format for ECharts
+    chart_data = sorted([{'date': k, 'total': v} for k, v in daily_stats.items()], key=lambda x: x['date'])
+    breakdown_data = [{'name': k, 'value': v} for k, v in member_stats.items()]
     
     rate = float(AppConfiguration.get_rate())
     

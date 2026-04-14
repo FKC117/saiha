@@ -19,6 +19,30 @@ def handle_user_signed_up(request, user, **kwargs):
             email_address.verified = True
             email_address.save()
 
+    # --- PENDING INVITATION LINKING ---
+    pending_token = request.session.get('pending_invite_token')
+    if pending_token:
+        try:
+            from .models import CorporateInvitation
+            from .corporate_service import CorporateService
+            invitation = CorporateInvitation.objects.filter(id=pending_token, is_accepted=False).first()
+            if invitation:
+                # Add to corp with stored name preferences
+                CorporateService.add_user_directly(
+                    invitation.corporate,
+                    user,
+                    first_name=invitation.first_name,
+                    last_name=invitation.last_name,
+                    initial_credits=invitation.initial_credits
+                )
+                invitation.is_accepted = True
+                invitation.save()
+                # Clear session
+                del request.session['pending_invite_token']
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error(f"Failed to link invited user {user.email}: {e}")
+
 @receiver(post_save, sender=User)
 def ensure_user_quota(sender, instance, created, **kwargs):
     """

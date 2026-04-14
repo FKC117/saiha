@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'DM Sans', Arial, sans-serif; background-color: #09090b; color: #f4f4f5; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 40px auto; background-color: #18181b; border: 1px solid #27272a; border-radius: 16px; overflow: hidden; }
+        .header { background-color: #8B5CF6; padding: 40px; text-align: center; }
+        .content { padding: 40px; }
+        .footer { padding: 20px; text-align: center; font-size: 12px; color: #71717a; border-top: 1px solid #27272a; }
+        h1 { font-size: 24px; font-weight: 700; margin: 0; color: white; }
+        p { font-size: 16px; line-height: 1.6; color: #a1a1aa; }
+        .btn { display: inline-block; background-color: #8B5CF6; color: white !important; padding: 16px 32px; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 16px; margin-top: 24px; }
+        .benefit-box { background-color: #27272a; border-radius: 12px; padding: 20px; margin: 24px 0; border: 1px solid #3f3f46; }
+        .benefit-title { font-weight: 700; color: #e4e4e7; margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: 12px;">
+                <rect width="24" height="24" rx="6" fill="white" fill-opacity="0.2"/>
+                <path d="M7 12L12 7L17 12L12 17L7 12Z" fill="white"/>
+            </svg>
+            <h1>Join the Team</h1>
+        </div>
+        <div class="content">
+            <p>Hi {{ first_name|default:"there" }},</p>
+            <p>You have been invited by <strong>{{ corporate_name }}</strong> to join their organization on <strong>ChatFlow</strong>.</p>
+            
+            <p>By joining, you will gain access to specialized AI analysis tools and a shared organization credit pool.</p>
+
+            <div class="benefit-box">
+                <div class="benefit-title">Starting Allocation</div>
+                <div style="color: #A78BFA; font-size: 20px; font-weight: 700;">{{ initial_credits }} Credits</div>
+                <div style="font-size: 13px; color: #71717a; margin-top: 4px;">Ready for immediate use upon signup</div>
+            </div>
+
+            <div style="text-align: center;">
+                <a href="{{ join_url }}" class="btn">Join Organization</a>
+            </div>
+
+            <p style="margin-top: 40px; font-size: 14px;">If you didn't expect this invitation, you can safely ignore this email.</p>
+        </div>
+        <div class="footer">
+            &copy; 2026 ChatFlow AI. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

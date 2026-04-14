@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 class CorporateService:
     @staticmethod
-    def invite_user(corporate, email, initial_credits=5.0):
+    def invite_user(corporate, email, first_name=None, last_name=None, initial_credits=5.0):
         """
         Creates a pending invitation for a user.
         Defensively checks seat limits.
@@ -32,9 +32,12 @@ class CorporateService:
         invitation = CorporateInvitation.objects.create(
             corporate=corporate,
             email=email,
+            first_name=first_name,
+            last_name=last_name,
             token=token,
             initial_credits=initial_credits,
-            expires_at=expires_at
+            expires_at=expires_at,
+            status=CorporateInvitation.Status.PENDING
         )
         
         logger.info(f"Created invitation for {email} to join {corporate.name}")
@@ -42,7 +45,7 @@ class CorporateService:
 
     @staticmethod
     @transaction.atomic
-    def add_user_directly(corporate, user, role=CorporateProfile.Role.MEMBER, initial_credits=5.0):
+    def add_user_directly(corporate, user, role=CorporateProfile.Role.MEMBER, initial_credits=5.0, first_name=None, last_name=None):
         """
         Links an existing user directly to a corporation.
         Subtracts from corporate unallocated pool.
@@ -57,14 +60,21 @@ class CorporateService:
         if corporate.rem_credits < initial_credits:
             raise ValueError(f"Insufficient corporate credits to allocate {initial_credits}.")
 
-        # 2. Create Profile
+        # 2. Update User Name if missing
+        if first_name and not user.first_name:
+            user.first_name = first_name
+        if last_name and not user.last_name:
+            user.last_name = last_name
+        user.save()
+
+        # 3. Create Profile
         profile = CorporateProfile.objects.create(
             user=user,
             corporate=corporate,
             role=role
         )
 
-        # 3. Setup Quota
+        # 4. Setup Quota
         quota, _ = UserQuota.objects.get_or_create(user=user)
         
         from .models import AppConfiguration
@@ -75,7 +85,7 @@ class CorporateService:
         quota.max_tokens = token_allocation
         quota.save()
 
-        # 4. Deduct from Corporate Pool
+        # 5. Deduct from Corporate Pool
         corporate.rem_credits -= float(initial_credits)
         corporate.save()
 
@@ -110,3 +120,59 @@ class CorporateService:
 
         logger.info(f"Reallocated credits for {target_user.email}: {current_credits} -> {new_credit_limit}")
         return True
+
+    @staticmethod
+    def resend_invitation(request, invitation_id):
+        """
+        Retrieves a pending invitation and resends it, updating timestamps.
+        """
+        invitation = CorporateInvitation.objects.get(id=invitation_id, is_accepted=False)
+        return CorporateService.send_invitation_email(request, invitation)
+
+    @staticmethod
+    def send_invitation_email(request, invitation):
+        """
+        Sends the branded HTML invitation email and updates tracking fields.
+        """
+        from django.core.mail import EmailMultiAlternatives
+        from django.template.loader import render_to_string
+        from django.utils.html import strip_tags
+        from django.conf import settings
+        from django.utils import timezone
+
+        # 1. Prepare Content
+        context = {
+            'corporate_name': invitation.corporate.name,
+            'first_name': invitation.first_name,
+            'initial_credits': invitation.initial_credits,
+            'join_url': request.build_absolute_uri(f"/corporate/join/{invitation.id}/")
+        }
+
+        subject = f"Invitation to join {invitation.corporate.name} on ChatFlow"
+        html_content = render_to_string('emails/corporate_invitation.html', context)
+        text_content = strip_tags(html_content)
+
+        # 2. Send Email
+        try:
+            msg = EmailMultiAlternatives(
+                subject,
+                text_content,
+                settings.DEFAULT_FROM_EMAIL,
+                [invitation.email]
+            )
+            msg.attach_alternative(html_content, "text/html")
+            msg.send()
+            
+            # 3. Update Tracking
+            now = timezone.now()
+            if not invitation.sent_at:
+                invitation.sent_at = now
+            invitation.last_sent_at = now
+            invitation.status = CorporateInvitation.Status.SENT
+            invitation.save()
+            
+            logger.info(f"Sent invitation email to {invitation.email}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send invitation email to {invitation.email}: {e}")
+            return False

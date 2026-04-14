@@ -380,12 +380,27 @@ class CorporateInvitation(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     corporate = models.ForeignKey(Corporate, on_delete=models.CASCADE, related_name='invitations')
     email = models.EmailField()
+    first_name = models.CharField(max_length=150, null=True, blank=True)
+    last_name = models.CharField(max_length=150, null=True, blank=True)
     token = models.CharField(max_length=100, unique=True)
     
     # Allocation for this invited user
     initial_credits = models.FloatField(default=5.0)
     
     is_accepted = models.BooleanField(default=False)
+    
+    # Tracking
+    sent_at = models.DateTimeField(null=True, blank=True)
+    last_sent_at = models.DateTimeField(null=True, blank=True)
+    
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        SENT = 'SENT', 'Sent'
+        ACCEPTED = 'ACCEPTED', 'Accepted'
+        EXPIRED = 'EXPIRED', 'Expired'
+    
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
 

@@ -111,10 +111,29 @@
                 </div>
             </div>
 
-            <form method="POST">
-                {% csrf_token %}
-                <button type="submit" class="btn-join">Accept Invitation</button>
-            </form>
+            {% if email_mismatch %}
+                <div style="background:rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); border-radius:16px; padding:24px; text-align:left; margin-bottom:32px;">
+                    <div style="display:flex; gap:12px; color:#F59E0B; margin-bottom:12px; font-weight:700;">
+                        <i data-lucide="shield-alert"></i> Identity Check
+                    </div>
+                    <p style="font-size:14px; margin:0; line-height:1.5; color:#d6d3d1;">
+                        You are currently logged in as <strong style="color:white;">{{ current_email }}</strong>, but this invitation was sent to <strong style="color:white;">{{ invitation.email }}</strong>.
+                    </p>
+                    <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
+                        <a href="{% url 'account_logout' %}?next={{ request.path }}" class="btn-join" style="background:#292524; text-align:center; text-decoration:none;">Switch Account</a>
+                        <form method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="force_link">
+                            <button type="submit" style="background:none; border:none; color:#78716c; font-size:12px; text-decoration:underline; cursor:pointer; width:100%;">Continue as {{ current_email }} anyway</button>
+                        </form>
+                    </div>
+                </div>
+            {% else %}
+                <form method="POST">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-join">Accept Invitation</button>
+                </form>
+            {% endif %}
             
             <p style="font-size:12px; color:#57534e; margin-top:24px;">
                 Secure invitation for <strong>{{ invitation.email }}</strong>

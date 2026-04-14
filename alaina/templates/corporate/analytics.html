@@ -1,0 +1,197 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Org Analytics | {{ corporate.name }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <style>
+        :root {
+            --zinc-950: #09090b;
+            --zinc-900: #18181b;
+            --zinc-800: #27272a;
+            --zinc-700: #3f3f46;
+            --zinc-500: #71717a;
+            --zinc-100: #f4f4f5;
+            --primary-color: #8B5CF6;
+        }
+
+        body {
+            background-color: var(--zinc-950);
+            color: var(--zinc-100);
+            font-family: 'DM Sans', sans-serif;
+            margin: 0;
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: var(--zinc-900);
+            border-right: 1px solid var(--zinc-800);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 32px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+
+        .chart-card {
+            background: rgba(24, 24, 27, 0.4);
+            border: 1px solid var(--zinc-800);
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            min-height: 400px;
+        }
+
+        .chart-container {
+            width: 100%;
+            height: 350px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 24px;
+        }
+
+        .nav-link {
+            color: var(--zinc-400);
+            padding: 10px 12px;
+            border-radius: 8px;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover { color: white; background: var(--zinc-800); }
+        .nav-link.active { background: var(--zinc-800); color: white; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <div style="background:var(--primary-color); width:32px; height:32px; border-radius:8px; display:grid; place-items:center;">
+                <i data-lucide="building-2" style="color:white; width:18px; height:18px;"></i>
+            </div>
+            <span style="font-weight:700; font-size:18px;">{{ corporate.name }}</span>
+        </div>
+        
+        <nav style="display:flex; flex-direction:column; gap:8px; margin-top:20px;">
+            <a href="{% url 'saiha:corporate_dashboard' %}" class="nav-link">
+                <i data-lucide="users" size="18"></i> Team Management
+            </a>
+            <a href="{% url 'saiha:corporate_analytics' %}" class="nav-link active">
+                <i data-lucide="pie-chart" size="18"></i> Usage Analytics
+            </a>
+            <a href="/accounts/logout/" class="nav-link" style="margin-top:auto;">
+                <i data-lucide="log-out" size="18"></i> Sign Out
+            </a>
+        </nav>
+    </div>
+
+    <div class="main-content">
+        <header style="margin-bottom:40px;">
+            <h1 style="font-size:28px; font-weight:700;">Organization Analytics</h1>
+            <p style="color:var(--zinc-500);">Deep insights into your team's consumption patterns.</p>
+        </header>
+
+        <div class="chart-card">
+            <h3 style="font-size:16px; margin-bottom:20px;">Organization Consumption Trend (30 Days)</h3>
+            <div id="consumptionChart" class="chart-container"></div>
+        </div>
+
+        <div class="grid-2">
+            <div class="chart-card">
+                <h3 style="font-size:16px; margin-bottom:20px;">Top Resource Consumers</h3>
+                <div id="memberChart" class="chart-container"></div>
+            </div>
+            <div class="chart-card" style="display:flex; flex-direction:column; justify-content:center; text-align:center;">
+                <i data-lucide="zap" size="48" style="color:var(--primary-color); margin: 0 auto 16px;"></i>
+                <h2 style="font-size:32px; margin-bottom:8px;" id="totalOrgSpent">--</h2>
+                <p style="color:var(--zinc-500); font-size:14px;">Total Credits Consumed by Org</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Standard Chart Theme
+        const chartTheme = {
+            backgroundColor: 'transparent',
+            textStyle: { color: '#71717a', fontFamily: 'DM Sans' },
+            grid: { top: 40, right: 20, bottom: 40, left: 50 }
+        };
+
+        async function loadAnalytics() {
+            const resp = await fetch('{% url "saiha:get_corporate_usage_data" %}');
+            const data = await resp.json();
+            const charts = data.charts;
+
+            // 1. Consumption Area Chart
+            const consumptionDom = document.getElementById('consumptionChart');
+            const consumptionChart = echarts.init(consumptionDom);
+            consumptionChart.setOption({
+                ...chartTheme,
+                tooltip: { trigger: 'axis' },
+                xAxis: { type: 'category', data: charts.daily_dates, boundaryGap: false },
+                yAxis: { type: 'value', splitLine: { lineStyle: { color: '#27272a' } } },
+                series: [{
+                    data: charts.daily_values,
+                    type: 'line',
+                    smooth: true,
+                    areaStyle: {
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color: 'rgba(139, 92, 246, 0.4)' },
+                            { offset: 1, color: 'rgba(139, 92, 246, 0)' }
+                        ])
+                    },
+                    lineStyle: { color: '#8B5CF6', width: 3 },
+                    symbol: 'none'
+                }]
+            });
+
+            // 2. Member Pie Chart
+            const memberDom = document.getElementById('memberChart');
+            const memberChart = echarts.init(memberDom);
+            memberChart.setOption({
+                ...chartTheme,
+                tooltip: { trigger: 'item' },
+                series: [{
+                    type: 'pie',
+                    radius: ['40%', '70%'],
+                    avoidLabelOverlap: false,
+                    itemStyle: { borderRadius: 10, borderColor: '#18181b', borderWidth: 2 },
+                    label: { show: false },
+                    emphasis: { label: { show: true, fontSize: 14, fontWeight: 'bold' } },
+                    data: charts.member_breakdown
+                }]
+            });
+
+            // 3. Update KPI
+            const total = charts.member_breakdown.reduce((sum, m) => sum + m.value, 0);
+            document.getElementById('totalOrgSpent').innerText = total.toFixed(2);
+            
+            window.addEventListener('resize', () => {
+                consumptionChart.resize();
+                memberChart.resize();
+            });
+        }
+
+        loadAnalytics();
+    </script>
+</body>
+</html>

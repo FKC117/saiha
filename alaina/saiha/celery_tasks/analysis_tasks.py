@@ -89,11 +89,15 @@ def execute_analysis_task(self, result_id: str, session_id: str, tool_name: str,
         # The result_record definitely exists (created by Agent)
         result_record = AnalysisResult.objects.get(id=result_id)
 
-        result_record.result_data = {
+        # JSON Hardening: Recursive sanitization to remove NaN/Inf/etc.
+        # This prevents Postgres 'Token NaN is invalid' errors.
+        safe_result = tool.sanitize_json_data({
             "data": result_obj.data,
             "artifacts": result_obj.artifacts,
             "message": result_obj.message
-        }
+        })
+
+        result_record.result_data = safe_result
         result_record.summary = result_obj.message # Primary narrative target
         result_record.status = AnalysisResult.Status.SUCCESS
         result_record.save()

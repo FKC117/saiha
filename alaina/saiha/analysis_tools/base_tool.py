@@ -131,7 +131,7 @@ class BaseAnalysisTool(abc.ABC):
                 table_rows = section.get('data') or section.get('rows') or []
                 norm_art['data'] = [list(row) if isinstance(row, (list, tuple)) else [row] for row in table_rows]
                 
-                final_artifacts.append(norm_art)
+                final_artifacts.append(self.sanitize_json_data(norm_art))
         
         # 2. Process existing Artifacts
         for art in raw_artifacts:
@@ -181,8 +181,8 @@ class BaseAnalysisTool(abc.ABC):
         )
 
     def sanitize_json_data(self, obj: Any) -> Any:
-        # Avoid recursion on strings/bytes
-        if isinstance(obj, (str, bytes)):
+        # Avoid recursion on strings/bytes/None
+        if obj is None or isinstance(obj, (str, bytes, bool, int)):
             return obj
             
         import math
@@ -190,27 +190,35 @@ class BaseAnalysisTool(abc.ABC):
         
         # 1. Handle NaN / Inf (The Postgres Killers)
         try:
-            if isinstance(obj, float):
+            # Handle float specifically (including np.float64 which often behaves like float)
+            if isinstance(obj, (float, np.floating)):
                 if math.isnan(obj) or math.isinf(obj):
                     return None
-                return obj
+                return float(obj)
             
-            # 2. Handle Numpy Types
+            # 2. Handle Numpy Types (Integers, etc)
+            if isinstance(obj, np.integer):
+                return int(obj)
+                
             if isinstance(obj, np.generic):
                 if hasattr(obj, 'item'):
                     val = obj.item()
-                    if isinstance(val, float) and (math.isnan(val) or math.isinf(val)):
-                        return None
-                    return val
+                    return self.sanitize_json_data(val)
                 return None
             
-            # 3. Handle Sequences
-            if isinstance(obj, (list, tuple, set)):
+            # 3. Handle Sequences (List, Tuple, NDArray)
+            if isinstance(obj, (list, tuple, set, np.ndarray)):
                 return [self.sanitize_json_data(i) for i in obj]
                 
             # 4. Handle Dictionaries
             if isinstance(obj, dict):
                 return {str(k): self.sanitize_json_data(v) for k, v in obj.items()}
+                
+            # 5. Handle Pandas Objects (Series/DF) - convert to list/dict
+            if hasattr(obj, 'tolist'): # Pandas Series/Index
+                return self.sanitize_json_data(obj.tolist())
+            if hasattr(obj, 'to_dict'): # Pandas DataFrame
+                return self.sanitize_json_data(obj.to_dict(orient='records'))
                 
             return obj
         except Exception:

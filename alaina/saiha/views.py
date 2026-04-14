@@ -411,8 +411,14 @@ def corporate_dashboard(request):
     corporate = request.user.corp_profile.corporate
     members = CorporateProfile.objects.filter(corporate=corporate).select_related('user', 'user__quota')
     
-    # Calculate aggregate stats
-    total_spent = sum(m.user.quota.credits_used for m in members)
+    # Calculate aggregate stats safely
+    total_spent = 0
+    for m in members:
+        try:
+            total_spent += m.user.quota.credits_used
+        except Exception:
+            # Fallback for users missing quota (though signals should prevent this)
+            continue
     
     context = {
         'corporate': corporate,
@@ -478,7 +484,7 @@ def corporate_login(request):
     if request.user.is_authenticated:
         return redirect(CustomAccountAdapter(request).get_login_redirect_url(request))
 
-    form = LoginForm(request.POST or None)
+    form = LoginForm(data=request.POST or None, request=request)
     if request.method == "POST" and form.is_valid():
         user = form.user
         # High-security check: Only users with a CorporateProfile allowed here
@@ -525,3 +531,64 @@ def corporate_join(request, token):
             return render(request, 'corporate/join.html', {'invitation': invitation, 'error': str(e)})
 
     return render(request, 'corporate/join.html', {'invitation': invitation})
+
+@corporate_admin_required
+def corporate_analytics(request):
+    """
+    Renders the Corporate-wide usage analytics dashboard.
+    """
+    corporate = request.user.corp_profile.corporate
+    context = {
+        'corporate': corporate,
+    }
+    return render(request, 'corporate/analytics.html', context)
+
+@corporate_admin_required
+def get_corporate_usage_data(request):
+    """
+    API endpoint that aggregates usage for the entire organization.
+    """
+    from django.db.models import Sum, Count
+    from django.db.models.functions import TruncDate
+    from django.utils import timezone
+    from datetime import timedelta
+    from .models import AIAuditLog, CorporateProfile, AppConfiguration
+    
+    corporate = request.user.corp_profile.corporate
+    member_ids = CorporateProfile.objects.filter(corporate=corporate).values_list('user_id', flat=True)
+    
+    today = timezone.now().date()
+    thirty_days_ago = today - timedelta(days=30)
+    
+    # 1. Total Organization Usage (Last 30 days)
+    logs = AIAuditLog.objects.filter(
+        user_id__in=member_ids,
+        timestamp__date__gte=thirty_days_ago
+    ).annotate(
+        date=TruncDate('timestamp')
+    ).values('date').annotate(
+        total=Sum('tokens_input') + Sum('tokens_output')
+    ).order_by('date')
+
+    # 2. Breakdown by Member
+    member_usage = AIAuditLog.objects.filter(
+        user_id__in=member_ids
+    ).values('user__username').annotate(
+        total=Sum('tokens_input') + Sum('tokens_output')
+    ).order_by('-total')
+
+    # Formatting for ECharts
+    dates = [(thirty_days_ago + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(31)]
+    usage_map = {log['date'].strftime('%Y-%m-%d'): log['total'] for log in logs}
+    usage_values = [usage_map.get(date, 0) for date in dates]
+    
+    rate = float(AppConfiguration.get_rate())
+    
+    return JsonResponse({
+        'status': 'success',
+        'charts': {
+            'daily_dates': dates,
+            'daily_values': [round(v / rate, 2) for v in usage_values],
+            'member_breakdown': [{'name': m['user__username'], 'value': round(m['total'] / rate, 2)} for m in member_usage]
+        }
+    })

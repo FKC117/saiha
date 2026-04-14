@@ -555,3 +555,222 @@ Traceback (most recent call last):
     return json.dumps(self.metadata)
            ^^^^
 NameError: name 'json' is not defined
+ERROR 2026-04-14 14:36:26,452 log 6320 10848 Internal Server Error: /corporate/login/
+Traceback (most recent call last):
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 557, in thread_handler
+    raise exc_info[1]
+  File "F:\saiha\venv\Lib\site-packages\django\core\handlers\exception.py", line 42, in inner
+    response = await get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 557, in thread_handler
+    raise exc_info[1]
+  File "F:\saiha\venv\Lib\site-packages\django\core\handlers\base.py", line 253, in _get_response_async
+    response = await wrapped_callback(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 506, in __call__
+    ret = await asyncio.shield(exec_coro)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python311\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 561, in thread_handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\views.py", line 482, in corporate_login
+    if request.method == "POST" and form.is_valid():
+                                    ^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 206, in is_valid
+    return self.is_bound and not self.errors
+                                 ^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 201, in errors
+    self.full_clean()
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 338, in full_clean
+    self._clean_form()
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 354, in _clean_form
+    cleaned_data = self.clean()
+                   ^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\forms.py", line 182, in clean
+    return self._clean_with_password(credentials)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\forms.py", line 212, in _clean_with_password
+    user = adapter.authenticate(self.request, **credentials)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\adapter.py", line 734, in authenticate
+    self.pre_authenticate(request, **credentials)
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\adapter.py", line 721, in pre_authenticate
+    self._login_failed_rl_usage = ratelimit.consume(
+                                  ^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\core\internal\ratelimit.py", line 161, in consume
+    if (not limit_get) and request.method == "GET":
+                           ^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'method'
+ERROR 2026-04-14 14:38:43,348 log 22800 15640 Internal Server Error: /corporate/login/
+Traceback (most recent call last):
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 557, in thread_handler
+    raise exc_info[1]
+  File "F:\saiha\venv\Lib\site-packages\django\core\handlers\exception.py", line 42, in inner
+    response = await get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 557, in thread_handler
+    raise exc_info[1]
+  File "F:\saiha\venv\Lib\site-packages\django\core\handlers\base.py", line 253, in _get_response_async
+    response = await wrapped_callback(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 506, in __call__
+    ret = await asyncio.shield(exec_coro)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python311\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 561, in thread_handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\views.py", line 482, in corporate_login
+    if request.method == "POST" and form.is_valid():
+                                    ^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 206, in is_valid
+    return self.is_bound and not self.errors
+                                 ^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 201, in errors
+    self.full_clean()
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 338, in full_clean
+    self._clean_form()
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 354, in _clean_form
+    cleaned_data = self.clean()
+                   ^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\forms.py", line 182, in clean
+    return self._clean_with_password(credentials)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\forms.py", line 212, in _clean_with_password
+    user = adapter.authenticate(self.request, **credentials)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\adapter.py", line 734, in authenticate
+    self.pre_authenticate(request, **credentials)
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\adapter.py", line 721, in pre_authenticate
+    self._login_failed_rl_usage = ratelimit.consume(
+                                  ^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\core\internal\ratelimit.py", line 161, in consume
+    if (not limit_get) and request.method == "GET":
+                           ^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'method'
+ERROR 2026-04-14 14:38:50,933 log 22800 15640 Internal Server Error: /corporate/login/
+Traceback (most recent call last):
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 557, in thread_handler
+    raise exc_info[1]
+  File "F:\saiha\venv\Lib\site-packages\django\core\handlers\exception.py", line 42, in inner
+    response = await get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 557, in thread_handler
+    raise exc_info[1]
+  File "F:\saiha\venv\Lib\site-packages\django\core\handlers\base.py", line 253, in _get_response_async
+    response = await wrapped_callback(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 506, in __call__
+    ret = await asyncio.shield(exec_coro)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python311\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 561, in thread_handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\views.py", line 482, in corporate_login
+    if request.method == "POST" and form.is_valid():
+                                    ^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 206, in is_valid
+    return self.is_bound and not self.errors
+                                 ^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 201, in errors
+    self.full_clean()
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 338, in full_clean
+    self._clean_form()
+  File "F:\saiha\venv\Lib\site-packages\django\forms\forms.py", line 354, in _clean_form
+    cleaned_data = self.clean()
+                   ^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\forms.py", line 182, in clean
+    return self._clean_with_password(credentials)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\forms.py", line 212, in _clean_with_password
+    user = adapter.authenticate(self.request, **credentials)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\adapter.py", line 734, in authenticate
+    self.pre_authenticate(request, **credentials)
+  File "F:\saiha\venv\Lib\site-packages\allauth\account\adapter.py", line 721, in pre_authenticate
+    self._login_failed_rl_usage = ratelimit.consume(
+                                  ^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\allauth\core\internal\ratelimit.py", line 161, in consume
+    if (not limit_get) and request.method == "GET":
+                           ^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'method'
+ERROR 2026-04-14 14:40:13,586 log 1144 20552 Internal Server Error: /corporate/dashboard/
+Traceback (most recent call last):
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 557, in thread_handler
+    raise exc_info[1]
+  File "F:\saiha\venv\Lib\site-packages\django\core\handlers\exception.py", line 42, in inner
+    response = await get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 557, in thread_handler
+    raise exc_info[1]
+  File "F:\saiha\venv\Lib\site-packages\django\core\handlers\base.py", line 253, in _get_response_async
+    response = await wrapped_callback(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 506, in __call__
+    ret = await asyncio.shield(exec_coro)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python311\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 561, in thread_handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\views.py", line 403, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\views.py", line 415, in corporate_dashboard
+    total_spent = sum(m.user.quota.credits_used for m in members)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\views.py", line 415, in <genexpr>
+    total_spent = sum(m.user.quota.credits_used for m in members)
+                      ^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\django\db\models\fields\related_descriptors.py", line 534, in __get__
+    raise self.RelatedObjectDoesNotExist(
+django.contrib.auth.models.User.quota.RelatedObjectDoesNotExist: User has no quota.
+ERROR 2026-04-14 14:41:15,122 log 23920 17460 Internal Server Error: /corporate/dashboard/
+Traceback (most recent call last):
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 557, in thread_handler
+    raise exc_info[1]
+  File "F:\saiha\venv\Lib\site-packages\django\core\handlers\exception.py", line 42, in inner
+    response = await get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 557, in thread_handler
+    raise exc_info[1]
+  File "F:\saiha\venv\Lib\site-packages\django\core\handlers\base.py", line 253, in _get_response_async
+    response = await wrapped_callback(
+               ^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 506, in __call__
+    ret = await asyncio.shield(exec_coro)
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\Lenovo\AppData\Local\Programs\Python\Python311\Lib\concurrent\futures\thread.py", line 58, in run
+    result = self.fn(*self.args, **self.kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\asgiref\sync.py", line 561, in thread_handler
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\django\contrib\auth\decorators.py", line 59, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\views.py", line 403, in _wrapped_view
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\views.py", line 415, in corporate_dashboard
+    total_spent = sum(m.user.quota.credits_used for m in members)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\views.py", line 415, in <genexpr>
+    total_spent = sum(m.user.quota.credits_used for m in members)
+                      ^^^^^^^^^^^^
+  File "F:\saiha\venv\Lib\site-packages\django\db\models\fields\related_descriptors.py", line 534, in __get__
+    raise self.RelatedObjectDoesNotExist(
+django.contrib.auth.models.User.quota.RelatedObjectDoesNotExist: User has no quota.

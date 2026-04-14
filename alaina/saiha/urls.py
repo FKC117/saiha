@@ -19,6 +19,8 @@ urlpatterns = [
     path("corporate/login/", views.corporate_login, name="corporate_login"),
     path("corporate/join/<uuid:token>/", views.corporate_join, name="corporate_join"),
     path("corporate/dashboard/", views.corporate_dashboard, name="corporate_dashboard"),
+    path("corporate/analytics/", views.corporate_analytics, name="corporate_analytics"),
+    path("corporate/api/usage/", views.get_corporate_usage_data, name="get_corporate_usage_data"),
     path("corporate/members/add/", views.corporate_add_member, name="corporate_add_member"),
     path("corporate/members/reallocate/", views.corporate_reallocate_credits, name="corporate_reallocate_credits"),
 ]

@@ -1,0 +1,15 @@
+{
+  "dataset_id": "32a5dc09-f0ea-47a4-84c9-6ca2194e4d43",
+  "name": "Amazon_Sale_Report.csv (Updated by drop_column)",
+  "parent_dataset_id": "6844e98a-4c2b-4e04-8d7c-810eebd30586",
+  "created_via": "Transformation: Updated by drop_column",
+  "created_at": "2026-04-14T14:53:38.889729",
+  "storage_path": "F:\\saiha\\alaina\\media\\datasets\\1\\32a5dc09-f0ea-47a4-84c9-6ca2194e4d43",
+  "storage_format": "parquet",
+  "preview_data": {
+    "columns": [],
+    "data": [],
+    "total_rows": 128975,
+    "preview_rows": 10
+  }
+}

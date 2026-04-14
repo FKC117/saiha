@@ -143,10 +143,10 @@
         </div>
         
         <nav style="display:flex; flex-direction:column; gap:8px; margin-top:20px;">
-            <a href="#" style="background:var(--zinc-800); color:white; padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px;">
+            <a href="{% url 'saiha:corporate_dashboard' %}" style="background:var(--zinc-800); color:white; padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px;">
                 <i data-lucide="users" size="18"></i> Team Management
             </a>
-            <a href="#" style="color:var(--zinc-400); padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px;">
+            <a href="{% url 'saiha:corporate_analytics' %}" style="color:var(--zinc-400); padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px;">
                 <i data-lucide="pie-chart" size="18"></i> Usage Analytics
             </a>
             <a href="/accounts/logout/" style="color:var(--zinc-400); padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px; margin-top:auto;">

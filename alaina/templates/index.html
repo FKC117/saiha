@@ -1235,7 +1235,14 @@
           </button>
         </div>
       </div>
+
+      <div class="modal-tabs" style="border-bottom: 1px solid var(--zinc-800); margin-bottom: 24px;">
+        <div class="modal-tab active" onclick="switchUsageTab('overview')" id="usage-tab-overview">Overview</div>
+        <div class="modal-tab" onclick="switchUsageTab('history')" id="usage-tab-history">Purchase History</div>
+      </div>
+
       <div class="modal-content">
+        <div id="usage-overview-pane" class="tab-pane active">
         <!-- Quota Progress -->
         <div style="margin-bottom: 32px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
@@ -1293,6 +1300,16 @@
             Top Sessions
           </h4>
           <div id="usage-sessions-chart" style="height: 180px; width: 100%;"></div>
+        </div>
+        </div>
+
+        <!-- History Pane -->
+        <div id="usage-history-pane" class="tab-pane" style="display:none;">
+          <div id="retail-invoice-list">
+             <p style="text-align:center; padding:40px; color:var(--zinc-500);">
+                <i data-lucide="loader-2" class="spin"></i> Loading transaction history...
+             </p>
+          </div>
         </div>
       </div>
     </div>
@@ -1763,7 +1780,81 @@
     }
 
     function closeUsageModal() {
-        document.getElementById('usage-modal-backdrop').classList.remove('open');
+      document.getElementById('usage-modal-backdrop').style.display = 'none';
+      switchUsageTab('overview'); // Reset for next open
+    }
+
+    function switchUsageTab(tab) {
+      const overview = document.getElementById('usage-overview-pane');
+      const history = document.getElementById('usage-history-pane');
+      const overviewBtn = document.getElementById('usage-tab-overview');
+      const historyBtn = document.getElementById('usage-tab-history');
+
+      if (tab === 'overview') {
+        overview.style.display = 'block';
+        history.style.display = 'none';
+        overviewBtn.classList.add('active');
+        historyBtn.classList.remove('active');
+      } else {
+        overview.style.display = 'none';
+        history.style.display = 'block';
+        overviewBtn.classList.remove('active');
+        historyBtn.classList.add('active');
+        fetchRetailBillingHistory();
+      }
+    }
+
+    function fetchRetailBillingHistory() {
+      const container = document.getElementById('retail-invoice-list');
+      fetch('/api/billing/history/')
+      .then(r => r.json())
+      .then(d => {
+        if (d.invoices.length === 0) {
+          container.innerHTML = `<p style="text-align:center; padding:40px; color:var(--zinc-500); border:1px dashed var(--zinc-800); border-radius:8px; font-size:13px;">No credit purchases found yet.</p>`;
+          return;
+        }
+
+        let html = `
+          <div style="display:flex; flex-direction:column; gap:12px;">
+        `;
+        
+        d.invoices.forEach(inv => {
+          html += `
+            <div style="background:rgba(39, 39, 42, 0.4); border:1px solid var(--zinc-800); border-radius:12px; padding:16px; display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <div style="font-size:12px; color:var(--zinc-500); font-weight:700; margin-bottom:4px;">${inv.number}</div>
+                <div style="font-size:14px; font-weight:500; color:white;">${inv.description}</div>
+                <div style="font-size:12px; color:var(--zinc-500); margin-top:4px;">${inv.date}</div>
+              </div>
+              <div style="text-align:right;">
+                <div style="font-size:16px; font-weight:700; color:white; margin-bottom:8px;">${inv.amount}</div>
+                <a href="${inv.url}" target="_blank" class="btn btn-outline" style="padding:4px 10px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; color:var(--zinc-400); border:1px solid var(--zinc-800); border-radius:6px; background:transparent;">
+                  <i data-lucide="external-link" size="12"></i> View
+                </a>
+                <a href="${inv.url}" target="_blank" class="btn btn-outline" style="padding:4px 10px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; color:var(--zinc-400); border:1px solid var(--zinc-800); border-radius:6px; background:transparent;" title="View & Download PDF">
+                  <i data-lucide="download" size="12"></i>
+                </a>
+                <button onclick="resendInvoiceEmail('${inv.id}')" class="btn btn-outline" style="padding:4px 10px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; color:var(--zinc-400); border:1px solid var(--zinc-800); border-radius:6px; background:transparent;" title="Resend to Email">
+                  <i data-lucide="mail" size="12"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        });
+        
+        html += `</div>`;
+        container.innerHTML = html;
+        lucide.createIcons();
+      });
+    }
+
+    function resendInvoiceEmail(invoiceId) {
+      const formData = new FormData();
+      formData.append('invoice_id', invoiceId);
+      formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+      fetch('/api/billing/resend/', { method: 'POST', body: formData })
+      .then(r => r.json())
+      .then(d => alert(d.message));
     }
 
     async function fetchUsageData() {
@@ -1888,8 +1979,14 @@
         fetch('/user/topup/', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(d => {
-            alert(d.message);
-            if (d.status === 'success') location.reload();
+            if (d.status === 'success') {
+                if (confirm(d.message + "\n\nWould you like to view the invoice now?")) {
+                    window.open(`/billing/invoice/${d.invoice_id}/`, '_blank');
+                }
+                location.reload();
+            } else {
+                alert(d.message);
+            }
         });
     }
 

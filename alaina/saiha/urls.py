@@ -28,4 +28,9 @@ urlpatterns = [
     path("corporate/members/reallocate/", views.corporate_reallocate_credits, name="corporate_reallocate_credits"),
     path("corporate/members/purchase-seats/", views.corporate_purchase_seats, name="corporate_purchase_seats"),
     path("corporate/topup/", views.corporate_topup, name="corporate_topup"),
+
+    # Billing & Invoices
+    path("billing/invoice/<uuid:invoice_id>/", views.invoice_detail, name="invoice_detail"),
+    path("api/billing/resend/", views.api_resend_invoice, name="api_resend_invoice"),
+    path("api/billing/history/", views.api_billing_history, name="api_billing_history"),
 ]

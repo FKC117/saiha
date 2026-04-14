@@ -157,6 +157,11 @@
         }
 
         .badge-admin { background: rgba(139, 92, 246, 0.2); color: #A78BFA; }
+
+        .nav-link { transition: all 0.2s; }
+        .nav-link.active { background: var(--zinc-800) !important; color: white !important; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
 <body>
@@ -173,11 +178,14 @@
         </div>
         
         <nav style="display:flex; flex-direction:column; gap:8px; margin-top:20px;">
-            <a href="{% url 'saiha:corporate_dashboard' %}" style="background:var(--zinc-800); color:white; padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px;">
+            <a href="javascript:void(0)" onclick="switchTab('team', this)" class="nav-link active" style="padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px;">
                 <i data-lucide="users" size="18"></i> Team Management
             </a>
             <a href="{% url 'saiha:corporate_analytics' %}" style="color:var(--zinc-400); padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px;">
                 <i data-lucide="pie-chart" size="18"></i> Usage Analytics
+            </a>
+            <a href="javascript:void(0)" onclick="switchTab('billing', this)" class="nav-link" style="color:var(--zinc-400); padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px;">
+                <i data-lucide="receipt" size="18"></i> Billing & Invoices
             </a>
             <a href="/accounts/logout/" style="color:var(--zinc-400); padding:10px 12px; border-radius:8px; text-decoration:none; display:flex; align-items:center; gap:10px; margin-top:auto;">
                 <i data-lucide="log-out" size="18"></i> Sign Out
@@ -186,15 +194,16 @@
     </div>
 
     <div class="main-content">
-        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
-            <div>
-                <h1 style="font-size:28px; font-weight:700;">Team Management</h1>
-                <p style="color:var(--zinc-500);">Manage seats and credit allocation for your organization.</p>
-            </div>
-            <button class="btn" onclick="openAddMemberModal()">
-                <i data-lucide="plus" size="18"></i> Add Member
-            </button>
-        </header>
+        <div id="team-content" class="tab-content active">
+            <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+                <div>
+                    <h1 style="font-size:28px; font-weight:700;">Team Management</h1>
+                    <p style="color:var(--zinc-500);">Manage seats and credit allocation for your organization.</p>
+                </div>
+                <button class="btn" onclick="openAddMemberModal()">
+                    <i data-lucide="plus" size="18"></i> Add Member
+                </button>
+            </header>
 
         <div class="stat-grid">
             <div class="card">
@@ -385,6 +394,27 @@
                 No pending invitations.
             </p>
             {% endif %}
+        </div> <!-- End team-content -->
+
+        <div id="billing-content" class="tab-content">
+            <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
+                <div>
+                    <h1 style="font-size:28px; font-weight:700;">Billing & Invoices</h1>
+                    <p style="color:var(--zinc-500);">Review your organization's transaction ledger and download receipts.</p>
+                </div>
+                <button class="btn btn-outline" onclick="openRechargeModal()">
+                    <i data-lucide="credit-card" size="18"></i> Buy Credits
+                </button>
+            </header>
+
+            <div class="card">
+                <h3 style="font-size:16px; margin-bottom:20px;">Refill History</h3>
+                <div id="invoice-list-container">
+                    <p style="text-align:center; padding:40px; color:var(--zinc-500);">
+                        <i data-lucide="loader-2" class="spin"></i> Loading Billing records...
+                    </p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -564,8 +594,14 @@
             fetch('/corporate/topup/', { method: 'POST', body: formData })
             .then(r => r.json())
             .then(d => {
-                alert(d.message);
-                if (d.status === 'success') location.reload();
+                if (d.status === 'success') {
+                    if (confirm(d.message + "\n\nWould you like to view the invoice now?")) {
+                        window.open(`/billing/invoice/${d.invoice_id}/`, '_blank');
+                    }
+                    location.reload();
+                } else {
+                    alert(d.message);
+                }
             });
         }
 
@@ -586,6 +622,82 @@
                     if (d.status === 'success') location.reload();
                 });
             }
+        }
+
+        function switchTab(tabId, el) {
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.querySelectorAll('.nav-link').forEach(l => l.style.color = 'var(--zinc-400)');
+            
+            document.getElementById(tabId + '-content').classList.add('active');
+            el.classList.add('active');
+            el.style.color = 'white';
+            
+            if (tabId === 'billing') {
+                fetchBillingHistory();
+            }
+        }
+
+        function fetchBillingHistory() {
+            fetch('/api/billing/history/?scope=corporate')
+            .then(r => r.json())
+            .then(d => {
+                const container = document.getElementById('invoice-list-container');
+                if (d.invoices.length === 0) {
+                    container.innerHTML = `<p style="text-align:center; padding:40px; color:var(--zinc-500); border:1px dashed var(--zinc-800); border-radius:8px;">No transaction records found.</p>`;
+                    return;
+                }
+                
+                let html = `
+                    <table class="member-table">
+                        <thead>
+                            <tr>
+                                <th>Invoice #</th>
+                                <th>Description</th>
+                                <th>Date</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th style="text-align:right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                d.invoices.forEach(inv => {
+                    html += `
+                        <tr>
+                            <td style="font-weight:700; color:var(--primary-color);">${inv.number}</td>
+                            <td>${inv.description}</td>
+                            <td style="color:var(--zinc-500);">${inv.date}</td>
+                            <td style="font-weight:700;">${inv.amount}</td>
+                            <td><span class="badge" style="background:rgba(34,197,94,0.1); color:#22c55e;">${inv.status}</span></td>
+                            <td style="text-align:right; display:flex; justify-content:flex-end; gap:8px;">
+                                <a href="${inv.url}" target="_blank" class="btn btn-outline" style="padding:4px 10px; font-size:12px;">
+                                    <i data-lucide="external-link" size="14"></i> View
+                                </a>
+                                <a href="${inv.url}" target="_blank" class="btn btn-outline" style="padding:4px 10px; font-size:12px;" title="View & Download PDF">
+                                    <i data-lucide="download" size="14"></i>
+                                </a>
+                                <button onclick="resendInvoiceEmail('${inv.id}')" class="btn btn-outline" style="padding:4px 10px; font-size:12px;" title="Resend to Email">
+                                    <i data-lucide="mail" size="14"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+                lucide.createIcons();
+            });
+        }
+
+        function resendInvoiceEmail(invoiceId) {
+            const formData = new FormData();
+            formData.append('invoice_id', invoiceId);
+            fetch('/api/billing/resend/', { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(d => alert(d.message));
         }
 
         function simulateRecharge() {

@@ -1,6 +1,5 @@
-import json
-import os
 import logging
+import json
 import datetime
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse, FileResponse
@@ -14,7 +13,8 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from saiha.models import (
     Dataset, DatasetColumn, AnalysisSession, ChatMessage, AnalysisResult,
-    AIAuditLog, UserQuota, AppConfiguration, Corporate, CorporateProfile, CorporateInvitation, CreditPackage
+    AIAuditLog, UserQuota, AppConfiguration, Corporate, CorporateProfile, 
+    CorporateInvitation, CreditPackage, Invoice, BusinessInfo, SiteSettings
 )
 from saiha.corporate_service import CorporateService
 from saiha.adapter import CustomAccountAdapter
@@ -406,10 +406,15 @@ def user_topup(request):
         try:
             package = get_object_or_404(CreditPackage, id=package_id, is_active=True)
             amount = float(package.credits)
-            CorporateService.recharge_user(request.user, amount)
+            CorporateService.recharge_user(request.user, amount, package=package)
+            
+            # Get the latest invoice for this recharge
+            last_invoice = Invoice.objects.filter(user=request.user).order_by('-created_at').first()
+            
             return JsonResponse({
                 'status': 'success', 
-                'message': f'Payment Successful! {package.name} ({amount} Credits) added. Any expired balance has been rescued.'
+                'message': f'Payment Successful! {package.name} ({amount} Credits) added. Any expired balance has been rescued.',
+                'invoice_id': last_invoice.id if last_invoice else None
             })
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
@@ -558,10 +563,15 @@ def corporate_topup(request):
             package = get_object_or_404(CreditPackage, id=package_id, is_active=True)
             amount = float(package.credits)
             
-            total_added = CorporateService.recharge_corporate(corporate, amount)
+            total_added = CorporateService.recharge_corporate(corporate, amount, package=package)
+            
+            # Get the latest invoice for this recharge
+            last_invoice = Invoice.objects.filter(corporate=corporate).order_by('-created_at').first()
+            
             return JsonResponse({
                 'status': 'success', 
-                'message': f'Payment Successful! {package.name} ({amount} Credits) added. Any expired balance has been carried forward.'
+                'message': f'Payment Successful! {package.name} ({amount} Credits) added. Any expired balance has been carried forward.',
+                'invoice_id': last_invoice.id if last_invoice else None
             })
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
@@ -668,7 +678,90 @@ def corporate_login(request):
         # Use our adapter for smart redirection
         return redirect(CustomAccountAdapter(request).get_login_redirect_url(request))
 
-    return render(request, 'corporate/login.html', {'form': form})
+    return render(request, 'corporate/login.html', {'form': form, 'site_logo': getattr(SiteSettings.load(), 'logo', None)})
+
+@login_required
+def invoice_detail(request, invoice_id):
+    """
+    Renders a professional, print-optimized invoice detail page.
+    """
+    invoice = get_object_or_404(Invoice, id=invoice_id)
+    
+    # Security: Ensure user owns this invoice or is admin
+    if not request.user.is_staff:
+        if invoice.user and invoice.user != request.user:
+            raise PermissionDenied()
+        if invoice.corporate:
+            profile = getattr(request.user, 'corp_profile', None)
+            if not profile or profile.corporate != invoice.corporate:
+                raise PermissionDenied()
+
+    business = BusinessInfo.load()
+    return render(request, 'corporate/invoice_detail.html', {
+        'invoice': invoice,
+        'business': business
+    })
+
+@login_required
+def api_billing_history(request):
+    """
+    API returned normalized billing history for both retail and corporate dashboards.
+    """
+    profile = getattr(request.user, 'corp_profile', None)
+    is_corp_admin = profile and profile.role == CorporateProfile.Role.ADMIN
+    
+    if request.GET.get('scope') == 'corporate' and is_corp_admin:
+        invoices = Invoice.objects.filter(corporate=profile.corporate)
+    else:
+        invoices = Invoice.objects.filter(user=request.user)
+        
+    data = []
+    for inv in invoices:
+        data.append({
+            'id': str(inv.id),
+            'number': inv.invoice_number,
+            'description': inv.description,
+            'amount': f"{inv.total_amount_local:,.2f} {inv.currency}",
+            'status': inv.status,
+            'date': inv.created_at.strftime('%b %d, %Y'),
+            'url': f"/billing/invoice/{inv.id}/"
+        })
+        
+    return JsonResponse({'status': 'success', 'invoices': data})
+
+    return JsonResponse({'status': 'success', 'invoices': data})
+
+@csrf_exempt
+@login_required
+def api_resend_invoice(request):
+    """
+    Manually triggers the invoice email resend.
+    """
+    if request.method == 'POST':
+        invoice_id = request.POST.get('invoice_id')
+        invoice = get_object_or_404(Invoice, id=invoice_id)
+        
+        # Security: check ownership (Retail user themselves or Corporate Admin)
+        can_access = False
+        if request.user.is_staff:
+            can_access = True
+        elif invoice.user == request.user:
+            can_access = True
+        elif invoice.corporate:
+            profile = getattr(request.user, 'corp_profile', None)
+            if profile and profile.corporate == invoice.corporate and profile.role == CorporateProfile.Role.ADMIN:
+                can_access = True
+        
+        if not can_access:
+            return JsonResponse({'status': 'error', 'message': 'Unauthorized'}, status=403)
+            
+        try:
+            CorporateService.send_invoice_email(invoice)
+            return JsonResponse({'status': 'success', 'message': f'Invoice {invoice.invoice_number} has been resent to your email.'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f'Failed to resend: {str(e)}'})
+            
+    return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
 
 def corporate_join(request, token):
     """

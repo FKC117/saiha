@@ -3,7 +3,8 @@ from saiha.models import (
     Dataset, DatasetColumn, ToolCategory, Tool, 
     AnalysisSession, ChatMessage, SiteSettings, 
     AnalysisResult, AIAuditLog, UserQuota, AppConfiguration,
-    Corporate, CorporateProfile, CorporateInvitation, CreditPackage
+    Corporate, CorporateProfile, CorporateInvitation, CreditPackage,
+    Invoice, BusinessInfo
 )
 
 @admin.register(CreditPackage)
@@ -30,7 +31,7 @@ class CorporateInvitationAdmin(admin.ModelAdmin):
 
 @admin.register(AppConfiguration)
 class AppConfigurationAdmin(admin.ModelAdmin):
-    list_display = ('id', 'token_to_credit_rate', 'updated_at')
+    list_display = ('id', 'token_to_credit_rate', 'credit_cost_per_seat', 'default_vat_percentage', 'updated_at')
     
     def has_add_permission(self, request):
         if AppConfiguration.objects.exists():
@@ -48,6 +49,25 @@ class SiteSettingsAdmin(admin.ModelAdmin):
         if SiteSettings.objects.exists():
             return False
         return True
+
+@admin.register(BusinessInfo)
+class BusinessInfoAdmin(admin.ModelAdmin):
+    list_display = ('company_name', 'email', 'phone', 'bin_vat_number')
+    def has_add_permission(self, request):
+        if BusinessInfo.objects.exists():
+            return False
+        return True
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = ('invoice_number', 'get_target', 'description', 'total_amount_local', 'currency', 'status', 'created_at')
+    list_filter = ('status', 'currency', 'created_at')
+    search_fields = ('invoice_number', 'user__email', 'corporate__name', 'description')
+    readonly_fields = ('invoice_number', 'created_at')
+
+    def get_target(self, obj):
+        return obj.corporate.name if obj.corporate else obj.user.email
+    get_target.short_description = 'Customer'
 
 @admin.register(Dataset)
 class DatasetAdmin(admin.ModelAdmin):

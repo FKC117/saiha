@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice {{ invoice.invoice_number }} | Saiha AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #8B5CF6;
+            --zinc-950: #09090b;
+            --zinc-500: #71717a;
+            --zinc-100: #f4f4f5;
+            --zinc-200: #e4e4e7;
+        }
+        body {
+            font-family: 'DM Sans', sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: #fff;
+            color: #000;
+            line-height: 1.5;
+        }
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 60px;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo-box {
+            background: var(--primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: grid;
+            place-items: center;
+            color: white;
+        }
+        .brand-name {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+        .invoice-meta {
+            text-align: right;
+        }
+        .invoice-meta h1 {
+            margin: 0;
+            font-size: 32px;
+            color: var(--primary);
+            text-transform: uppercase;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 60px;
+        }
+        .info-section h4 {
+            margin: 0 0 12px 0;
+            text-transform: uppercase;
+            font-size: 12px;
+            color: var(--zinc-500);
+            letter-spacing: 0.05em;
+        }
+        .info-content {
+            font-size: 14px;
+        }
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 60px;
+        }
+        .table th {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid #000;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+        .table td {
+            padding: 16px 12px;
+            border-bottom: 1px solid var(--zinc-200);
+        }
+        .footer-grid {
+            display: flex;
+            justify-content: flex-end;
+        }
+        .totals-box {
+            width: 300px;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            font-size: 14px;
+        }
+        .grand-total {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 2px solid var(--primary);
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .print-btn {
+            position: fixed;
+            bottom: 40px;
+            right: 40px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 999px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 10px 15px -3px rgba(139, 92, 246, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        @media print {
+            .print-btn { display: none; }
+            body { padding: 0; }
+            .invoice-container { width: 100%; max-width: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        {% if not is_pdf %}
+        <div style="margin-bottom: 20px; display: flex; gap: 12px; justify-content: flex-end;">
+            <button id="downloadBtn" class="btn-outline" style="background:none; cursor:pointer; text-decoration:none; padding:10px 20px; border-radius:8px; display:inline-flex; align-items:center; gap:8px; border:1px solid var(--zinc-300); color:var(--zinc-600); font-weight:600;">
+                <i data-lucide="download"></i> Download PDF
+            </button>
+            <button class="btn" style="background:var(--primary); color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px;" onclick="window.print()">
+                <i data-lucide="printer"></i> Print
+            </button>
+        </div>
+        {% endif %}
+
+        <header>
+            <div class="brand">
+                <div class="logo-box">
+                    <i data-lucide="zap"></i>
+                </div>
+                <div class="brand-name">{{ business.company_name|default:"Saiha AI" }}</div>
+            </div>
+            <div class="invoice-meta">
+                <h1>Invoice</h1>
+                <p style="margin:4px 0; color:var(--zinc-500);">#{{ invoice.invoice_number }}</p>
+                <p style="margin:0; font-size:14px;">Date: {{ invoice.created_at|date:"M d, Y" }}</p>
+            </div>
+        </header>
+
+        <div class="info-grid">
+            <div class="info-section">
+                <h4>From</h4>
+                <div class="info-content">
+                    <strong>{{ business.company_name|default:"Saiha AI HQ" }}</strong><br>
+                    {{ business.address|linebreaksbr|default:"Dhaka, Bangladesh" }}<br>
+                    {{ business.email }}<br>
+                    BIN: {{ business.bin_vat_number|default:"--" }}
+                </div>
+            </div>
+            <div class="info-section" style="text-align: right;">
+                <h4>Billed To</h4>
+                <div class="info-content">
+                    {% if invoice.corporate %}
+                        <strong>{{ invoice.corporate.name }}</strong><br>
+                        Enterprise Account
+                    {% else %}
+                        <strong>{{ invoice.user.get_full_name|default:invoice.user.email }}</strong><br>
+                        Individual Account
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th style="text-align: right;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <div style="font-weight: 600;">{{ invoice.description }}</div>
+                        <div style="font-size: 12px; color: var(--zinc-500);">Status: {{ invoice.status }}</div>
+                    </td>
+                    <td style="text-align: right; font-weight: 600;">{{ invoice.subtotal_local|floatformat:2 }} {{ invoice.currency }}</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer-grid">
+            <div class="totals-box">
+                <div class="total-row">
+                    <span>Subtotal</span>
+                    <span>{{ invoice.subtotal_local|floatformat:2 }} {{ invoice.currency }}</span>
+                </div>
+                <div class="total-row">
+                    <span>VAT ({{ invoice.vat_percentage|floatformat:1 }}%)</span>
+                    <span>{{ invoice.vat_amount_local|floatformat:2 }} {{ invoice.currency }}</span>
+                </div>
+                <div class="total-row grand-total">
+                    <span>Total Amount</span>
+                    <span>{{ invoice.total_amount_local|floatformat:2 }} {{ invoice.currency }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 100px; padding-top: 20px; border-top: 1px solid var(--zinc-200); font-size: 12px; color: var(--zinc-500); text-align: center;">
+            This is a computer-generated invoice. No signature required. Thank you for choosing {{ business.company_name|default:"Saiha" }}!
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const downloadBtn = document.getElementById('downloadBtn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', function() {
+                const element = document.querySelector('.invoice-container');
+                const invoiceNumber = "{{ invoice.invoice_number }}";
+                
+                // Hide actions during capture
+                const btnBar = this.parentElement;
+                btnBar.style.display = 'none';
+
+                const opt = {
+                    margin:       0.2,
+                    filename:     `Invoice_${invoiceNumber}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, useCORS: true },
+                    jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+                };
+
+                html2pdf().set(opt).from(element).save().then(() => {
+                    // Show actions back
+                    if (btnBar) btnBar.style.display = 'flex';
+                });
+            });
+        }
+    </script>
+</body>
+</html>

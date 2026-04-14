@@ -246,6 +246,35 @@ class SiteSettings(models.Model):
         obj, created = cls.objects.get_or_create(pk=1)
         return obj
 
+class BusinessInfo(models.Model):
+    """
+    Invoicing and branding details for the platform owner.
+    """
+    company_name = models.CharField(max_length=255, default='Saiha AI')
+    address = models.TextField(blank=True, null=True)
+    phone = models.CharField(max_length=50, blank=True, null=True)
+    email = models.EmailField(blank=True, null=True)
+    website = models.URLField(blank=True, null=True)
+    bin_vat_number = models.CharField(max_length=100, blank=True, null=True, help_text="Business Identification Number or VAT Reg.")
+    logo = models.ImageField(upload_to='branding/invoices/', blank=True, null=True)
+    
+    class Meta:
+        verbose_name = "Business Info"
+        verbose_name_plural = "Business Info"
+
+    def __str__(self):
+        return self.company_name
+
+    def save(self, *args, **kwargs):
+        if not self.pk and BusinessInfo.objects.exists():
+            return 
+        return super(BusinessInfo, self).save(*args, **kwargs)
+
+    @classmethod
+    def load(cls):
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
 class AIAuditLog(models.Model):
     """
     Enterprise-grade audit trail for AI interactions.
@@ -321,6 +350,7 @@ class AppConfiguration(models.Model):
     """
     token_to_credit_rate = models.IntegerField(default=10000, help_text="How many tokens equal 1 Credit (e.g., 10000)")
     credit_cost_per_seat = models.FloatField(default=10.0, help_text="Cost in credits to purchase 1 organizational seat license.")
+    default_vat_percentage = models.FloatField(default=0.0, help_text="Default VAT percentage to apply to invoices (e.g. 15.0)")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -442,3 +472,54 @@ class CorporateInvitation(models.Model):
 
     def __str__(self):
         return f"Invite: {self.email} to {self.corporate.name}"
+
+class Invoice(models.Model):
+    """
+    Financial record of a credit purchase or seat expansion.
+    """
+    class Meta:
+        ordering = ['-created_at']
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invoice_number = models.CharField(max_length=50, unique=True)
+    
+    # Ownership
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='invoices')
+    corporate = models.ForeignKey(Corporate, on_delete=models.SET_NULL, null=True, blank=True, related_name='invoices')
+    
+    # Billable Items
+    description = models.TextField()
+    package = models.ForeignKey(CreditPackage, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Financials (Stored as snapshots at time of payment)
+    subtotal_usd = models.DecimalField(max_digits=12, decimal_places=2)
+    subtotal_local = models.DecimalField(max_digits=12, decimal_places=2, help_text="Amount in BDT at time of purchase")
+    
+    vat_percentage = models.FloatField(default=0.0)
+    vat_amount_local = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    
+    total_amount_local = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=10, default="BDT")
+    
+    status = models.CharField(max_length=20, default="PAID")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        target = self.corporate.name if self.corporate else self.user.email
+        return f"{self.invoice_number} - {target} ({self.total_amount_local} {self.currency})"
+
+    @staticmethod
+    def generate_number():
+        """Generates a professional invoice number: SAI-YYYY-XXXX"""
+        now = timezone.now()
+        prefix = f"SAI-{now.year}-"
+        last_invoice = Invoice.objects.filter(invoice_number__startswith=prefix).order_by('-invoice_number').first()
+        if last_invoice:
+            try:
+                last_num = int(last_invoice.invoice_number.split('-')[-1])
+                new_num = str(last_num + 1).zfill(4)
+            except:
+                new_num = "0001"
+        else:
+            new_num = "0001"
+        return f"{prefix}{new_num}"

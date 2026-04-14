@@ -1,9 +1,15 @@
 import logging
+import uuid
+from decimal import Decimal
+from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
-from datetime import timedelta
-import uuid
-from saiha.models import Corporate, CorporateProfile, CorporateInvitation, UserQuota, User, AppConfiguration
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
+from saiha.models import (
+    Corporate, CorporateProfile, CorporateInvitation, UserQuota, User,
+    AppConfiguration, Invoice, CreditPackage, BusinessInfo
+)
 
 logger = logging.getLogger(__name__)
 
@@ -212,6 +218,89 @@ class CorporateService:
         return True
 
     @staticmethod
+    def create_invoice(user=None, corporate=None, package=None, description=None, amount_usd=None, amount_bdt=None):
+        """
+        Generates a professional invoice record.
+        Captures VAT snapshots from current AppConfiguration.
+        """
+        try:
+            config = AppConfiguration.objects.get()
+            vat_pct = config.default_vat_percentage
+        except:
+            vat_pct = 0.0
+
+        subtotal = 0
+        if amount_bdt:
+            subtotal = Decimal(str(amount_bdt))
+        elif package:
+            subtotal = package.price_bdt
+        
+        vat_amount = subtotal * Decimal(str(vat_pct / 100))
+        total = subtotal + vat_amount
+        
+        # Determine Description
+        if not description and package:
+            description = f"Credit Recharge: {package.name} ({package.credits} Credits)"
+        
+        invoice = Invoice.objects.create(
+            invoice_number=Invoice.generate_number(),
+            user=user,
+            corporate=corporate,
+            description=description or "Custom Transaction",
+            package=package,
+            subtotal_usd=Decimal(str(amount_usd)) if amount_usd else (package.price_usd if package else 0),
+            subtotal_local=subtotal,
+            vat_percentage=vat_pct,
+            vat_amount_local=vat_amount,
+            total_amount_local=total,
+            currency="BDT"
+        )
+        logger.info(f"Generated Invoice {invoice.invoice_number} for {user.email if user else corporate.name}")
+        return invoice
+
+    @staticmethod
+    def send_invoice_email(invoice):
+        """
+        Generates a PDF from the invoice HTML and sends it via email.
+        """
+        if not invoice:
+            return
+
+        target_email = invoice.user.email if invoice.user else None
+        if not target_email and invoice.corporate:
+            # Try to get the Corporate Admin email
+            admin_profile = CorporateProfile.objects.filter(corporate=invoice.corporate, role=CorporateProfile.Role.ADMIN).first()
+            if admin_profile:
+                target_email = admin_profile.user.email
+
+        if not target_email:
+            logger.warning(f"Could not determine recipient email for invoice {invoice.invoice_number}")
+            return
+
+        business = BusinessInfo.load()
+        subject = f"Invoice {invoice.invoice_number} from {business.company_name or 'Saiha AI'}"
+        
+        # 1. Render HTML for the Email Body
+        email_body = render_to_string('emails/invoice_email.html', {
+            'invoice': invoice,
+            'business': business
+        })
+
+        email = EmailMessage(
+            subject=subject,
+            body=email_body,
+            from_email=None, # Uses DEFAULT_FROM_EMAIL
+            to=[target_email],
+        )
+        email.content_subtype = "html"
+
+        try:
+            email.send(fail_silently=False)
+            logger.info(f"Sent invoice email to {target_email} for {invoice.invoice_number}")
+        except Exception as e:
+            logger.error(f"Failed to send invoice email: {str(e)}")
+
+    @staticmethod
     @transaction.atomic
     def purchase_seats(corporate, count):
         """
@@ -227,19 +316,30 @@ class CorporateService:
         except AppConfiguration.DoesNotExist:
             price_per_seat = 10.0 # Fallback
 
-        total_cost = price_per_seat * count
+        total_cost_credits = price_per_seat * count
         
         # 2. Verify Credits
-        if corporate.rem_credits < total_cost:
-            raise ValueError(f"Insufficient credits. Total cost for {count} seats is {total_cost} Credits.")
+        if corporate.rem_credits < total_cost_credits:
+            raise ValueError(f"Insufficient credits. Total cost for {count} seats is {total_cost_credits} Credits.")
 
         # 3. Deduct and Expand
-        corporate.rem_credits -= total_cost
-        corporate.total_credits -= total_cost # This was spent on seats, no longer available for AI usage
+        corporate.rem_credits -= total_cost_credits
+        corporate.total_credits -= total_cost_credits
         corporate.max_users += count
         corporate.save()
 
-        logger.info(f"Corporate {corporate.name} purchased {count} seats for {total_cost} credits.")
+        # 4. Generate Internal Invoice (Zero-price in cash as it's a credit swap,
+        # but we record it for seat expansion audit)
+        invoice = CorporateService.create_invoice(
+            corporate=corporate,
+            description=f"Seat Expansion: +{count} Organizational Licenses",
+            amount_usd=0,
+            amount_bdt=0
+        )
+        # 5. Send Email
+        CorporateService.send_invoice_email(invoice)
+
+        logger.info(f"Corporate {corporate.name} purchased {count} seats for {total_cost_credits} credits.")
         return True
 
     @staticmethod
@@ -258,7 +358,7 @@ class CorporateService:
 
     @staticmethod
     @transaction.atomic
-    def recharge_corporate(corporate, amount_credits):
+    def recharge_corporate(corporate, amount_credits, package=None):
         """
         Process a credit recharge for a corporate account.
         Rescues any expired credits into the active pool.
@@ -280,13 +380,19 @@ class CorporateService:
         # 4. Extend expiry (30 days from now)
         corporate.expiry_date = timezone.now() + timedelta(days=30)
         corporate.save()
+
+        # 5. Generate Invoice
+        invoice = CorporateService.create_invoice(corporate=corporate, package=package, amount_usd=package.price_usd if package else 0, amount_bdt=package.price_bdt if package else 0)
+        
+        # 6. Send Email
+        CorporateService.send_invoice_email(invoice)
         
         logger.info(f"Recharged {corporate.name}: Added {amount_credits}, Rescued {rescued}. New Total: {corporate.rem_credits}")
         return total_to_add
 
     @staticmethod
     @transaction.atomic
-    def recharge_user(user, amount_credits):
+    def recharge_user(user, amount_credits, package=None):
         """
         Process a credit recharge for a retail user.
         Converts credits to tokens and rescues any expired tokens.
@@ -308,14 +414,18 @@ class CorporateService:
         quota.expired_tokens = 0
         
         # 4. Update Quota
-        # We reset 'current_tokens_used' to 0 and set 'max_tokens' to new + rescued
-        # This keeps the 'usage' simple for retail users
         quota.max_tokens = int(new_tokens + rescued)
         quota.current_tokens_used = 0
         
         # 5. Extend expiry
         quota.expiry_date = timezone.now() + timedelta(days=30)
         quota.save()
+
+        # 6. Generate Invoice
+        invoice = CorporateService.create_invoice(user=user, package=package, amount_usd=package.price_usd if package else 0, amount_bdt=package.price_bdt if package else 0)
+        
+        # 7. Send Email
+        CorporateService.send_invoice_email(invoice)
         
         return quota.max_tokens
 

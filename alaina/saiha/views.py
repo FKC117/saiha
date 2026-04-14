@@ -8,8 +8,14 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.conf import settings
 
+from django.utils import timezone
 from django.contrib.auth.models import User
-from saiha.models import Dataset, DatasetColumn, AnalysisSession, ChatMessage, AnalysisResult
+from saiha.models import (
+    Dataset, DatasetColumn, AnalysisSession, ChatMessage, AnalysisResult,
+    AIAuditLog, UserQuota, AppConfiguration, Corporate, CorporateProfile, CorporateInvitation
+)
+from saiha.corporate_service import CorporateService
+from saiha.adapter import CustomAccountAdapter
 from saiha.database_processing_logic.dataset_processor import DatasetProcessor, EmptyColumnsDetected
 from saiha.database_processing_logic.storage_manager_parquet import DatasetStorageManager
 from saiha.session_management.session_manager import SessionManager
@@ -309,9 +315,7 @@ def get_usage_data(request):
     """
     from django.db.models import Sum, Count
     from django.db.models.functions import TruncDate
-    from django.utils import timezone
     from datetime import timedelta
-    from .models import AIAuditLog, UserQuota, AnalysisSession
 
     user = request.user
     today = timezone.now().date()
@@ -363,7 +367,6 @@ def get_usage_data(request):
     )['total'] or 0
     
     # Get Dynamic Conversion Rate
-    from .models import AppConfiguration
     rate = float(AppConfiguration.get_rate())
 
     return JsonResponse({
@@ -389,8 +392,6 @@ def get_usage_data(request):
 
 from functools import wraps
 from django.core.exceptions import PermissionDenied
-from .models import Corporate, CorporateProfile, CorporateInvitation, UserQuota
-from .corporate_service import CorporateService
 
 def corporate_admin_required(view_func):
     @wraps(view_func)
@@ -474,7 +475,6 @@ def corporate_reallocate_credits(request):
 
 from allauth.account.forms import LoginForm
 from django.contrib.auth import login as auth_login
-from .adapter import CustomAccountAdapter
 
 def corporate_login(request):
     """
@@ -550,9 +550,7 @@ def get_corporate_usage_data(request):
     """
     from django.db.models import Sum, Count
     from django.db.models.functions import TruncDate
-    from django.utils import timezone
     from datetime import timedelta
-    from .models import AIAuditLog, CorporateProfile, AppConfiguration
     
     corporate = request.user.corp_profile.corporate
     member_ids = CorporateProfile.objects.filter(corporate=corporate).values_list('user_id', flat=True)

@@ -368,3 +368,9 @@ Traceback (most recent call last):
     logger.error(f"Plot generation failed for '{col}': {pe}")
     ^^^^^^
 NameError: name 'logger' is not defined
+ERROR 2026-04-14 15:01:55,884 base_tool 9260 2868 Legacy error in column_analysis: cannot access local variable 'df' where it is not associated with a value
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\column_analysis_tool.py", line 62, in execute
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+                   ^^
+UnboundLocalError: cannot access local variable 'df' where it is not associated with a value

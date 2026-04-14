@@ -1,6 +1,7 @@
 import json
 import os
 import logging
+import datetime
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -8,6 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.conf import settings
 
+from sys import path
 from django.utils import timezone
 from django.contrib.auth.models import User
 from saiha.models import (
@@ -414,8 +416,7 @@ def corporate_dashboard(request):
     pending_invites = CorporateInvitation.objects.filter(corporate=corporate, is_accepted=False).order_by('-created_at')
     
     from django.db.models import Sum
-    from .models import AIAuditLog, AppConfiguration
-
+    
     rate = float(AppConfiguration.get_rate())
     
     # Calculate isolated organization usage
@@ -654,16 +655,28 @@ def get_corporate_usage_data(request):
         member_stats[profile.user.username] = total_tokens
 
     # Format for ECharts
-    chart_data = sorted([{'date': k, 'total': v} for k, v in daily_stats.items()], key=lambda x: x['date'])
-    breakdown_data = [{'name': k, 'value': v} for k, v in member_stats.items()]
+    chart_data = sorted([
+        {'date': datetime.datetime.strptime(k, '%Y-%m-%d'), 'total': v} 
+        for k, v in daily_stats.items()
+    ], key=lambda x: x['date'])
     
     rate = float(AppConfiguration.get_rate())
     
+    # Convert totals to credits for the charts
+    usage_dates = [item['date'].strftime('%Y-%m-%d') for item in chart_data]
+    usage_credits = [round(item['total'] / rate, 2) for item in chart_data]
+    
+    # Member breakdown already contains tokens, convert that too
+    final_breakdown = [
+        {'name': name, 'value': round(tokens / rate, 2)}
+        for name, tokens in member_stats.items()
+    ]
+
     return JsonResponse({
         'status': 'success',
         'charts': {
-            'daily_dates': dates,
-            'daily_values': [round(v / rate, 2) for v in usage_values],
-            'member_breakdown': [{'name': m['user__username'], 'value': round(m['total'] / rate, 2)} for m in member_usage]
+            'daily_dates': usage_dates,
+            'daily_values': usage_credits,
+            'member_breakdown': final_breakdown
         }
     })

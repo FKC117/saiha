@@ -34,4 +34,8 @@ urlpatterns = [
     path("billing/invoice/<uuid:invoice_id>/", views.invoice_detail, name="invoice_detail"),
     path("api/billing/resend/", views.api_resend_invoice, name="api_resend_invoice"),
     path("api/billing/history/", views.api_billing_history, name="api_billing_history"),
+
+    # Credit Requests
+    path("api/corporate/request-credits/", views.api_submit_credit_request, name="api_submit_credit_request"),
+    path("api/corporate/process-request/", views.api_process_credit_request, name="api_process_credit_request"),
 ]

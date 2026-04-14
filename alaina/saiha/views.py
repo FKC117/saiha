@@ -60,12 +60,19 @@ def index(request):
     chat_sessions = AnalysisSession.objects.filter(user=request.user, is_active=True).order_by('-last_activity')
     credit_packages = CreditPackage.objects.filter(is_active=True)
     
+    # Identify Corporate Status
+    corp_profile = getattr(request.user, 'corp_profile', None)
+    is_corporate = corp_profile.is_active if corp_profile else False
+    corp_role = corp_profile.role if corp_profile else None
+    
     context = {
         'chat_sessions': chat_sessions,
         'current_session': current_session,
         'messages': messages,
         'available_datasets': datasets,
         'credit_packages': credit_packages,
+        'is_corporate': is_corporate,
+        'corp_role': corp_role,
     }
     return render(request, 'index.html', context)
 
@@ -376,9 +383,14 @@ def get_usage_data(request):
     # Get Dynamic Conversion Rate
     rate = float(AppConfiguration.get_rate()) or 10000.0
 
+    # Override plan name for corporate members
+    plan_name = quota.plan_name
+    if hasattr(user, 'corp_profile') and user.corp_profile.is_active:
+        plan_name = "Corporate"
+
     return JsonResponse({
         'status': 'success',
-        'plan_name': quota.plan_name,
+        'plan_name': plan_name,
         'used_tokens': quota.current_tokens_used,
         'max_tokens': quota.max_tokens,
         'rescue_tokens': quota.expired_tokens,
@@ -449,6 +461,9 @@ def corporate_dashboard(request):
     members = CorporateProfile.objects.filter(corporate=corporate, is_active=True).select_related('user', 'user__quota')
     pending_invites = CorporateInvitation.objects.filter(corporate=corporate, is_accepted=False).order_by('-created_at')
     
+    from saiha.models import CreditRequest
+    pending_requests = CreditRequest.objects.filter(corporate=corporate, status=CreditRequest.Status.PENDING).order_by('-created_at')
+    
     from django.db.models import Sum
     
     rate = float(AppConfiguration.get_rate())
@@ -514,7 +529,8 @@ def corporate_dashboard(request):
         'unallocated': corporate.rem_credits,
         'expired_credits': corporate.expired_credits,
         'expiry_date': corporate.expiry_date,
-        'active_seats': members.filter(role='MEMBER').count()
+        'active_seats': members.filter(role='MEMBER').count(),
+        'pending_requests': pending_requests,
     }
     return render(request, 'corporate/dashboard.html', context)
 
@@ -942,3 +958,90 @@ def get_corporate_usage_data(request):
             'member_breakdown': final_breakdown
         }
     })
+
+@csrf_exempt
+@login_required
+def api_submit_credit_request(request):
+    """
+    Allows a corporate member to request additional credits from their admin.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid method.'})
+    
+    corp_profile = getattr(request.user, 'corp_profile', None)
+    if not corp_profile or not corp_profile.is_active:
+        return JsonResponse({'status': 'error', 'message': 'Requires active corporate membership.'})
+    
+    try:
+        amount = float(request.POST.get('amount', 0))
+        message = request.POST.get('message', '')
+        
+        if amount <= 0:
+            return JsonResponse({'status': 'error', 'message': 'Invalid amount.'})
+        
+        # Prevent spam (limit pending requests)
+        from saiha.models import CreditRequest
+        existing = CreditRequest.objects.filter(user=request.user, status=CreditRequest.Status.PENDING).exists()
+        if existing:
+            return JsonResponse({'status': 'error', 'message': 'You already have a pending request.'})
+            
+        CreditRequest.objects.create(
+            user=request.user,
+            corporate=corp_profile.corporate,
+            amount=amount,
+            message=message
+        )
+        return JsonResponse({'status': 'success', 'message': 'Credit request submitted to your administrator.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+@csrf_exempt
+@login_required
+def api_process_credit_request(request):
+    """
+    Allows a Corporate Admin to approve or deny a credit request.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid method.'})
+    
+    corp_profile = getattr(request.user, 'corp_profile', None)
+    from saiha.models import CorporateProfile
+    if not corp_profile or corp_profile.role != CorporateProfile.Role.ADMIN:
+        return JsonResponse({'status': 'error', 'message': 'Admin access required.'})
+    
+    try:
+        request_id = request.POST.get('request_id')
+        action = request.POST.get('action') # 'APPROVE' or 'DENY'
+        
+        from saiha.models import CreditRequest
+        credit_req = get_object_or_404(CreditRequest, id=request_id, corporate=corp_profile.corporate)
+        
+        if credit_req.status != CreditRequest.Status.PENDING:
+            return JsonResponse({'status': 'error', 'message': 'Request already processed.'})
+            
+        if action == 'APPROVE':
+            # Perform Real Reallocation
+            corporate = corp_profile.corporate
+            if corporate.rem_credits < credit_req.amount:
+                return JsonResponse({'status': 'error', 'message': 'Insufficient unallocated credits in organization pool.'})
+            
+            # Reallocate
+            from saiha.corporate_service import CorporateService
+            rate = float(AppConfiguration.get_rate()) or 10000.0
+            current_credits = credit_req.user.quota.max_tokens / rate
+            new_limit = current_credits + credit_req.amount
+            
+            CorporateService.reallocate_credits(corporate, credit_req.user, new_limit)
+            
+            credit_req.status = CreditRequest.Status.APPROVED
+            credit_req.save()
+            return JsonResponse({'status': 'success', 'message': f'Request approved. {credit_req.amount} credits allocated to {credit_req.user.email}.'})
+        
+        elif action == 'DENY':
+            credit_req.status = CreditRequest.Status.DENIED
+            credit_req.save()
+            return JsonResponse({'status': 'success', 'message': 'Request denied.'})
+        
+        return JsonResponse({'status': 'error', 'message': 'Invalid action.'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})

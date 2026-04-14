@@ -1238,7 +1238,7 @@
 
       <div class="modal-tabs" style="border-bottom: 1px solid var(--zinc-800); margin-bottom: 24px;">
         <div class="modal-tab active" onclick="switchUsageTab('overview')" id="usage-tab-overview">Overview</div>
-        <div class="modal-tab" onclick="switchUsageTab('history')" id="usage-tab-history">Purchase History</div>
+        <div class="modal-tab" onclick="switchUsageTab('history')" id="usage-tab-history">{% if is_corporate %}Allocation History{% else %}Purchase History{% endif %}</div>
       </div>
 
       <div class="modal-content">
@@ -1251,9 +1251,18 @@
               <h4 id="usage-plan-name" style="font-size: 18px; color: white;">Free Plan</h4>
             </div>
             <div style="text-align: right;">
-              <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; margin-bottom: 8px;" onclick="openRetailRechargeModal()">
-                <i data-lucide="zap" size="14"></i> Buy Credits
-              </button>
+              {% if is_corporate %}
+                <p style="font-size: 11px; color: var(--zinc-500); margin-bottom: 8px; font-weight: 500;">
+                  <i data-lucide="shield-info" size="12" style="vertical-align: middle;"></i> Corporate Managed
+                </p>
+                <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px; border-color: var(--zinc-800);" onclick="requestCorporateCredits()">
+                  <i data-lucide="send" size="12"></i> Request Credits
+                </button>
+              {% else %}
+                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; margin-bottom: 8px;" onclick="openRetailRechargeModal()">
+                  <i data-lucide="zap" size="14"></i> Buy Credits
+                </button>
+              {% endif %}
               <p style="font-size: 12px; color: var(--zinc-400);"><span id="usage-credits-used">0</span> / <span id="usage-credits-max">0</span> Credits</p>
             </div>
           </div>
@@ -1261,6 +1270,7 @@
             <div id="usage-quota-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #8B5CF6, #6366F1); transition: width 1s cubic-bezier(0.19, 1, 0.22, 1);"></div>
           </div>
           
+          {% if not is_corporate %}
           <div id="usage-expiry-notice" style="display:none; margin-top:12px; background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary-color); padding: 8px 12px; border-radius: 4px;">
              <p style="font-size:11px; color:var(--zinc-300); margin:0;">
                 <i data-lucide="clock" size="12" style="vertical-align:middle;"></i>
@@ -1273,6 +1283,7 @@
                 You have <b id="usage-rescue-amount">0</b> Expired Tokens waiting to be rescued! Recharge now to reactivate them.
              </p>
           </div>
+          {% endif %}
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px;">
@@ -1810,7 +1821,8 @@
       .then(r => r.json())
       .then(d => {
         if (d.invoices.length === 0) {
-          container.innerHTML = `<p style="text-align:center; padding:40px; color:var(--zinc-500); border:1px dashed var(--zinc-800); border-radius:8px; font-size:13px;">No credit purchases found yet.</p>`;
+          const emptyMsg = "{% if is_corporate %}No credit allocations found yet.{% else %}No credit purchases found yet.{% endif %}";
+          container.innerHTML = `<p style="text-align:center; padding:40px; color:var(--zinc-500); border:1px dashed var(--zinc-800); border-radius:8px; font-size:13px;">${emptyMsg}</p>`;
           return;
         }
 
@@ -1852,6 +1864,26 @@
       fetch('/api/billing/resend/', { method: 'POST', body: formData })
       .then(r => r.json())
       .then(d => alert(d.message));
+    }
+
+    function requestCorporateCredits() {
+        const amount = prompt("Enter the number of credits you wish to request from your administrator:", "10");
+        if (amount && !isNaN(amount) && parseFloat(amount) > 0) {
+            const formData = new FormData();
+            formData.append('amount', amount);
+            formData.append('message', 'Request from dashboard');
+            
+            fetch('/api/corporate/request-credits/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(r => r.json())
+            .then(d => {
+                alert(d.message);
+            });
+        } else if (amount !== null) {
+            alert("Please enter a valid amount.");
+        }
     }
 
     async function fetchUsageData() {

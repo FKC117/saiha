@@ -473,6 +473,32 @@ class CorporateInvitation(models.Model):
     def __str__(self):
         return f"Invite: {self.email} to {self.corporate.name}"
 
+class CreditRequest(models.Model):
+    """
+    Tracks requests from corporate members for additional credit allocations.
+    """
+    class Status(models.TextChoices):
+        PENDING = 'PENDING', 'Pending'
+        APPROVED = 'APPROVED', 'Approved'
+        DENIED = 'DENIED', 'Denied'
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='credit_requests')
+    corporate = models.ForeignKey(Corporate, on_delete=models.CASCADE, related_name='credit_requests')
+    amount = models.FloatField(help_text="Requested credit amount")
+    message = models.TextField(null=True, blank=True)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = "Credit Request"
+        verbose_name_plural = "Credit Requests"
+
+    def __str__(self):
+        return f"Request: {self.user.email} - {self.amount} Credits ({self.status})"
+
 class Invoice(models.Model):
     """
     Financial record of a credit purchase or seat expansion.

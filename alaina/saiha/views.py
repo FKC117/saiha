@@ -58,12 +58,14 @@ def index(request):
 
     datasets = Dataset.objects.filter(user=request.user, is_active=True).order_by('-upload_date')
     chat_sessions = AnalysisSession.objects.filter(user=request.user, is_active=True).order_by('-last_activity')
+    credit_packages = CreditPackage.objects.filter(is_active=True)
     
     context = {
         'chat_sessions': chat_sessions,
         'current_session': current_session,
         'messages': messages,
         'available_datasets': datasets,
+        'credit_packages': credit_packages,
     }
     return render(request, 'index.html', context)
 
@@ -315,9 +317,12 @@ def get_usage_data(request):
     API endpoint to fetch token usage statistics for the current user.
     Aggregates data for charts and KPI cards.
     """
-    from django.db.models import Sum, Count
+    from django.db.models import Sum
     from django.db.models.functions import TruncDate
     from datetime import timedelta
+    
+    # 0. Sync credits first
+    CorporateService.sync_user_credits(request.user)
 
     user = request.user
     today = timezone.now().date()
@@ -367,18 +372,18 @@ def get_usage_data(request):
     ).aggregate(
         total=Sum('tokens_input') + Sum('tokens_output')
     )['total'] or 0
-    
+
     # Get Dynamic Conversion Rate
-    rate = float(AppConfiguration.get_rate())
+    rate = float(AppConfiguration.get_rate()) or 10000.0
 
     return JsonResponse({
         'status': 'success',
-        'quota': {
-            'used': quota.credits_used,
-            'max': quota.max_credits,
-            'percent': round((quota.current_tokens_used / quota.max_tokens) * 100, 1) if quota.max_tokens > 0 else 0,
-            'plan': quota.plan_name
-        },
+        'plan_name': quota.plan_name,
+        'used_tokens': quota.current_tokens_used,
+        'max_tokens': quota.max_tokens,
+        'rescue_tokens': quota.expired_tokens,
+        'expiry_date': quota.expiry_date.isoformat() if quota.expiry_date else None,
+        'is_expired': quota.is_expired,
         'kpis': {
             'today': round(today_total_tokens / rate, 3), 
             'total': quota.credits_used
@@ -389,6 +394,26 @@ def get_usage_data(request):
             'sessions': [{'name': s['name'], 'value': round(s['value'] / rate, 2)} for s in formatted_sessions]
         }
     })
+
+@csrf_exempt
+@login_required
+def user_topup(request):
+    """
+    API to process retail user credit top-ups.
+    """
+    if request.method == 'POST':
+        package_id = request.POST.get('package_id')
+        try:
+            package = get_object_or_404(CreditPackage, id=package_id, is_active=True)
+            amount = float(package.credits)
+            CorporateService.recharge_user(request.user, amount)
+            return JsonResponse({
+                'status': 'success', 
+                'message': f'Payment Successful! {package.name} ({amount} Credits) added. Any expired balance has been rescued.'
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+    return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
 
 # --- CORPORATE ADMIN PANEL VIEWS ---
 

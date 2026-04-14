@@ -258,26 +258,85 @@ class CorporateService:
 
     @staticmethod
     @transaction.atomic
-    def recharge_corporate(corporate, amount_credits, days_valid=30):
+    def recharge_corporate(corporate, amount_credits):
         """
-        Main entry point for adding credits. Performs the 'Rescue & Rollover'.
+        Process a credit recharge for a corporate account.
+        Rescues any expired credits into the active pool.
         """
         from django.utils import timezone
         from datetime import timedelta
+        # 1. Sync first to ensure we know what's expired
+        CorporateService.sync_corporate_credits(corporate)
         
-        # 1. Prepare rescue
+        # 2. Rescue expired pool
         rescued = corporate.expired_credits
-        total_to_add = amount_credits + rescued
-        
-        # 2. Update Pool
-        corporate.rem_credits += total_to_add
-        corporate.total_credits += amount_credits # Total ledger only increases by the new purchase
         corporate.expired_credits = 0
         
-        # 3. Extend Expiry
-        new_expiry = timezone.now() + timedelta(days=days_valid)
-        corporate.expiry_date = new_expiry
+        # 3. Add new credits + rescued credits
+        total_to_add = amount_credits + rescued
+        corporate.total_credits += total_to_add
+        corporate.rem_credits += total_to_add
         
+        # 4. Extend expiry (30 days from now)
+        corporate.expiry_date = timezone.now() + timedelta(days=30)
         corporate.save()
+        
         logger.info(f"Recharged {corporate.name}: Added {amount_credits}, Rescued {rescued}. New Total: {corporate.rem_credits}")
         return total_to_add
+
+    @staticmethod
+    @transaction.atomic
+    def recharge_user(user, amount_credits):
+        """
+        Process a credit recharge for a retail user.
+        Converts credits to tokens and rescues any expired tokens.
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+        from saiha.models import UserQuota, AppConfiguration
+        quota, _ = UserQuota.objects.get_or_create(user=user)
+        
+        # 1. Sync first
+        CorporateService.sync_user_credits(user)
+        
+        # 2. Convert Credits to Tokens
+        rate = AppConfiguration.get_rate()
+        new_tokens = amount_credits * float(rate)
+        
+        # 3. Rescue expired tokens
+        rescued = quota.expired_tokens
+        quota.expired_tokens = 0
+        
+        # 4. Update Quota
+        # We reset 'current_tokens_used' to 0 and set 'max_tokens' to new + rescued
+        # This keeps the 'usage' simple for retail users
+        quota.max_tokens = int(new_tokens + rescued)
+        quota.current_tokens_used = 0
+        
+        # 5. Extend expiry
+        quota.expiry_date = timezone.now() + timedelta(days=30)
+        quota.save()
+        
+        return quota.max_tokens
+
+    @staticmethod
+    def sync_user_credits(user):
+        """
+        Check if user's current tokens have expired and move them to the rescue pool.
+        """
+        from saiha.models import UserQuota
+        try:
+            quota = user.quota
+        except UserQuota.DoesNotExist:
+            return
+
+        if quota.is_expired:
+            rem_tokens = quota.max_tokens - quota.current_tokens_used
+            if rem_tokens > 0:
+                quota.expired_tokens += rem_tokens
+            
+            # Reset active tokens since they expired
+            quota.max_tokens = 0
+            quota.current_tokens_used = 0
+            quota.expiry_date = None # Stop expiring until next recharge
+            quota.save()

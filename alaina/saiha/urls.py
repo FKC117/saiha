@@ -11,13 +11,14 @@ urlpatterns = [
     path("datasets/", views.dataset_dashboard, name="dataset_dashboard"),
     path("datasets/delete/<uuid:dataset_id>/", views.delete_dataset, name="delete_dataset"),
     path("datasets/<uuid:dataset_id>/", views.dataset_detail, name="dataset_detail"),
-    path("usage/stats/", views.get_usage_data, name="get_usage_stats"),
+    path("usage/stats/", views.get_usage_data, name="get_usage_data"),
     path("api/analysis-result/<uuid:result_id>/", views.get_analysis_result, name="get_analysis_result"),
     path("api/export/session/<uuid:session_id>/<str:format>/", views.export_session_report, name="export_session_report"),
 
     # Corporate Admin Panel
     path("corporate/login/", views.corporate_login, name="corporate_login"),
     path("corporate/join/<uuid:token>/", views.corporate_join, name="corporate_join"),
+    path("user/topup/", views.user_topup, name="user_topup"),
     path("corporate/dashboard/", views.corporate_dashboard, name="corporate_dashboard"),
     path("corporate/analytics/", views.corporate_analytics, name="corporate_analytics"),
     path("corporate/api/usage/", views.get_corporate_usage_data, name="get_corporate_usage_data"),

@@ -286,7 +286,7 @@ class UserQuota(models.Model):
     plan_name = models.CharField(max_length=50, default="Free")
     max_tokens = models.IntegerField(default=50000)
     current_tokens_used = models.IntegerField(default=0)
-    expired_tokens = models.IntegerField(default=0, help_text="Tokens from a previous cycle that can be rescued.")
+    expired_tokens = models.FloatField(default=0, help_text="Tokens that have expired but can be rescued upon recharge.")
     expiry_date = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -302,16 +302,17 @@ class UserQuota(models.Model):
         return timezone.now() > self.expiry_date
 
     @property
+    def rem_credits(self):
+        """Map remaining tokens back to credits for display consistency."""
+        rate = AppConfiguration.get_rate()
+        rem_tokens = self.max_tokens - self.current_tokens_used
+        return round(rem_tokens / float(rate), 2) if rem_tokens > 0 else 0
+
+    @property
     def credits_used(self):
         """Calculates credits based on dynamic config rate."""
         rate = AppConfiguration.get_rate()
         return round(self.current_tokens_used / float(rate), 2)
-
-    @property
-    def max_credits(self):
-        """Calculates max credits based on dynamic config rate."""
-        rate = AppConfiguration.get_rate()
-        return round(self.max_tokens / float(rate), 1)
 
 class AppConfiguration(models.Model):
     """
@@ -438,6 +439,6 @@ class CorporateInvitation(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
 
+
     def __str__(self):
         return f"Invite: {self.email} to {self.corporate.name}"
-

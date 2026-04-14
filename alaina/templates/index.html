@@ -227,6 +227,20 @@
       color: white;
     }
 
+    .package-card {
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid var(--zinc-800);
+        background: var(--zinc-900);
+        padding: 16px;
+        border-radius: 12px;
+    }
+    .package-card:hover { border-color: var(--zinc-600); transform: translateY(-2px); }
+    .package-card.popular { border-color: var(--primary-color); background: rgba(139, 92, 246, 0.05); }
+    .package-tier { font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: var(--zinc-500); }
+    .package-card.popular .package-tier { color: var(--primary-color); }
+
     .conv-title {
       font-size: 13px;
       white-space: nowrap;
@@ -1230,13 +1244,28 @@
               <h4 id="usage-plan-name" style="font-size: 18px; color: white;">Free Plan</h4>
             </div>
             <div style="text-align: right;">
+              <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; margin-bottom: 8px;" onclick="openRetailRechargeModal()">
+                <i data-lucide="zap" size="14"></i> Buy Credits
+              </button>
               <p style="font-size: 12px; color: var(--zinc-400);"><span id="usage-credits-used">0</span> / <span id="usage-credits-max">0</span> Credits</p>
             </div>
           </div>
           <div style="height: 10px; background: var(--zinc-800); border-radius: 10px; overflow: hidden;">
             <div id="usage-quota-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #8B5CF6, #6366F1); transition: width 1s cubic-bezier(0.19, 1, 0.22, 1);"></div>
           </div>
-          <p style="font-size: 11px; color: var(--zinc-500); margin-top: 8px;">Quota resets monthly or when you upgrade your package.</p>
+          
+          <div id="usage-expiry-notice" style="display:none; margin-top:12px; background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary-color); padding: 8px 12px; border-radius: 4px;">
+             <p style="font-size:11px; color:var(--zinc-300); margin:0;">
+                <i data-lucide="clock" size="12" style="vertical-align:middle;"></i>
+                Credits expire on <b id="usage-expiry-date">--</b>. Recharging rescues any unused balance.
+             </p>
+          </div>
+          <div id="usage-rescue-notice" style="display:none; margin-top:12px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 4px;">
+             <p style="font-size:11px; color:#f59e0b; margin:0;">
+                <i data-lucide="alert-circle" size="12" style="vertical-align:middle;"></i>
+                You have <b id="usage-rescue-amount">0</b> Expired Tokens waiting to be rescued! Recharge now to reactivate them.
+             </p>
+          </div>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px;">
@@ -1723,6 +1752,7 @@
     function openSettingsModal() { document.getElementById('settingsModal').classList.add('open'); }
     function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('open'); }
 
+    // --- 4. Usage Dashboard Logic ---
     let trendChart = null;
     let sessionsChart = null;
 
@@ -1738,64 +1768,145 @@
 
     async function fetchUsageData() {
         try {
-            const response = await fetch(`/usage/stats/?t=${new Date().getTime()}`);
+            const response = await fetch('{% url "saiha:get_usage_data" %}');
             const data = await response.json();
+
+            // 1. Update Profile/Plan Info
+            document.getElementById('usage-plan-name').innerText = data.plan_name + " Plan";
+
+            // 2. Update Credits (Using rate of 10,000 tokens = 1 Credit)
+            const rate = 10000;
+            const creditsUsed = (data.used_tokens / rate).toFixed(2);
+            const creditsMax = (data.max_tokens / rate).toFixed(1);
             
-            if (data.status === 'success') {
-                // Update KPI Cards
-                document.getElementById('usage-plan-name').innerText = data.quota.plan + " Plan";
-                document.getElementById('usage-credits-used').innerText = data.quota.used.toFixed(2);
-                document.getElementById('usage-credits-max').innerText = data.quota.max.toFixed(1);
-                document.getElementById('usage-quota-bar').style.width = data.quota.percent + "%";
-                document.getElementById('usage-kpi-today').innerText = data.kpis.today.toFixed(3);
-                document.getElementById('usage-kpi-total').innerText = data.kpis.total.toFixed(2);
+            document.getElementById('usage-credits-used').innerText = creditsUsed;
+            document.getElementById('usage-credits-max').innerText = creditsMax;
 
-                // Initialize/Update Trends Chart
-                if (!trendChart) trendChart = echarts.init(document.getElementById('usage-trend-chart'));
-                trendChart.setOption({
-                    grid: { top: 10, left: 40, right: 10, bottom: 30 },
-                    xAxis: { type: 'category', data: data.charts.daily_dates, axisLine: { lineStyle: { color: '#3f3f46' } } },
-                    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#27272a' } } },
-                    series: [{
-                        data: data.charts.daily_values,
-                        type: 'line',
-                        smooth: true,
-                        areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(139, 92, 246, 0.3)' }, { offset: 1, color: 'transparent' }]) },
-                        lineStyle: { color: '#8B5CF6', width: 3 },
-                        showSymbol: false,
-                    }]
-                });
+            // 3. Update Progress Bar
+            const percent = data.max_tokens > 0 ? (data.used_tokens / data.max_tokens) * 100 : 0;
+            document.getElementById('usage-quota-bar').style.width = percent + '%';
 
-                // Initialize/Update Sessions Chart
-                if (!sessionsChart) sessionsChart = echarts.init(document.getElementById('usage-sessions-chart'));
-                sessionsChart.setOption({
-                    grid: { top: 10, left: 100, right: 30, bottom: 20 },
-                    xAxis: { type: 'value', show: false },
-                    yAxis: { 
-                        type: 'category', 
-                        data: data.charts.sessions.map(s => s.name),
-                        axisLine: { show: false },
-                        axisTick: { show: false },
-                        axisLabel: { color: '#a1a1aa', fontSize: 11 }
-                    },
-                    series: [{
-                        type: 'bar',
-                        data: data.charts.sessions.map(s => s.value),
-                        itemStyle: { borderRadius: [0, 4, 4, 0], color: '#6366F1' },
-                        barPadding: '20%'
-                    }]
-                });
+            // 4. Update KPI Cards
+            document.getElementById('usage-kpi-today').innerText = (data.used_tokens / rate).toFixed(3);
+            document.getElementById('usage-kpi-total').innerText = creditsUsed;
+
+            // 5. Update Rescue Pool & Expiry Notices
+            const rescuePool = data.rescue_tokens || 0;
+            const rescueEl = document.getElementById('usage-rescue-notice');
+            if (rescuePool > 0) {
+                rescueEl.style.display = 'block';
+                document.getElementById('usage-rescue-amount').innerText = rescuePool.toLocaleString();
+            } else {
+                rescueEl.style.display = 'none';
+            }
+
+            const expiryEl = document.getElementById('usage-expiry-notice');
+            if (data.expiry_date && !data.is_expired) {
+                expiryEl.style.display = 'block';
+                document.getElementById('usage-expiry-date').innerText = new Date(data.expiry_date).toLocaleDateString();
+            } else {
+                expiryEl.style.display = 'none';
+            }
+
+            // 6. Fetch Full Reporting for Charts
+            const reportResp = await fetch(`/usage/stats/?t=${new Date().getTime()}`);
+            const reportData = await reportResp.json();
+            if (reportData.status === 'success') {
+                loadUsageCharts(reportData.charts);
             }
         } catch (err) {
             console.error("Failed to fetch usage stats:", err);
         }
     }
+
+    function loadUsageCharts(charts) {
+        // Trend Chart
+        if (!trendChart) trendChart = echarts.init(document.getElementById('usage-trend-chart'));
+        trendChart.setOption({
+            grid: { top: 10, left: 40, right: 10, bottom: 30 },
+            xAxis: { type: 'category', data: charts.daily_dates, axisLine: { lineStyle: { color: '#3f3f46' } } },
+            yAxis: { type: 'value', splitLine: { lineStyle: { color: '#27272a' } } },
+            series: [{
+                data: charts.daily_values,
+                type: 'line', smooth: true,
+                areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(139, 92, 246, 0.3)' }, { offset: 1, color: 'transparent' }]) },
+                lineStyle: { color: '#8B5CF6', width: 3 },
+                showSymbol: false,
+            }]
+        });
+
+        // Sessions Chart
+        if (!sessionsChart) sessionsChart = echarts.init(document.getElementById('usage-sessions-chart'));
+        sessionsChart.setOption({
+            grid: { top: 10, left: 100, right: 30, bottom: 20 },
+            xAxis: { type: 'value', show: false },
+            yAxis: { 
+                type: 'category', 
+                data: charts.sessions.map(s => s.name),
+                axisLine: { show: false }, axisTick: { show: false },
+                axisLabel: { color: '#a1a1aa', fontSize: 11 }
+            },
+            series: [{
+                type: 'bar',
+                data: charts.sessions.map(s => s.value),
+                itemStyle: { borderRadius: [0, 4, 4, 0], color: '#6366F1' },
+                barPadding: '20%'
+            }]
+        });
+    }
+
+    // --- 5. Retail Purchase ---
+    function openRetailRechargeModal() { 
+        closeUsageModal();
+        document.getElementById('retailRechargeModal').style.display = 'flex'; 
+    }
+
+    let activeRetailPackage = { id: '', amount: 0, cost: 0 };
+
+    function handleRetailPackageClick(el) {
+        activeRetailPackage = {
+            id: el.dataset.id,
+            amount: el.dataset.credits,
+            cost: parseFloat(el.dataset.priceUsd),
+            tier: el.dataset.name,
+            bdt: el.dataset.priceBdt
+        };
+        document.getElementById('retail-checkout-tier').innerText = activeRetailPackage.tier;
+        document.getElementById('retail-checkout-amount').innerText = activeRetailPackage.amount;
+        document.getElementById('retail-checkout-cost').innerText = '$' + activeRetailPackage.cost.toFixed(2);
+        document.getElementById('retail-checkout-bdt').innerText = activeRetailPackage.bdt;
+
+        document.getElementById('retailRechargeModal').style.display = 'none';
+        document.getElementById('retailCheckoutModal').style.display = 'flex';
+    }
+
+    function completeRetailPurchase() {
+        const formData = new FormData();
+        formData.append('package_id', activeRetailPackage.id);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch('/user/topup/', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(d => {
+            alert(d.message);
+            if (d.status === 'success') location.reload();
+        });
+    }
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // --- 6. Other Modals & Tabs ---
+    function openSettingsModal() { document.getElementById('settingsModal').classList.add('open'); }
+    function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('open'); }
+    
     function switchSettingsTab(tabId) {
       const modal = document.getElementById('settingsModal');
       modal.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
       modal.querySelectorAll('.modal-tab').forEach(el => el.classList.remove('active'));
       document.getElementById(tabId).classList.add('active');
-      document.getElementById('tab-btn-' + tabId.replace('-tab', '')).classList.add('active');
+      const btnId = 'tab-btn-' + tabId.replace('-tab', '');
+      const btn = document.getElementById(btnId);
+      if (btn) btn.classList.add('active');
     }
 
     async function handleProfileSubmit(event) {
@@ -1844,12 +1955,78 @@
       }
     }
 
+    function switchModalTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.modal-tab').forEach(el => el.classList.remove('active'));
+      document.getElementById(tabId).classList.add('active');
+      document.getElementById(tabId === 'upload-tab' ? 'tab-btn-upload' : 'tab-btn-select').classList.add('active');
+    }
+
     window.onclick = function (event) {
       if (event.target.classList.contains('dataset-modal-backdrop')) {
         event.target.classList.remove('open');
       }
+      if (event.target.id === 'retailRechargeModal' || event.target.id === 'retailCheckoutModal') {
+          event.target.style.display = 'none';
+      }
     }
   </script>
+  <!-- Retail Recharge Modals -->
+  <div id="retailRechargeModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center; padding:20px;">
+      <div class="card" style="max-width:600px; width:100%; border-color:var(--zinc-700); background:var(--zinc-900); padding:24px;">
+          <header style="display:flex; justify-content:space-between; margin-bottom:24px;">
+              <div>
+                  <h1 style="font-size:20px; font-weight:700; color:white;">Recharge Account</h1>
+                  <p style="color:var(--zinc-500); font-size:13px;">Fuel your personal AI workspace with fresh credits.</p>
+              </div>
+              <button onclick="closeModal('retailRechargeModal')" style="background:none; border:none; color:var(--zinc-500); cursor:pointer;"><i data-lucide="x" size="20"></i></button>
+          </header>
+
+          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-bottom:24px;">
+              {% for p in credit_packages %}
+              <div class="package-card {% if p.is_popular %}popular{% endif %}" 
+                   data-id="{{ p.id }}" data-credits="{{ p.credits }}" data-price-usd="{{ p.price_usd }}" data-name="{{ p.name }}" data-price-bdt="{{ p.price_bdt }}"
+                   onclick="handleRetailPackageClick(this)">
+                  <div class="package-tier">{% if p.is_popular %}Popular{% else %}{{ p.name }}{% endif %}</div>
+                  <div style="font-size:24px; font-weight:700; margin-bottom:4px; color:white;">{{ p.credits|floatformat:0 }}</div>
+                  <div style="color:var(--zinc-500); font-size:11px;">Credits</div>
+                  <div style="margin-top:16px; font-weight:700; color:white;">${{ p.price_usd }} / ৳{{ p.price_bdt|floatformat:0 }}</div>
+              </div>
+              {% endfor %}
+          </div>
+          <div style="background:rgba(139, 92, 246, 0.1); border-left:4px solid var(--primary-color); padding:12px; border-radius:4px;">
+              <p style="font-size:12px; color:var(--zinc-300); margin:0;"><b>Fair-Play Guarantee:</b> Recharging instantly rescues all expired tokens into your active balance.</p>
+          </div>
+      </div>
+  </div>
+
+  <div id="retailCheckoutModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2100; align-items:center; justify-content:center; padding:20px;">
+      <div class="card" style="max-width:400px; width:100%; border-color:var(--zinc-700); background:var(--zinc-950); padding:32px;">
+          <header style="text-align:center; margin-bottom:32px;">
+              <div style="background:var(--primary-color); width:48px; height:48px; border-radius:12px; display:grid; place-items:center; margin:0 auto 16px;">
+                  <i data-lucide="shopping-cart" style="color:white;"></i>
+              </div>
+              <h3 style="font-size:20px; font-weight:700; color:white;">Secure Checkout</h3>
+              <p style="color:var(--zinc-500); font-size:13px;">Recharging <span id="retail-checkout-tier" style="color:white; font-weight:700;">--</span></p>
+          </header>
+          <div style="margin-bottom:32px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px; color:var(--zinc-400);">
+                  <span>Individual Credits</span>
+                  <span id="retail-checkout-amount" style="color:white; font-weight:700;">--</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px; color:var(--zinc-500);">
+                  <span>Local Price (BDT)</span>
+                  <span style="color:var(--zinc-300); font-weight:600;">৳<span id="retail-checkout-bdt">--</span></span>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding-top:12px; border-top:1px solid var(--zinc-800);">
+                  <span style="font-weight:700; color:white;">Total (USD)</span>
+                  <span id="retail-checkout-cost" style="font-size:24px; font-weight:700; color:var(--primary-color);">$0.00</span>
+              </div>
+          </div>
+          <button class="btn btn-primary" onclick="completeRetailPurchase()" style="width:100%; justify-content:center; padding:14px; font-size:16px;">Confirm & Pay</button>
+          <button onclick="closeModal('retailCheckoutModal')" style="width:100%; background:none; border:none; color:var(--zinc-500); margin-top:16px; cursor:pointer; font-size:13px;">Cancel</button>
+      </div>
+  </div>
 </body>
 
 </html>

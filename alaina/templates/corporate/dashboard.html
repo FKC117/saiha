@@ -394,7 +394,8 @@
                 No pending invitations.
             </p>
             {% endif %}
-        </div> <!-- End team-content -->
+        </div> <!-- End card -->
+    </div> <!-- End team-content -->
 
         <div id="billing-content" class="tab-content">
             <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:40px;">
@@ -678,9 +679,6 @@
                                 <a href="${inv.url}" target="_blank" class="btn btn-outline" style="padding:4px 10px; font-size:12px;" title="View & Download PDF">
                                     <i data-lucide="download" size="14"></i>
                                 </a>
-                                <button onclick="resendInvoiceEmail('${inv.id}')" class="btn btn-outline" style="padding:4px 10px; font-size:12px;" title="Resend to Email">
-                                    <i data-lucide="mail" size="14"></i>
-                                </button>
                             </td>
                         </tr>
                     `;

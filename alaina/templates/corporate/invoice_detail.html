@@ -6,6 +6,39 @@
     <title>Invoice {{ invoice.invoice_number }} | Saiha AI</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    {% if is_pdf %}
+    <style>
+        @page {
+            size: letter;
+            margin: 1cm;
+        }
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 11pt;
+            line-height: 1.4;
+            color: #000;
+        }
+        .invoice-container { width: 100%; }
+        .logo-box {
+            background-color: #8B5CF6;
+            color: #ffffff;
+            width: 35px;
+            height: 35px;
+            text-align: center;
+            line-height: 35px;
+            font-weight: bold;
+            font-size: 18pt;
+        }
+        .brand-name { font-size: 20pt; font-weight: bold; }
+        .invoice-meta h1 { font-size: 24pt; color: #8B5CF6; }
+        .info-section h4 { font-size: 9pt; color: #71717a; text-transform: uppercase; }
+        .table th { border-bottom: 2pt solid #000; font-size: 10pt; text-align: left; background-color: #f4f4f5; }
+        .table td { border-bottom: 0.5pt solid #e4e4e7; padding: 10pt 5pt; }
+        .grand-total { border-top: 2pt solid #8B5CF6; font-size: 16pt; font-weight: bold; color: #8B5CF6; padding-top: 10pt; }
+        .text-zinc-500 { color: #71717a; }
+        .border-zinc-100 { border-color: #f4f4f5; }
+    </style>
+    {% else %}
     <style>
         :root {
             --primary: #8B5CF6;
@@ -17,20 +50,20 @@
         body {
             font-family: 'DM Sans', sans-serif;
             margin: 0;
-            padding: 40px;
+            padding: 30px;
             background: #fff;
             color: #000;
-            line-height: 1.5;
+            line-height: 1.4;
         }
         .invoice-container {
-            max-width: 800px;
+            max-width: 700px;
             margin: 0 auto;
         }
         header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 60px;
+            margin-bottom: 40px;
         }
         .brand {
             display: flex;
@@ -56,7 +89,7 @@
         }
         .invoice-meta h1 {
             margin: 0;
-            font-size: 32px;
+            font-size: 28px;
             color: var(--primary);
             text-transform: uppercase;
         }
@@ -64,7 +97,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 40px;
-            margin-bottom: 60px;
+            margin-bottom: 40px;
         }
         .info-section h4 {
             margin: 0 0 12px 0;
@@ -79,7 +112,7 @@
         .table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 60px;
+            margin-bottom: 40px;
         }
         .table th {
             text-align: left;
@@ -97,7 +130,7 @@
             justify-content: flex-end;
         }
         .totals-box {
-            width: 300px;
+            width: 250px;
         }
         .total-row {
             display: flex;
@@ -135,6 +168,8 @@
             .invoice-container { width: 100%; max-width: none; }
         }
     </style>
+    </style>
+    {% endif %}
 </head>
 <body>
     <div class="invoice-container">
@@ -152,14 +187,18 @@
         <header>
             <div class="brand">
                 <div class="logo-box">
-                    <i data-lucide="zap"></i>
+                    {% if is_pdf %}S{% else %}<i data-lucide="zap"></i>{% endif %}
                 </div>
                 <div class="brand-name">{{ business.company_name|default:"Saiha AI" }}</div>
             </div>
             <div class="invoice-meta">
                 <h1>Invoice</h1>
-                <p style="margin:4px 0; color:var(--zinc-500);">#{{ invoice.invoice_number }}</p>
-                <p style="margin:0; font-size:14px;">Date: {{ invoice.created_at|date:"M d, Y" }}</p>
+                <p style="margin:4px 0; color:#71717a; font-weight: 500;">#{{ invoice.invoice_number }}</p>
+                <div style="font-size: 13px; color: #71717a; border-top: 1px solid #f4f4f5; margin-top: 8px; padding-top: 8px;">
+                    <div>Date: {{ invoice.created_at|date:"M d, Y" }}</div>
+                    <div>Status: {{ invoice.status }}</div>
+                    <div>Payment: {{ invoice.payment_method|default:"Credit Balance" }}</div>
+                </div>
             </div>
         </header>
 
@@ -198,7 +237,7 @@
                 <tr>
                     <td>
                         <div style="font-weight: 600;">{{ invoice.description }}</div>
-                        <div style="font-size: 12px; color: var(--zinc-500);">Status: {{ invoice.status }}</div>
+                        <div style="font-size: 12px; color: #71717a;">Status: {{ invoice.status }}</div>
                     </td>
                     <td style="text-align: right; font-weight: 600;">{{ invoice.subtotal_local|floatformat:2 }} {{ invoice.currency }}</td>
                 </tr>
@@ -222,8 +261,9 @@
             </div>
         </div>
 
-        <div style="margin-top: 100px; padding-top: 20px; border-top: 1px solid var(--zinc-200); font-size: 12px; color: var(--zinc-500); text-align: center;">
-            This is a computer-generated invoice. No signature required. Thank you for choosing {{ business.company_name|default:"Saiha" }}!
+        <div style="margin-top: 100px; padding-top: 20px; border-top: 1px solid #e4e4e7; font-size: 12px; color: #71717a; text-align: center;">
+            <p>Thank you for choosing {{ business.company_name|default:"Saiha AI" }}.</p>
+            <p style="margin-top: 8px;">This is a computer-generated document. No signature is required.</p>
         </div>
     </div>
 

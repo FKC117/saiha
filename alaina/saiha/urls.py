@@ -28,6 +28,7 @@ urlpatterns = [
     path("corporate/members/reallocate/", views.corporate_reallocate_credits, name="corporate_reallocate_credits"),
     path("corporate/members/purchase-seats/", views.corporate_purchase_seats, name="corporate_purchase_seats"),
     path("corporate/topup/", views.corporate_topup, name="corporate_topup"),
+    path("corporate/simulate-recharge/", views.simulate_corporate_recharge, name="simulate_corporate_recharge"),
 
     # Billing & Invoices
     path("billing/invoice/<uuid:invoice_id>/", views.invoice_detail, name="invoice_detail"),

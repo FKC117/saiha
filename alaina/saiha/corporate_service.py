@@ -1,11 +1,14 @@
 import logging
 import uuid
+from io import BytesIO
 from decimal import Decimal
 from datetime import timedelta
 from django.db import transaction
 from django.utils import timezone
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
+from django.contrib.sites.models import Site
+from xhtml2pdf import pisa
 from saiha.models import (
     Corporate, CorporateProfile, CorporateInvitation, UserQuota, User,
     AppConfiguration, Invoice, CreditPackage, BusinessInfo
@@ -280,10 +283,19 @@ class CorporateService:
         business = BusinessInfo.load()
         subject = f"Invoice {invoice.invoice_number} from {business.company_name or 'Saiha AI'}"
         
+        try:
+            site = Site.objects.get_current()
+            domain = site.domain
+            protocol = 'https' if not domain.startswith('127.0.0.1') and not domain.startswith('localhost') else 'http'
+        except:
+            domain = "localhost:8000"
+            protocol = "http"
+
         # 1. Render HTML for the Email Body
         email_body = render_to_string('emails/invoice_email.html', {
             'invoice': invoice,
-            'business': business
+            'business': business,
+            'base_url': f"{protocol}://{domain}"
         })
 
         email = EmailMessage(
@@ -293,6 +305,29 @@ class CorporateService:
             to=[target_email],
         )
         email.content_subtype = "html"
+
+        # 2. Add PDF Attachment using xhtml2pdf (Stable on Windows)
+        try:
+            # We use the same invoice_detail template but pass is_pdf context
+            html_attachment = render_to_string('corporate/invoice_detail.html', {
+                'invoice': invoice,
+                'business': business,
+                'is_pdf': True
+            })
+            
+            pdf_buffer = BytesIO()
+            pisa_status = pisa.CreatePDF(html_attachment, dest=pdf_buffer)
+            
+            if not pisa_status.err:
+                email.attach(
+                    f"Invoice_{invoice.invoice_number}.pdf",
+                    pdf_buffer.getvalue(),
+                    'application/pdf'
+                )
+            else:
+                logger.error(f"xhtml2pdf error: {pisa_status.err}")
+        except Exception as e:
+            logger.error(f"Failed to generate PDF attachment: {str(e)}")
 
         try:
             email.send(fail_silently=False)
@@ -421,11 +456,9 @@ class CorporateService:
         quota.expiry_date = timezone.now() + timedelta(days=30)
         quota.save()
 
-        # 6. Generate Invoice
-        invoice = CorporateService.create_invoice(user=user, package=package, amount_usd=package.price_usd if package else 0, amount_bdt=package.price_bdt if package else 0)
-        
-        # 7. Send Email
-        CorporateService.send_invoice_email(invoice)
+        # 7. No email for retail user recharge per request
+        # invoice = CorporateService.create_invoice(user=user, package=package, amount_usd=package.price_usd if package else 0, amount_bdt=package.price_bdt if package else 0)
+        # CorporateService.send_invoice_email(invoice)
         
         return quota.max_tokens
 

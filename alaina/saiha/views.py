@@ -473,7 +473,7 @@ def corporate_dashboard(request):
         member_stats.append({
             'profile': m,
             'org_usage': usage_credits,
-            'total_allocation': m.user.quota.max_credits
+            'total_allocation': round(m.user.quota.max_tokens / rate, 2)
         })
     
     # 2. Former Members (Historical consumption & Archive UI)
@@ -596,6 +596,33 @@ def corporate_purchase_seats(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': f"Internal Error: {str(e)}"})
             
+    return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
+
+@csrf_exempt
+@corporate_admin_required
+def simulate_corporate_recharge(request):
+    """
+    Simulation endpoint that skips payment gateways and recharges the corporate account directly.
+    Designed for testing and demonstration.
+    """
+    if request.method == 'POST':
+        amount = float(request.POST.get('amount', 50))
+        corporate = request.user.corp_profile.corporate
+        
+        try:
+            total_added = CorporateService.recharge_corporate(corporate, amount)
+            
+            # Get the new invoice
+            invoice = Invoice.objects.filter(corporate=corporate).order_by('-created_at').first()
+            
+            return JsonResponse({
+                'status': 'success',
+                'message': f'Simulated Recharge Successful! {amount} Credits added.',
+                'invoice_id': str(invoice.id) if invoice else None
+            })
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
 
 @csrf_exempt
@@ -727,8 +754,6 @@ def api_billing_history(request):
             'url': f"/billing/invoice/{inv.id}/"
         })
         
-    return JsonResponse({'status': 'success', 'invoices': data})
-
     return JsonResponse({'status': 'success', 'invoices': data})
 
 @csrf_exempt

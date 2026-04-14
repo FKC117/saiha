@@ -318,6 +318,7 @@ class AppConfiguration(models.Model):
     Follows a singleton-like pattern.
     """
     token_to_credit_rate = models.IntegerField(default=10000, help_text="How many tokens equal 1 Credit (e.g., 10000)")
+    credit_cost_per_seat = models.FloatField(default=10.0, help_text="Cost in credits to purchase 1 organizational seat license.")
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

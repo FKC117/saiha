@@ -210,3 +210,34 @@ class CorporateService:
         
         logger.info(f"Discontinued user {user.email} from {corporate.name}. Recovered {rem_credits} credits.")
         return True
+
+    @staticmethod
+    @transaction.atomic
+    def purchase_seats(corporate, count):
+        """
+        Increases the corporate's max_users limit by deducting from their unallocated pool.
+        """
+        if count <= 0:
+            raise ValueError("Select at least 1 seat to purchase.")
+
+        # 1. Fetch Price
+        try:
+            config = AppConfiguration.objects.get()
+            price_per_seat = config.credit_cost_per_seat
+        except AppConfiguration.DoesNotExist:
+            price_per_seat = 10.0 # Fallback
+
+        total_cost = price_per_seat * count
+        
+        # 2. Verify Credits
+        if corporate.rem_credits < total_cost:
+            raise ValueError(f"Insufficient credits. Total cost for {count} seats is {total_cost} Credits.")
+
+        # 3. Deduct and Expand
+        corporate.rem_credits -= total_cost
+        corporate.total_credits -= total_cost # This was spent on seats, no longer available for AI usage
+        corporate.max_users += count
+        corporate.save()
+
+        logger.info(f"Corporate {corporate.name} purchased {count} seats for {total_cost} credits.")
+        return True

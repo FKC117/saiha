@@ -508,6 +508,26 @@ def corporate_resend_invite(request):
 
 @csrf_exempt
 @corporate_admin_required
+def corporate_purchase_seats(request):
+    """
+    API to purchase more seats using corporate credits.
+    """
+    if request.method == 'POST':
+        count = int(request.POST.get('count', 0))
+        corporate = request.user.corp_profile.corporate
+        
+        try:
+            CorporateService.purchase_seats(corporate, count)
+            return JsonResponse({'status': 'success', 'message': f'Successfully added {count} seats to your organization.'})
+        except ValueError as e:
+            return JsonResponse({'status': 'error', 'message': str(e)})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': f"Internal Error: {str(e)}"})
+            
+    return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
+
+@csrf_exempt
+@corporate_admin_required
 def corporate_add_member(request):
     """
     API to add a member to the corporate pool.

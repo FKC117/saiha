@@ -1,0 +1,23 @@
+{
+    "pythonVersion": "3.11",
+    "venvPath": ".",
+    "venv": "venv",
+    "extraPaths": [
+        "./alaina"
+    ],
+    "include": [
+        "./alaina"
+    ],
+    "exclude": [
+        "venv",
+        ".git",
+        "staticfiles",
+        "media",
+        "logs",
+        "alaina/__pycache__"
+    ],
+    "typeCheckingMode": "basic",
+    "reportMissingImports": "warning",
+    "reportMissingModuleSource": "none",
+    "reportUndefinedVariable": "warning"
+}

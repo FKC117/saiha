@@ -433,3 +433,12 @@ Traceback (most recent call last):
     numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
                    ^^
 UnboundLocalError: cannot access local variable 'df' where it is not associated with a value
+ERROR 2026-04-15 20:28:09,491 base_tool 24932 19640 Error in tool Generate Session Summary: 'NoneType' object has no attribute 'get'
+Traceback (most recent call last):
+  File "F:\saiha\alaina\saiha\analysis_tools\base_tool.py", line 84, in validate_and_run
+    legacy_result = self.execute(query="", **validated_params)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "F:\saiha\alaina\saiha\analysis_tools\session_summary.py", line 44, in execute
+    elif result.result_data.get('canned_interpretation'):
+         ^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'get'

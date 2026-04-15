@@ -10,6 +10,7 @@
   <link rel="icon" type="image/x-icon" href="{{ site_settings.favicon.url }}">
   {% endif %}
   <link rel="stylesheet" href="{% static 'styles.css' %}">
+  <link rel="stylesheet" href="{% static 'css/index.css' %}">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link
@@ -21,816 +22,6 @@
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
   <script src="{% static 'js/charting_engine.js' %}"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-  <style>
-    :root {
-      --zinc-950: #09090b;
-      --zinc-900: #18181b;
-      --zinc-800: #27272a;
-      --zinc-700: #3f3f46;
-      --zinc-600: #52525b;
-      --zinc-500: #71717a;
-      --zinc-400: #a1a1aa;
-      --zinc-300: #d4d4d8;
-      --zinc-200: #e4e4e7;
-      --zinc-100: #f4f4f5;
-      --primary-color: #8B5CF6;
-      /* Violet 500 */
-      --primary-hover: #7C3AED;
-      --glass-bg: rgba(24, 24, 27, 0.7);
-      --glass-border: rgba(63, 63, 70, 0.4);
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-      font-family: 'DM Sans', sans-serif;
-    }
-
-    body {
-      background-color: var(--zinc-950);
-      color: var(--zinc-100);
-      height: 100vh;
-      overflow: hidden;
-    }
-
-    /* Layout */
-    #app {
-      display: flex;
-      height: 100vh;
-      width: 100vw;
-    }
-
-    /* Sidebar Styles */
-    .sidebar {
-      width: 260px;
-      background-color: var(--zinc-900);
-      border-right: 1px solid var(--zinc-800);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      transition: transform 0.3s ease;
-      z-index: 50;
-    }
-
-    .sidebar-header {
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .logo-container {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .logo-text {
-      font-weight: 700;
-      font-size: 18px;
-    }
-
-    .toggle-btn {
-      background: none;
-      border: none;
-      color: var(--zinc-400);
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 4px;
-    }
-
-    .toggle-btn:hover {
-      background-color: var(--zinc-800);
-      color: white;
-    }
-
-    .new-chat-container {
-      padding: 0 12px 16px 12px;
-    }
-
-    .new-chat-btn {
-      width: 100%;
-      height: 44px;
-      background-color: transparent;
-      border: 1px solid var(--zinc-800);
-      border-radius: 8px;
-      color: white;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 0 16px;
-      cursor: pointer;
-      font-weight: 500;
-      transition: all 0.2s;
-    }
-
-    .new-chat-btn:hover {
-      background-color: var(--zinc-800);
-      border-color: var(--zinc-700);
-    }
-
-    .search-container {
-      padding: 0 12px 16px 12px;
-    }
-
-    .search-wrapper {
-      position: relative;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--zinc-500);
-    }
-
-    .search-input {
-      width: 100%;
-      height: 36px;
-      background-color: var(--zinc-950);
-      border: 1px solid var(--zinc-800);
-      border-radius: 6px;
-      padding-left: 34px;
-      color: white;
-      font-size: 13px;
-      outline: none;
-    }
-
-    .search-input:focus {
-      border-color: var(--primary-color);
-    }
-
-    .conversation-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 0 8px;
-    }
-
-    .group-label {
-      font-size: 11px;
-      font-weight: 600;
-      color: var(--zinc-500);
-      text-transform: uppercase;
-      margin: 16px 12px 8px 12px;
-      letter-spacing: 0.05em;
-    }
-
-    .conv-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 12px;
-      border-radius: 6px;
-      cursor: pointer;
-      color: var(--zinc-400);
-      margin-bottom: 2px;
-    }
-
-    .refresh-btn {
-      padding: 6px;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      color: var(--zinc-500);
-      display: flex;
-      align-items: center;
-      transition: color 0.2s;
-    }
-
-    .refresh-btn:hover {
-      color: white;
-    }
-
-    .corporate-avatar {
-      width: 28px;
-      height: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-size: cover;
-      background-position: center;
-    }
-
-    .corporate-avatar.default-avatar {
-      background: linear-gradient(to bottom right, #8B5CF6, #6366F1);
-    }
-
-    .conv-item:hover {
-      background-color: var(--zinc-800);
-      color: white;
-    }
-
-    .conv-item.active {
-      background-color: var(--zinc-800);
-      color: white;
-    }
-
-    .package-card {
-        text-align: center;
-        cursor: pointer;
-        transition: all 0.2s;
-        border: 1px solid var(--zinc-800);
-        background: var(--zinc-900);
-        padding: 16px;
-        border-radius: 12px;
-    }
-    .package-card:hover { border-color: var(--zinc-600); transform: translateY(-2px); }
-    .package-card.popular { border-color: var(--primary-color); background: rgba(139, 92, 246, 0.05); }
-    .package-tier { font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px; color: var(--zinc-500); }
-    .package-card.popular .package-tier { color: var(--primary-color); }
-
-    .conv-title {
-      font-size: 13px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    /* Main Chat Column */
-    .chat-column {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      background-color: var(--zinc-950);
-    }
-
-    .chat-header {
-      height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 0 20px;
-      border-bottom: 1px solid rgba(82, 82, 91, 0.2);
-    }
-
-    .chat-messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 40px 0;
-      display: flex;
-      flex-direction: column;
-      gap: 32px;
-    }
-
-    /* Message Styles */
-    .message {
-      width: 100%;
-      max-width: 800px;
-      margin: 0 auto;
-      display: flex;
-      gap: 20px;
-      padding: 0 20px;
-    }
-
-    .avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
-      flex-shrink: 0;
-      overflow: hidden;
-    }
-
-    .avatar.ai {
-      background: var(--primary-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .avatar.user {
-      background: linear-gradient(to bottom right, #3f3f46, #18181b);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .message-content {
-      color: #e4e4e7;
-      font-size: 15px;
-      line-height: 1.6;
-      width: 100%;
-      padding-top: 2px;
-    }
-
-    .message-content p {
-      margin-bottom: 16px;
-    }
-
-    .message-content p:last-child {
-      margin-bottom: 0;
-    }
-
-    /* Code Blocks */
-    .message-content pre {
-      background-color: #0d0d0d;
-      border-radius: 8px;
-      padding: 16px;
-      margin: 16px 0;
-      overflow-x: auto;
-    }
-
-    .message-content code {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-    }
-
-    /* Input Area */
-    .input-area {
-      padding: 20px 40px 40px 40px;
-      max-width: 840px;
-      width: 100%;
-      margin: 0 auto;
-    }
-
-    .input-container {
-      background-color: var(--zinc-900);
-      border: 1px solid var(--zinc-800);
-      border-radius: 12px;
-      padding: 12px;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-      position: relative;
-    }
-
-    .input-wrapper {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .chat-input {
-      background: transparent;
-      border: none;
-      color: white;
-      font-size: 15px;
-      line-height: 1.5;
-      resize: none;
-      outline: none;
-      padding: 8px;
-      width: 100%;
-      max-height: 200px;
-      min-height: 40px;
-      overflow-y: hidden;
-    }
-
-    .input-actions {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-top: 8px;
-    }
-
-    .action-btn {
-      color: var(--zinc-500);
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 6px;
-      border-radius: 6px;
-      transition: all 0.2s;
-    }
-
-    .action-btn:hover {
-      color: white;
-      background-color: var(--zinc-800);
-    }
-
-    .send-btn {
-      background-color: var(--primary-color);
-      color: white;
-      border: none;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .send-btn:hover {
-      background-color: var(--primary-hover);
-      transform: scale(1.05);
-    }
-
-    .send-btn:disabled {
-      background-color: var(--zinc-800);
-      color: var(--zinc-600);
-      cursor: not-allowed;
-      transform: none;
-    }
-
-    /* Modal Styles */
-    .dataset-modal-backdrop {
-      position: fixed;
-      inset: 0;
-      background-color: rgba(0, 0, 0, 0.85);
-      backdrop-filter: blur(8px);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s ease;
-    }
-
-    .dataset-modal-backdrop.open {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .dataset-modal {
-      width: 500px;
-      background-color: var(--zinc-900);
-      border: 1px solid var(--zinc-800);
-      border-radius: 20px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      max-height: 80vh;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-    }
-
-    .modal-header {
-      padding: 24px;
-      border-bottom: 1px solid var(--zinc-800);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .modal-title {
-      font-size: 20px;
-      font-weight: 700;
-      color: white;
-    }
-
-    .close-modal {
-      background: none;
-      border: none;
-      color: var(--zinc-500);
-      cursor: pointer;
-    }
-
-    .modal-content {
-      padding: 24px;
-      flex: 1;
-      overflow-y: auto;
-    }
-
-    .modal-tabs {
-      display: flex;
-      padding: 0 24px;
-      border-bottom: 1px solid var(--zinc-800);
-    }
-
-    .modal-tab {
-      padding: 12px 16px;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--zinc-500);
-      cursor: pointer;
-      position: relative;
-    }
-
-    .modal-tab.active {
-      color: var(--primary-color);
-    }
-
-    .modal-tab.active::after {
-      content: '';
-      position: absolute;
-      bottom: -1px;
-      left: 0;
-      right: 0;
-      height: 2px;
-      background-color: var(--primary-color);
-    }
-
-    .tab-pane {
-      display: none;
-    }
-
-    .tab-pane.active {
-      display: block;
-    }
-
-    .upload-zone {
-      height: 180px;
-      border: 2px dashed var(--zinc-800);
-      border-radius: 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .upload-zone:hover {
-      border-color: var(--primary-color);
-      background: rgba(139, 92, 246, 0.05);
-    }
-
-    .upload-btn {
-      background-color: var(--primary-color);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      padding: 12px 24px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-top: 20px;
-      transition: all 0.2s;
-    }
-
-    .upload-btn:hover {
-      background-color: var(--primary-hover);
-    }
-
-    /* Scrollbars */
-    ::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--zinc-800);
-      border-radius: 10px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--zinc-700);
-    }
-
-    /* Rich Analysis Blocks */
-    .rich-blocks-container {
-      margin-top: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .rich-block {
-      background-color: var(--zinc-900);
-      border: 1px solid var(--zinc-800);
-      border-radius: 12px;
-      overflow: hidden;
-    }
-
-    .block-header {
-      padding: 12px 16px;
-      background-color: rgba(255, 255, 255, 0.03);
-      border-bottom: 1px solid var(--zinc-800);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .block-title-group {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .block-icon {
-      color: var(--primary-color);
-    }
-
-    .block-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--zinc-300);
-    }
-
-    .chart-container {
-      padding: 16px;
-      min-height: 200px;
-    }
-
-    /* Table blocks */
-    .table-container {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 13px;
-    }
-
-    th {
-      text-align: left;
-      padding: 10px 16px;
-      background-color: rgba(255, 255, 255, 0.02);
-      border-bottom: 1px solid var(--zinc-800);
-      color: var(--zinc-400);
-      font-weight: 600;
-    }
-
-    td {
-      padding: 10px 16px;
-      border-bottom: 1px solid rgba(82, 82, 91, 0.2);
-      color: var(--zinc-300);
-    }
-
-    tr:last-child td {
-      border-bottom: none;
-    }
-
-    /* Custom Scrollbar for Premium Feel */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: var(--zinc-950); }
-    ::-webkit-scrollbar-thumb { background: var(--zinc-800); border-radius: 4px; border: 2px solid var(--zinc-950); }
-    ::-webkit-scrollbar-thumb:hover { background: var(--zinc-700); }
-
-    .table-container::-webkit-scrollbar { height: 8px; }
-    .table-container::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); }
-    .table-container::-webkit-scrollbar-thumb { background: var(--zinc-700); border-radius: 4px; border: 2px solid transparent; background-clip: content-box; }
-    .table-container::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
-
-    /* Typing Indicator */
-    .typing-indicator {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .dot {
-      width: 6px;
-      height: 6px;
-      background-color: var(--zinc-500);
-      border-radius: 50%;
-      animation: bounce 1.4s infinite ease-in-out;
-    }
-
-    .dot:nth-child(1) {
-      animation-delay: -0.32s;
-    }
-
-    .dot:nth-child(2) {
-      animation-delay: -0.16s;
-    }
-
-    @keyframes bounce {
-
-      0%,
-      80%,
-      100% {
-        transform: scale(0);
-      }
-
-      40% {
-        transform: scale(1);
-      }
-    }
-
-    /* Dataset List */
-    .dataset-list-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px;
-      border: 1px solid rgba(82, 82, 91, 0.5);
-      border-radius: 8px;
-      margin-bottom: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-decoration: none;
-      color: white;
-    }
-
-    .dataset-list-item:hover {
-      border-color: #8B5CF6;
-      background: rgba(139, 92, 246, 0.05);
-    }
-
-    .dataset-icon {
-      color: #8B5CF6;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 40px;
-      height: 40px;
-      background: rgba(139, 92, 246, 0.1);
-      border-radius: 6px;
-      margin-right: 12px;
-    }
-
-    /* Mobile Responsive Overrides */
-    @media (max-width: 768px) {
-      .sidebar {
-        position: fixed;
-        left: 0;
-        top: 0;
-        bottom: 0;
-        z-index: 1000;
-        transform: translateX(-100%);
-        width: 280px;
-        box-shadow: 24px 0 60px rgba(0,0,0,0.8);
-        transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-      }
-
-      .sidebar.open {
-        transform: translateX(0);
-      }
-
-      .chat-header {
-        padding: 0 16px;
-      }
-
-      #mobile-toggle {
-        display: flex !important;
-        padding: 8px;
-        margin-right: 8px;
-        margin-left: -8px;
-      }
-
-      .chat-messages {
-        padding: 20px 0;
-        gap: 20px;
-      }
-
-      .message {
-        padding: 0 12px;
-        gap: 10px;
-      }
-
-      .message-content {
-        font-size: 14px;
-      }
-
-      .message-content p {
-        margin-bottom: 12px;
-      }
-
-      .avatar {
-        width: 26px;
-        height: 26px;
-      }
-
-      .input-area {
-        padding: 10px 12px 16px 12px;
-      }
-
-      .input-container {
-        border-radius: 10px;
-        padding: 6px;
-      }
-
-      .chat-input {
-        font-size: 14px;
-        padding: 4px;
-      }
-
-      /* Rich Content Reductions */
-      .rich-blocks-container {
-        margin-top: 12px;
-        gap: 12px;
-      }
-
-      .block-header {
-        padding: 8px 12px;
-      }
-
-      .block-title {
-        font-size: 11px;
-      }
-
-      .chart-container {
-        height: 240px !important;
-        padding: 10px;
-      }
-
-      .table-container {
-        font-size: 11px !important;
-      }
-
-      .table-container th, .table-container td {
-        padding: 8px 10px !important;
-      }
-
-      .modal-tab {
-        padding: 10px 12px;
-        font-size: 13px;
-      }
-
-      .dataset-modal {
-        width: 90%;
-        margin: 0 5%;
-        max-height: 90vh;
-      }
-      
-      .md-hidden { display: flex !important; }
-      .md-up-only { display: none !important; }
-    }
-  </style>
 </head>
 
 <body>
@@ -1079,8 +270,7 @@
             {% csrf_token %}
             <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
               <i data-lucide="upload-cloud" size="40" style="color: #a1a1aa; margin-bottom: 16px;"></i>
-              <p style="color: white; font-weight: 500; font-size: 15px; margin-bottom: 4px;">Click or drag file to this
-                area</p>
+              <p style="color: white; font-weight: 500; font-size: 15px; margin-bottom: 4px;">Click or drag file to this area</p>
               <p style="color: #a1a1aa; font-size: 13px;">Support for a single CSV or Excel file.</p>
               <input type="file" id="file-input" name="file" style="display: none;" accept=".csv,.xlsx,.xls">
               <button type="submit" class="upload-btn" id="upload-submit-btn"
@@ -1100,16 +290,14 @@
               </div>
               <div>
                 <div style="font-size: 14px; font-weight: 500;">{{ ds.name }}</div>
-                <div style="font-size: 12px; color: #a1a1aa;">{{ ds.rows_count|default:"Unknown" }} rows • {{
-                  ds.upload_date|date:"M d, Y" }}</div>
+                <div style="font-size: 12px; color: #a1a1aa;">{{ ds.rows_count|default:"Unknown" }} rows • {{ ds.upload_date|date:"M d, Y" }}</div>
               </div>
             </div>
             <i data-lucide="chevron-right" size="16" style="color: #a1a1aa;"></i>
           </a>
           {% endfor %}
           {% else %}
-          <div
-            style="height: 100%; display: flex; align-items: center; justify-content: center; color: #a1a1aa; font-size: 14px;">
+          <div style="height: 100%; display: flex; align-items: center; justify-content: center; color: #a1a1aa; font-size: 14px;">
             No datasets available.
           </div>
           {% endif %}
@@ -1134,13 +322,11 @@
         <p style="font-size: 14px; color: #a1a1aa; margin-bottom: 20px; line-height: 1.5;">
           We detected columns that are entirely empty. These will not provide any value for analysis. Would you like us to drop them for you?
         </p>
-        
         <div id="empty-column-list" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; padding: 12px; border-radius: 12px; background: rgba(39, 39, 42, 0.4); border: 1px solid rgba(82, 82, 91, 0.3);">
           <!-- Columns will be injected here -->
         </div>
-
         <div style="display: flex; gap: 12px;">
-          <button onclick="confirmDropEmpty()" class="upload-btn" style="flex: 1; margin: 0; background: #8B5CF6;">Drop & Continue</button>
+          <button onclick="confirmDropEmpty()" class="upload-btn" style="flex: 1; margin: 0; background: #8B5CF6;">Drop &amp; Continue</button>
           <button onclick="closeEmptyColumnModal()" class="upload-btn" style="flex: 1; margin: 0; background: rgba(39, 39, 42, 0.6); border: 1px solid rgba(82, 82, 91, 0.4);">Cancel</button>
         </div>
       </div>
@@ -1189,7 +375,6 @@
         <div id="account-tab" class="tab-pane">
           <div style="padding: 10px 0; display: flex; flex-direction: column; gap: 12px; height: 100%;">
             <p style="color: #a1a1aa; font-size: 14px; margin-bottom: 8px;">Account Security Management</p>
-
             <a href="{% url 'account_change_password' %}" class="dataset-list-item" style="margin-bottom: 4px;">
               <div style="display: flex; align-items: center;">
                 <div class="dataset-icon">
@@ -1202,7 +387,6 @@
               </div>
               <i data-lucide="external-link" size="14" style="color: #a1a1aa;"></i>
             </a>
-
             <div onclick="document.getElementById('logout-form').submit();" class="dataset-list-item"
               style="color: #f87171; border-color: rgba(248, 113, 113, 0.2); background: rgba(248, 113, 113, 0.05);">
               <div style="display: flex; align-items: center;">
@@ -1243,75 +427,75 @@
 
       <div class="modal-content">
         <div id="usage-overview-pane" class="tab-pane active">
-        <!-- Quota Progress -->
-        <div style="margin-bottom: 32px;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
-            <div>
-              <p style="font-size: 11px; text-transform: uppercase; color: var(--zinc-500); font-weight: 700; letter-spacing: 0.05em;">Current Plan</p>
-              <h4 id="usage-plan-name" style="font-size: 18px; color: white;">Free Plan</h4>
+          <!-- Quota Progress -->
+          <div style="margin-bottom: 32px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px;">
+              <div>
+                <p style="font-size: 11px; text-transform: uppercase; color: var(--zinc-500); font-weight: 700; letter-spacing: 0.05em;">Current Plan</p>
+                <h4 id="usage-plan-name" style="font-size: 18px; color: white;">Free Plan</h4>
+              </div>
+              <div style="text-align: right;">
+                {% if is_corporate %}
+                  <p style="font-size: 11px; color: var(--zinc-500); margin-bottom: 8px; font-weight: 500;">
+                    <i data-lucide="info" size="12" style="vertical-align: middle;"></i> Corporate Managed
+                  </p>
+                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px; border-color: var(--zinc-800);" onclick="requestCorporateCredits()">
+                    <i data-lucide="send" size="12"></i> Request Credits
+                  </button>
+                {% else %}
+                  <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; margin-bottom: 8px;" onclick="openRetailRechargeModal()">
+                    <i data-lucide="zap" size="14"></i> Buy Credits
+                  </button>
+                {% endif %}
+                <p style="font-size: 12px; color: var(--zinc-400);"><span id="usage-credits-used">0</span> / <span id="usage-credits-max">0</span> Credits</p>
+              </div>
             </div>
-            <div style="text-align: right;">
-              {% if is_corporate %}
-                <p style="font-size: 11px; color: var(--zinc-500); margin-bottom: 8px; font-weight: 500;">
-                  <i data-lucide="info" size="12" style="vertical-align: middle;"></i> Corporate Managed
-                </p>
-                <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px; border-color: var(--zinc-800);" onclick="requestCorporateCredits()">
-                  <i data-lucide="send" size="12"></i> Request Credits
-                </button>
-              {% else %}
-                <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px; margin-bottom: 8px;" onclick="openRetailRechargeModal()">
-                  <i data-lucide="zap" size="14"></i> Buy Credits
-                </button>
-              {% endif %}
-              <p style="font-size: 12px; color: var(--zinc-400);"><span id="usage-credits-used">0</span> / <span id="usage-credits-max">0</span> Credits</p>
+            <div style="height: 10px; background: var(--zinc-800); border-radius: 10px; overflow: hidden;">
+              <div id="usage-quota-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #8B5CF6, #6366F1); transition: width 1s cubic-bezier(0.19, 1, 0.22, 1);"></div>
+            </div>
+
+            {% if not is_corporate %}
+            <div id="usage-expiry-notice" style="display:none; margin-top:12px; background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary-color); padding: 8px 12px; border-radius: 4px;">
+               <p style="font-size:11px; color:var(--zinc-300); margin:0;">
+                  <i data-lucide="clock" size="12" style="vertical-align:middle;"></i>
+                  Credits expire on <b id="usage-expiry-date">--</b>. Recharging rescues any unused balance.
+               </p>
+            </div>
+            <div id="usage-rescue-notice" style="display:none; margin-top:12px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 4px;">
+               <p style="font-size:11px; color:#f59e0b; margin:0;">
+                  <i data-lucide="alert-circle" size="12" style="vertical-align:middle;"></i>
+                  You have <b id="usage-rescue-amount">0</b> Expired Tokens waiting to be rescued! Recharge now to reactivate them.
+               </p>
+            </div>
+            {% endif %}
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px;">
+            <div style="background: rgba(39, 39, 42, 0.4); padding: 16px; border-radius: 12px; border: 1px solid var(--zinc-800);">
+              <p style="font-size: 11px; color: var(--zinc-500); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Used Today</p>
+              <h3 id="usage-kpi-today" style="font-size: 24px; color: white;">0</h3>
+            </div>
+            <div style="background: rgba(39, 39, 42, 0.4); padding: 16px; border-radius: 12px; border: 1px solid var(--zinc-800);">
+              <p style="font-size: 11px; color: var(--zinc-500); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Total Spent</p>
+              <h3 id="usage-kpi-total" style="font-size: 24px; color: white;">0</h3>
             </div>
           </div>
-          <div style="height: 10px; background: var(--zinc-800); border-radius: 10px; overflow: hidden;">
-            <div id="usage-quota-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, #8B5CF6, #6366F1); transition: width 1s cubic-bezier(0.19, 1, 0.22, 1);"></div>
-          </div>
-          
-          {% if not is_corporate %}
-          <div id="usage-expiry-notice" style="display:none; margin-top:12px; background: rgba(139, 92, 246, 0.1); border-left: 3px solid var(--primary-color); padding: 8px 12px; border-radius: 4px;">
-             <p style="font-size:11px; color:var(--zinc-300); margin:0;">
-                <i data-lucide="clock" size="12" style="vertical-align:middle;"></i>
-                Credits expire on <b id="usage-expiry-date">--</b>. Recharging rescues any unused balance.
-             </p>
-          </div>
-          <div id="usage-rescue-notice" style="display:none; margin-top:12px; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; padding: 8px 12px; border-radius: 4px;">
-             <p style="font-size:11px; color:#f59e0b; margin:0;">
-                <i data-lucide="alert-circle" size="12" style="vertical-align:middle;"></i>
-                You have <b id="usage-rescue-amount">0</b> Expired Tokens waiting to be rescued! Recharge now to reactivate them.
-             </p>
-          </div>
-          {% endif %}
-        </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 32px;">
-          <div style="background: rgba(39, 39, 42, 0.4); padding: 16px; border-radius: 12px; border: 1px solid var(--zinc-800);">
-            <p style="font-size: 11px; color: var(--zinc-500); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Used Today</p>
-            <h3 id="usage-kpi-today" style="font-size: 24px; color: white;">0</h3>
+          <div style="margin-bottom: 32px;">
+            <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="trending-up" size="14" style="color: var(--primary-color);"></i>
+              Consumption Trend (Last 14 Days)
+            </h4>
+            <div id="usage-trend-chart" style="height: 200px; width: 100%;"></div>
           </div>
-          <div style="background: rgba(39, 39, 42, 0.4); padding: 16px; border-radius: 12px; border: 1px solid var(--zinc-800);">
-            <p style="font-size: 11px; color: var(--zinc-500); text-transform: uppercase; font-weight: 700; margin-bottom: 8px;">Total Spent</p>
-            <h3 id="usage-kpi-total" style="font-size: 24px; color: white;">0</h3>
+
+          <div>
+            <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+              <i data-lucide="list" size="14" style="color: var(--primary-color);"></i>
+              Top Sessions
+            </h4>
+            <div id="usage-sessions-chart" style="height: 180px; width: 100%;"></div>
           </div>
-        </div>
-
-        <div style="margin-bottom: 32px;">
-          <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-            <i data-lucide="trending-up" size="14" style="color: var(--primary-color);"></i>
-            Consumption Trend (Last 14 Days)
-          </h4>
-          <div id="usage-trend-chart" style="height: 200px; width: 100%;"></div>
-        </div>
-
-        <div>
-          <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
-            <i data-lucide="list" size="14" style="color: var(--primary-color);"></i>
-            Top Sessions
-          </h4>
-          <div id="usage-sessions-chart" style="height: 180px; width: 100%;"></div>
-        </div>
         </div>
 
         <!-- History Pane -->
@@ -1326,837 +510,89 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script>
-    lucide.createIcons();
-    const userInitials = '{{ user.first_name|default:user.email|slice:":1"|upper }}';
-    const siteLogoUrl = '{{ site_settings.logo.url|default:"" }}';
-    const siteName = "{{ site_settings.site_name|default:'ChatFlow' }}";
-
-    // --- 1. Global State ---
-    let isSubmitting = false;
-
-    // --- 2. Sidebar Toggle ---
-    function toggleSidebar() {
-      const sidebar = document.getElementById('sidebar');
-      sidebar.classList.toggle('open');
-      
-      // Update icon based on state
-      const icon = document.querySelector('#mobile-toggle i') || document.querySelector('.toggle-btn i');
-      if (icon && sidebar.classList.contains('open')) {
-        icon.setAttribute('data-lucide', 'x');
-      } else if (icon) {
-        icon.setAttribute('data-lucide', 'panel-left-close');
-      }
-      lucide.createIcons();
-    }
-
-    // --- 3. Chat Logic ---
-    const textarea = document.getElementById('chat-textarea');
-    textarea?.addEventListener('input', function () {
-      this.style.height = 'auto';
-      const newHeight = this.scrollHeight;
-      this.style.height = newHeight + 'px';
-      
-      // Auto-show scrollbar if max-height reached
-      this.style.overflowY = newHeight > 200 ? 'auto' : 'hidden';
-      
-      updateSendBtn();
-    });
-
-    function updateSendBtn() {
-      const btn = document.getElementById('submit-btn');
-      btn.disabled = isSubmitting || !textarea.value.trim();
-    }
-
-    function escapedHTML(str) {
-      const div = document.createElement('div');
-      div.textContent = str;
-      return div.innerHTML;
-    }
-
-    function scrollToBottom() {
-      const chatMessages = document.getElementById('chat-messages');
-      chatMessages.scrollTop = chatMessages.scrollHeight;
-    }
-
-    async function renderRichMessage(container, content, metadata = null) {
-      if (!container) return;
-      console.log(`[RichMessage] Rendering ID: ${metadata ? metadata.id : 'N/A'}`, metadata);
-      
-      const textContent = container.querySelector('.text-content');
-      if (textContent && content) textContent.innerHTML = marked.parse(content);
-
-      if (metadata && metadata.artifacts) {
-        console.log(`[RichMessage] Detected ${metadata.artifacts.length} artifacts:`, metadata.artifacts);
-        const blocksTop = container.querySelector('.rich-blocks-top');
-        const blocksBottom = container.querySelector('.rich-blocks-bottom') || container.querySelector('.rich-blocks-container');
-        
-        if (blocksTop) blocksTop.innerHTML = '';
-        if (blocksBottom) blocksBottom.innerHTML = '';
-        
-        for (const [index, art] of metadata.artifacts.entries()) {
-          // Narrative Order: Tables on top, Visuals/Others on bottom
-          const blockContainer = (art.type === 'table' && blocksTop) ? blocksTop : blocksBottom;
-          if (!blockContainer) continue;
-
-          if (art.type === 'chart') {
-            // 1. Generate Stable Deterministic ID
-            const stableId = art.result_id ? `chart-${art.result_id}` : `chart-temp-${Math.random().toString(36).substr(2, 5)}`;
-            const chartId = `${stableId}-${index}`;
-            
-            blockContainer.insertAdjacentHTML('beforeend', `
-              <div class="rich-block chart-block" style="background: rgba(24, 24, 27, 0.4); backdrop-filter: blur(10px); color: white;">
-                <div class="block-header" style="border-bottom: 1px solid rgba(255,255,255,0.05);">
-                  <div class="block-title-group">
-                    <i data-lucide="line-chart" class="block-icon" size="14" style="color: #8B5CF6;"></i>
-                    <span class="block-title" style="font-weight: 500; font-size: 13px;">${art.title || "Data Analysis"}</span>
-                  </div>
-                </div>
-                <div id="${chartId}" class="chart-container" style="height: 320px; width: 100%; padding: 16px;">
-                  <div class="chart-loader" style="height: 100%; display: flex; align-items: center; justify-content: center; color: #71717a; font-size: 12px;">
-                    Initializing Chart Engine...
-                  </div>
-                </div>
-              </div>
-            `);
-
-            // 2. Threshold-based Resurrection (Lazy Loading)
-            let chartData = art.metadata;
-            if (!chartData && art.result_id) {
-              try {
-                const response = await fetch(`/api/analysis-result/${art.result_id}/`);
-                const result = await response.json();
-                chartData = result.data;
-              } catch (e) { 
-                console.error("Failed to resurrect chart:", e);
-              }
-            }
-
-            // 3. Initialize via ChartManager
-            if (chartData && (chartData.type || art.option)) {
-              const el = document.getElementById(chartId);
-              if (el) {
-                const finalType = art.option ? 'RAW' : chartData.type;
-                const finalData = art.option || chartData;
-                ChatChartManager.initChart(chartId, el, finalType, finalData);
-              }
-            }
-          } else if (art.type === 'plot') {
-            // Defensive extraction: handle new string format AND legacy object/metadata formats
-            let base64 = null;
-            if (typeof art.content === 'string' && art.content.length > 100) {
-              base64 = art.content;
-            } else if (art.metadata && typeof art.metadata.base64 === 'string') {
-              base64 = art.metadata.base64;
-            } else if (art.content && typeof art.content === 'object' && typeof art.content.base64 === 'string') {
-              base64 = art.content.base64;
-            }
-
-            if (base64) {
-              const imgSrc = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
-              blockContainer.insertAdjacentHTML('beforeend', `
-                <div class="rich-block plot-block" style="background: #18181b; border: 1px solid #27272a; border-radius: 12px; overflow: hidden; margin-top: 12px;">
-                  <div class="block-header" style="background: rgba(255,255,255,0.05); padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05);">
-                    <div class="block-title-group">
-                      <i data-lucide="image" class="block-icon" size="14" style="color: #8B5CF6;"></i>
-                      <span class="block-title" style="font-weight: 500; font-size: 13px;">${art.title || "Static Visualization"}</span>
-                    </div>
-                  </div>
-                  <div class="photo-frame" style="padding: 20px; background: white; display: flex; justify-content: center;">
-                    <img src="${imgSrc}" 
-                         style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);">
-                  </div>
-                </div>
-              `);
-            }
-          } else if (art.type === 'table') {
-            const tableData = art.data || art.rows || [];
-            const headers = art.headers || [];
-            blockContainer.insertAdjacentHTML('beforeend', `
-              <div class="rich-block table-block" style="margin-top: 12px; border: 1px solid rgba(82, 82, 91, 0.3); border-radius: 12px; overflow: hidden;">
-                <div class="block-header" style="background: rgba(255,255,255,0.03); padding: 10px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; gap: 8px;">
-                  <i data-lucide="table" class="block-icon" size="14" style="color: #8B5CF6;"></i>
-                  <span class="block-title" style="font-weight: 500; font-size: 13px;">${art.title || art.label || "Data Insight"}</span>
-                </div>
-                <div class="table-container" style="overflow-x: auto; font-size: 12px; background: rgba(9, 9, 11, 0.2);">
-                  <table style="width: 100%; border-collapse: collapse;">
-                    <thead><tr style="background: rgba(255,255,255,0.02);"><th style="padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a1a1aa; font-weight: 600; white-space: nowrap;">${headers.map(h => h).join('</th><th style="padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); color: #a1a1aa; font-weight: 600; white-space: nowrap;">')}</th></tr></thead>
-                    <tbody>${tableData.map(row => `<tr><td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); color: #e4e4e7; white-space: nowrap;">${row.map(cell => cell).join('</td><td style="padding: 10px 12px; border-bottom: 1px solid rgba(255,255,255,0.02); color: #e4e4e7; white-space: nowrap;">')}</td></tr>`).join('')}</tbody>
-                  </table>
-                  ${art.footer ? `<div style="padding: 8px 12px; font-size: 11px; color: #71717a; border-top: 1px solid rgba(255,255,255,0.02); font-style: italic;">${art.footer}</div>` : ''}
-                </div>
-              </div>
-            `);
-          }
-        }
-      }
-      lucide.createIcons();
-    }
-
-    async function handleChatSubmit(e) {
-      if (e) e.preventDefault();
-      if (isSubmitting) return;
-
-      const form = document.getElementById('chat-form');
-      const formData = new FormData(form);
-      const message = formData.get('message');
-      if (!message || !message.trim()) return;
-
-      isSubmitting = true;
-      updateSendBtn();
-
-      textarea.value = '';
-      textarea.style.height = 'auto';
-
-      requestAnimationFrame(() => {
-        textarea.value = '';
-        updateSendBtn();
-      });
-
-      const chatMessages = document.getElementById('chat-messages');
-
-      chatMessages.insertAdjacentHTML('beforeend', `
-        <div class="message user">
-          <div class="avatar user">
-            <span style="font-size: 11px; font-weight: 600; color: white;">${userInitials}</span>
-          </div>
-          <div class="message-content">${escapedHTML(message)}</div>
-        </div>
-      `);
-
-      chatMessages.insertAdjacentHTML('beforeend', `
-        <div class="message ai typing-indicator-msg">
-          <div class="avatar ai">
-            ${siteLogoUrl ? `<img src="${siteLogoUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">` : `
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="24" height="24" rx="6" fill="#8B5CF6"/>
-              <path d="M7 12L12 7L17 12L12 17L7 12Z" fill="white"/>
-            </svg>`}
-          </div>
-          <div class="message-content">
-            <div class="typing-indicator" style="gap: 12px; display: flex; align-items: center;">
-              <div style="display: flex; gap: 4px;">
-                <div class="dot" style="background-color: var(--primary-color);"></div><div class="dot" style="background-color: var(--primary-color); opacity: 0.7;"></div><div class="dot" style="background-color: var(--primary-color); opacity: 0.4;"></div>
-              </div>
-              <span class="typing-status" style="font-size: 11px; color: #a1a1aa; font-weight: 500; font-family: var(--font-secondary);">AI is thinking...</span>
-            </div>
-          </div>
-        </div>
-      `);
-      scrollToBottom();
-
-      try {
-        const response = await fetch('/api/chat-analysis/', {
-          method: 'POST',
-          body: JSON.stringify({ 
-            message,
-            session_id: formData.get('session_id'),
-            dataset_id: formData.get('dataset_id')
-          }),
-          headers: {
-            'Content-Type': 'application/json',
-            'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-          }
-        });
-        const data = await response.json();
-        // Socket or polling logic would normally update this. Manual for now.
-      } catch (err) {
-        console.error(err);
-      } finally {
-        isSubmitting = false;
-        updateSendBtn();
-      }
-    }
-
-    document.getElementById('chat-form')?.addEventListener('submit', handleChatSubmit);
-    textarea?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        handleChatSubmit();
-      }
-    });
-
-  </script>
-
-  {% if user.is_authenticated %}
-  <script>
-    (function () {
-      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      const sessionId = '{{ current_session.id|default:"" }}';
-      const socketUrl = sessionId 
-        ? `${protocol}//${window.location.host}/ws/notifications/${sessionId}/`
-        : `${protocol}//${window.location.host}/ws/notifications/general/`;
-      let socket = null;
-      let reconnectInterval = 5000;
-
-      function connect() {
-        socket = new WebSocket(socketUrl);
-        socket.onopen = () => console.log('Chat UI WebSocket connected');
-        socket.onerror = (err) => { console.error('Socket error:', err); socket.close(); };
-        socket.onclose = () => { setTimeout(connect, reconnectInterval); };
-
-        socket.onmessage = function (e) {
-          const data = JSON.parse(e.data);
-          const chatMessages = document.getElementById('chat-messages');
-
-          const indicatorMsg = document.querySelector('.typing-indicator-msg');
-          
-          if (data.type === 'notification' && !data.event_type) {
-            if (indicatorMsg && data.message) {
-              const statusEl = indicatorMsg.querySelector('.typing-status');
-              if (statusEl) statusEl.innerText = data.message;
-            }
-            return;
-          }
-
-          if (indicatorMsg) {
-            indicatorMsg.remove();
-            isSubmitting = false;
-            updateSendBtn();
-          }
-
-          if (data.type === 'chat_trace' || data.event_type === 'agent_message') {
-            const msgFormat = (data.message_type === 'ai' || data.message_type === 'system') ? 'ai' : null;
-            if (msgFormat === 'ai') {
-              let msgId = (data.metadata && data.metadata.id) ? 'msg-' + data.metadata.id : 'msg-streaming-response';
-              let msgEl = document.getElementById(msgId);
-              if (!msgEl) {
-                chatMessages.insertAdjacentHTML('beforeend', `
-                              <div class="message ai" id="${msgId}" data-rich-msg="true">
-                                <div class="avatar ai">
-                                  ${siteLogoUrl ? `<img src="${siteLogoUrl}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 6px;">` : `
-                                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect width="24" height="24" rx="6" fill="#8B5CF6"/>
-                                    <path d="M7 12L12 7L17 12L12 17L7 12Z" fill="white"/>
-                                  </svg>`}
-                                </div>
-                                <div class="message-content">
-                                  <div class="rich-blocks-top"></div>
-                                  <div class="text-content"></div>
-                                  <div class="rich-blocks-bottom"></div>
-                                </div>
-                              </div>
-                            `);
-                msgEl = document.getElementById(msgId);
-              }
-              renderRichMessage(msgEl, data.content || "", data.metadata);
-              scrollToBottom();
-            }
-          }
-        };
-      }
-
-      document.addEventListener('DOMContentLoaded', () => {
-        setTimeout(() => {
-          document.querySelectorAll('[data-rich-msg="true"]').forEach(msgEl => {
-            const msgId = msgEl.id.replace('msg-', '');
-            const metadataScript = document.getElementById('meta-' + msgId);
-            let metadata = null;
-            if (metadataScript) try { metadata = JSON.parse(metadataScript.textContent); } catch (e) { }
-            const contextEl = msgEl.querySelector('.text-content');
-            if (contextEl && contextEl.innerText.trim()) renderRichMessage(msgEl, contextEl.innerText.trim(), metadata);
-          });
-          scrollToBottom();
-        }, 200);
-      });
-
-      connect();
-    })();
-  </script>
-  {% endif %}
-
-  <script>
-    function openDatasetModal() { document.getElementById('datasetModal').classList.add('open'); }
-    function closeDatasetModal() { document.getElementById('datasetModal').classList.remove('open'); }
-    function switchModalTab(tabId) {
-      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.modal-tab').forEach(el => el.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      document.getElementById(tabId === 'upload-tab' ? 'tab-btn-upload' : 'tab-btn-select').classList.add('active');
-    }
-
-    document.getElementById('file-input')?.addEventListener('change', function () {
-      if (this.files?.length > 0) {
-        const uploadZoneP = this.closest('.upload-zone')?.querySelector('p');
-        if (uploadZoneP) uploadZoneP.innerText = "Processing: " + this.files[0].name;
-
-        // Trigger the standard submit event properly to ensure AJAX handler catches it
-        const form = this.closest('form') || document.getElementById('uploadDatasetForm');
-        if (form) {
-            if (typeof form.requestSubmit === 'function') {
-                form.requestSubmit();
-            } else {
-                form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-            }
-        }
-      }
-    });
-
-    let pendingUploadData = null;
-
-    function closeEmptyColumnModal() {
-        document.getElementById('emptyColumnWarningModal').classList.remove('open');
-        pendingUploadData = null;
-    }
-
-    async function confirmDropEmpty() {
-        if (!pendingUploadData) return;
-        
-        const { form, endpoint } = pendingUploadData;
-        const formData = new FormData(form);
-        formData.append('drop_empty', 'true');
-        
-        document.getElementById('emptyColumnWarningModal').classList.remove('open');
-        const btn = document.getElementById('upload-submit-btn');
-        if (btn) btn.innerText = "Cleaning & Uploading...";
-
-        try {
-            const response = await fetch(endpoint, {
-                method: 'POST', body: formData,
-                headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
-            });
-            const data = await response.json();
-            if (data.dataset_id || data.id) {
-                window.location.href = "?dataset_id=" + (data.dataset_id || data.id);
-            } else {
-                alert("Error: " + data.message);
-                if (btn) btn.innerText = "Upload Dataset";
-                if (btn) btn.disabled = false;
-            }
-        } catch (err) {
-            console.error(err);
-            alert("Retry failed.");
-            if (btn) btn.innerText = "Upload Dataset";
-            if (btn) btn.disabled = false;
-        }
-    }
-
-    document.getElementById('uploadDatasetForm')?.addEventListener('submit', async function (e) {
-      e.preventDefault();
-      const btn = document.getElementById('upload-submit-btn');
-      if (btn) {
-        btn.innerText = "Processing...";
-        btn.disabled = true;
-      }
-      try {
-        const response = await fetch(this.action, {
-          method: 'POST', body: new FormData(this),
-          headers: { 'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value }
-        });
-        const data = await response.json();
-        
-        if (data.status === 'warning' && data.empty_columns) {
-            // Show custom modal instead of confirm()
-            pendingUploadData = { form: this, endpoint: this.action };
-            const listEl = document.getElementById('empty-column-list');
-            listEl.innerHTML = data.empty_columns.map(col => `
-                <span style="background: rgba(139, 92, 246, 0.1); color: #c4b5fd; padding: 4px 10px; border-radius: 6px; font-size: 12px; border: 1px solid rgba(139, 92, 246, 0.2);">
-                    ${col}
-                </span>
-            `).join('');
-            document.getElementById('emptyColumnWarningModal').classList.add('open');
-            return;
-        }
-        
-        if (data.dataset_id || data.id) {
-            window.location.href = "?dataset_id=" + (data.dataset_id || data.id);
-        } else if (data.status === 'error') {
-            alert("Error: " + data.message);
-        }
-      } catch (err) { 
-        console.error(err); 
-        alert("Upload failed. Please check your network or file format.");
-      } finally {
-        if (!document.getElementById('emptyColumnWarningModal').classList.contains('open')) {
-            if (btn) {
-                btn.innerText = "Upload Dataset";
-                btn.disabled = false;
-            }
-        }
-      }
-    });
-
-    function openSettingsModal() { document.getElementById('settingsModal').classList.add('open'); }
-    function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('open'); }
-
-    // --- 4. Usage Dashboard Logic ---
-    let trendChart = null;
-    let sessionsChart = null;
-
-    function openUsageModal() {
-        document.getElementById('usage-modal-backdrop').classList.add('open');
-        lucide.createIcons();
-        fetchUsageData();
-    }
-
-    function closeUsageModal() {
-      document.getElementById('usage-modal-backdrop').style.display = 'none';
-      switchUsageTab('overview'); // Reset for next open
-    }
-
-    function switchUsageTab(tab) {
-      const overview = document.getElementById('usage-overview-pane');
-      const history = document.getElementById('usage-history-pane');
-      const overviewBtn = document.getElementById('usage-tab-overview');
-      const historyBtn = document.getElementById('usage-tab-history');
-
-      if (tab === 'overview') {
-        overview.style.display = 'block';
-        history.style.display = 'none';
-        overviewBtn.classList.add('active');
-        historyBtn.classList.remove('active');
-      } else {
-        overview.style.display = 'none';
-        history.style.display = 'block';
-        overviewBtn.classList.remove('active');
-        historyBtn.classList.add('active');
-        fetchRetailBillingHistory();
-      }
-    }
-
-    function fetchRetailBillingHistory() {
-      const container = document.getElementById('retail-invoice-list');
-      fetch('/api/billing/history/')
-      .then(r => r.json())
-      .then(d => {
-        if (d.invoices.length === 0) {
-          const emptyMsg = "{% if is_corporate %}No credit allocations found yet.{% else %}No credit purchases found yet.{% endif %}";
-          container.innerHTML = `<p style="text-align:center; padding:40px; color:var(--zinc-500); border:1px dashed var(--zinc-800); border-radius:8px; font-size:13px;">${emptyMsg}</p>`;
-          return;
-        }
-
-        let html = `
-          <div style="display:flex; flex-direction:column; gap:12px;">
-        `;
-        
-        d.invoices.forEach(inv => {
-          html += `
-            <div style="background:rgba(39, 39, 42, 0.4); border:1px solid var(--zinc-800); border-radius:12px; padding:16px; display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <div style="font-size:12px; color:var(--zinc-500); font-weight:700; margin-bottom:4px;">${inv.number}</div>
-                <div style="font-size:14px; font-weight:500; color:white;">${inv.description}</div>
-                <div style="font-size:12px; color:var(--zinc-500); margin-top:4px;">${inv.date}</div>
-              </div>
-              <div style="text-align:right;">
-                <div style="font-size:16px; font-weight:700; color:white; margin-bottom:8px;">${inv.amount}</div>
-                <a href="${inv.url}" target="_blank" class="btn btn-outline" style="padding:4px 10px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; color:var(--zinc-400); border:1px solid var(--zinc-800); border-radius:6px; background:transparent;">
-                  <i data-lucide="external-link" size="12"></i> View
-                </a>
-                <a href="${inv.url}" target="_blank" class="btn btn-outline" style="padding:4px 10px; font-size:11px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; color:var(--zinc-400); border:1px solid var(--zinc-800); border-radius:6px; background:transparent;" title="View & Download PDF">
-                  <i data-lucide="download" size="12"></i>
-                </a>
-              </div>
-            </div>
-          `;
-        });
-        
-        html += `</div>`;
-        container.innerHTML = html;
-        lucide.createIcons();
-      });
-    }
-
-    function resendInvoiceEmail(invoiceId) {
-      const formData = new FormData();
-      formData.append('invoice_id', invoiceId);
-      formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-      fetch('/api/billing/resend/', { method: 'POST', body: formData })
-      .then(r => r.json())
-      .then(d => alert(d.message));
-    }
-
-    function requestCorporateCredits() {
-        const amount = prompt("Enter the number of credits you wish to request from your administrator:", "10");
-        if (amount && !isNaN(amount) && parseFloat(amount) > 0) {
-            const formData = new FormData();
-            formData.append('amount', amount);
-            formData.append('message', 'Request from dashboard');
-            
-            fetch('/api/corporate/request-credits/', {
-                method: 'POST',
-                body: formData
-            })
-            .then(r => r.json())
-            .then(d => {
-                alert(d.message);
-            });
-        } else if (amount !== null) {
-            alert("Please enter a valid amount.");
-        }
-    }
-
-    async function fetchUsageData() {
-        try {
-            const response = await fetch('{% url "saiha:get_usage_data" %}');
-            const data = await response.json();
-
-            // 1. Update Profile/Plan Info
-            document.getElementById('usage-plan-name').innerText = data.plan_name + " Plan";
-
-            // 2. Update Credits (Using rate of 10,000 tokens = 1 Credit)
-            const rate = 10000;
-            const creditsUsed = (data.used_tokens / rate).toFixed(2);
-            const creditsMax = (data.max_tokens / rate).toFixed(1);
-            
-            document.getElementById('usage-credits-used').innerText = creditsUsed;
-            document.getElementById('usage-credits-max').innerText = creditsMax;
-
-            // 3. Update Progress Bar
-            const percent = data.max_tokens > 0 ? (data.used_tokens / data.max_tokens) * 100 : 0;
-            document.getElementById('usage-quota-bar').style.width = percent + '%';
-
-            // 4. Update KPI Cards
-            document.getElementById('usage-kpi-today').innerText = (data.used_tokens / rate).toFixed(3);
-            document.getElementById('usage-kpi-total').innerText = creditsUsed;
-
-            // 5. Update Rescue Pool & Expiry Notices
-            const rescuePool = data.rescue_tokens || 0;
-            const rescueEl = document.getElementById('usage-rescue-notice');
-            if (rescueEl) {
-                if (rescuePool > 0) {
-                    rescueEl.style.display = 'block';
-                    document.getElementById('usage-rescue-amount').innerText = rescuePool.toLocaleString();
-                } else {
-                    rescueEl.style.display = 'none';
-                }
-            }
-
-            const expiryEl = document.getElementById('usage-expiry-notice');
-            if (expiryEl) {
-                if (data.expiry_date && !data.is_expired) {
-                    expiryEl.style.display = 'block';
-                    document.getElementById('usage-expiry-date').innerText = new Date(data.expiry_date).toLocaleDateString();
-                } else {
-                    expiryEl.style.display = 'none';
-                }
-            }
-
-            // 6. Fetch Full Reporting for Charts
-            const reportResp = await fetch(`/usage/stats/?t=${new Date().getTime()}`);
-            const reportData = await reportResp.json();
-            if (reportData.status === 'success') {
-                loadUsageCharts(reportData.charts);
-            }
-        } catch (err) {
-            console.error("Failed to fetch usage stats:", err);
-        }
-    }
-
-    function loadUsageCharts(charts) {
-        // Trend Chart
-        if (!trendChart) trendChart = echarts.init(document.getElementById('usage-trend-chart'));
-        trendChart.setOption({
-            grid: { top: 10, left: 40, right: 10, bottom: 30 },
-            xAxis: { type: 'category', data: charts.daily_dates, axisLine: { lineStyle: { color: '#3f3f46' } } },
-            yAxis: { type: 'value', splitLine: { lineStyle: { color: '#27272a' } } },
-            series: [{
-                data: charts.daily_values,
-                type: 'line', smooth: true,
-                areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(139, 92, 246, 0.3)' }, { offset: 1, color: 'transparent' }]) },
-                lineStyle: { color: '#8B5CF6', width: 3 },
-                showSymbol: false,
-            }]
-        });
-
-        // Sessions Chart
-        if (!sessionsChart) sessionsChart = echarts.init(document.getElementById('usage-sessions-chart'));
-        sessionsChart.setOption({
-            grid: { top: 10, left: 100, right: 30, bottom: 20 },
-            xAxis: { type: 'value', show: false },
-            yAxis: { 
-                type: 'category', 
-                data: charts.sessions.map(s => s.name),
-                axisLine: { show: false }, axisTick: { show: false },
-                axisLabel: { color: '#a1a1aa', fontSize: 11 }
-            },
-            series: [{
-                type: 'bar',
-                data: charts.sessions.map(s => s.value),
-                itemStyle: { borderRadius: [0, 4, 4, 0], color: '#6366F1' },
-                barPadding: '20%'
-            }]
-        });
-    }
-
-    // --- 5. Retail Purchase ---
-    function openRetailRechargeModal() { 
-        closeUsageModal();
-        document.getElementById('retailRechargeModal').style.display = 'flex'; 
-    }
-
-    let activeRetailPackage = { id: '', amount: 0, cost: 0 };
-
-    function handleRetailPackageClick(el) {
-        activeRetailPackage = {
-            id: el.dataset.id,
-            amount: el.dataset.credits,
-            cost: parseFloat(el.dataset.priceUsd),
-            tier: el.dataset.name,
-            bdt: el.dataset.priceBdt
-        };
-        document.getElementById('retail-checkout-tier').innerText = activeRetailPackage.tier;
-        document.getElementById('retail-checkout-amount').innerText = activeRetailPackage.amount;
-        document.getElementById('retail-checkout-cost').innerText = '$' + activeRetailPackage.cost.toFixed(2);
-        document.getElementById('retail-checkout-bdt').innerText = activeRetailPackage.bdt;
-
-        document.getElementById('retailRechargeModal').style.display = 'none';
-        document.getElementById('retailCheckoutModal').style.display = 'flex';
-    }
-
-    function completeRetailPurchase() {
-        const formData = new FormData();
-        formData.append('package_id', activeRetailPackage.id);
-        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-
-        fetch('/user/topup/', { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(d => {
-            if (d.status === 'success') {
-                if (confirm(d.message + "\n\nWould you like to view the invoice now?")) {
-                    window.open(`/billing/invoice/${d.invoice_id}/`, '_blank');
-                }
-                location.reload();
-            } else {
-                alert(d.message);
-            }
-        });
-    }
-
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-    // --- 6. Other Modals & Tabs ---
-    function openSettingsModal() { document.getElementById('settingsModal').classList.add('open'); }
-    function closeSettingsModal() { document.getElementById('settingsModal').classList.remove('open'); }
-    
-    function switchSettingsTab(tabId) {
-      const modal = document.getElementById('settingsModal');
-      modal.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-      modal.querySelectorAll('.modal-tab').forEach(el => el.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      const btnId = 'tab-btn-' + tabId.replace('-tab', '');
-      const btn = document.getElementById(btnId);
-      if (btn) btn.classList.add('active');
-    }
-
-    async function handleProfileSubmit(event) {
-      event.preventDefault();
-      const form = event.target;
-      const statusEl = document.getElementById('profile-status');
-      const btn = document.getElementById('save-profile-btn');
-      
-      btn.disabled = true;
-      btn.innerText = 'Saving...';
-      statusEl.style.display = 'none';
-
-      try {
-        const response = await fetch(form.getAttribute('hx-post'), {
-          method: 'POST',
-          body: new FormData(form),
-          headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-          }
-        });
-        
-        const data = await response.json();
-        
-        if (data.status === 'success') {
-          statusEl.innerText = data.message;
-          statusEl.style.color = '#34d399';
-          statusEl.style.display = 'block';
-          
-          document.getElementById('sidebar-user-name').innerText = data.display_name;
-          document.getElementById('sidebar-user-initials').innerText = data.initials;
-          
-          setTimeout(() => { statusEl.style.display = 'none'; }, 3000);
-        } else {
-          statusEl.innerText = data.message || 'Error updating profile';
-          statusEl.style.color = '#f87171';
-          statusEl.style.display = 'block';
-        }
-      } catch (err) {
-        console.error(err);
-        statusEl.innerText = 'Server error. Please try again.';
-        statusEl.style.color = '#f87171';
-        statusEl.style.display = 'block';
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Save Profile';
-      }
-    }
-
-    function switchModalTab(tabId) {
-      document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.modal-tab').forEach(el => el.classList.remove('active'));
-      document.getElementById(tabId).classList.add('active');
-      document.getElementById(tabId === 'upload-tab' ? 'tab-btn-upload' : 'tab-btn-select').classList.add('active');
-    }
-
-    window.onclick = function (event) {
-      if (event.target.classList.contains('dataset-modal-backdrop')) {
-        event.target.classList.remove('open');
-      }
-      if (event.target.id === 'retailRechargeModal' || event.target.id === 'retailCheckoutModal') {
-          event.target.style.display = 'none';
-      }
-    }
-  </script>
-  <!-- Retail Recharge Modals -->
+  <!-- Retail Recharge Modal -->
   <div id="retailRechargeModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center; padding:20px;">
-      <div class="card" style="max-width:600px; width:100%; border-color:var(--zinc-700); background:var(--zinc-900); padding:24px;">
-          <header style="display:flex; justify-content:space-between; margin-bottom:24px;">
-              <div>
-                  <h1 style="font-size:20px; font-weight:700; color:white;">Recharge Account</h1>
-                  <p style="color:var(--zinc-500); font-size:13px;">Fuel your personal AI workspace with fresh credits.</p>
-              </div>
-              <button onclick="closeModal('retailRechargeModal')" style="background:none; border:none; color:var(--zinc-500); cursor:pointer;"><i data-lucide="x" size="20"></i></button>
-          </header>
+    <div class="card" style="max-width:600px; width:100%; border-color:var(--zinc-700); background:var(--zinc-900); padding:24px;">
+      <header style="display:flex; justify-content:space-between; margin-bottom:24px;">
+        <div>
+          <h1 style="font-size:20px; font-weight:700; color:white;">Recharge Account</h1>
+          <p style="color:var(--zinc-500); font-size:13px;">Fuel your personal AI workspace with fresh credits.</p>
+        </div>
+        <button onclick="closeModal('retailRechargeModal')" style="background:none; border:none; color:var(--zinc-500); cursor:pointer;"><i data-lucide="x" size="20"></i></button>
+      </header>
 
-          <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-bottom:24px;">
-              {% for p in credit_packages %}
-              <div class="package-card {% if p.is_popular %}popular{% endif %}" 
-                   data-id="{{ p.id }}" data-credits="{{ p.credits }}" data-price-usd="{{ p.price_usd }}" data-name="{{ p.name }}" data-price-bdt="{{ p.price_bdt }}"
-                   onclick="handleRetailPackageClick(this)">
-                  <div class="package-tier">{% if p.is_popular %}Popular{% else %}{{ p.name }}{% endif %}</div>
-                  <div style="font-size:24px; font-weight:700; margin-bottom:4px; color:white;">{{ p.credits|floatformat:0 }}</div>
-                  <div style="color:var(--zinc-500); font-size:11px;">Credits</div>
-                  <div style="margin-top:16px; font-weight:700; color:white;">${{ p.price_usd }} / ৳{{ p.price_bdt|floatformat:0 }}</div>
-              </div>
-              {% endfor %}
-          </div>
-          <div style="background:rgba(139, 92, 246, 0.1); border-left:4px solid var(--primary-color); padding:12px; border-radius:4px;">
-              <p style="font-size:12px; color:var(--zinc-300); margin:0;"><b>Fair-Play Guarantee:</b> Recharging instantly rescues all expired tokens into your active balance.</p>
-          </div>
+      <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:16px; margin-bottom:24px;">
+        {% for p in credit_packages %}
+        <div class="package-card {% if p.is_popular %}popular{% endif %}"
+             data-id="{{ p.id }}" data-credits="{{ p.credits }}" data-price-usd="{{ p.price_usd }}" data-name="{{ p.name }}" data-price-bdt="{{ p.price_bdt }}"
+             onclick="handleRetailPackageClick(this)">
+          <div class="package-tier">{% if p.is_popular %}Popular{% else %}{{ p.name }}{% endif %}</div>
+          <div style="font-size:24px; font-weight:700; margin-bottom:4px; color:white;">{{ p.credits|floatformat:0 }}</div>
+          <div style="color:var(--zinc-500); font-size:11px;">Credits</div>
+          <div style="margin-top:16px; font-weight:700; color:white;">${{ p.price_usd }} / ৳{{ p.price_bdt|floatformat:0 }}</div>
+        </div>
+        {% endfor %}
       </div>
+      <div style="background:rgba(139, 92, 246, 0.1); border-left:4px solid var(--primary-color); padding:12px; border-radius:4px;">
+        <p style="font-size:12px; color:var(--zinc-300); margin:0;"><b>Fair-Play Guarantee:</b> Recharging instantly rescues all expired tokens into your active balance.</p>
+      </div>
+    </div>
   </div>
 
+  <!-- Retail Checkout Modal -->
   <div id="retailCheckoutModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:2100; align-items:center; justify-content:center; padding:20px;">
-      <div class="card" style="max-width:400px; width:100%; border-color:var(--zinc-700); background:var(--zinc-950); padding:32px;">
-          <header style="text-align:center; margin-bottom:32px;">
-              <div style="background:var(--primary-color); width:48px; height:48px; border-radius:12px; display:grid; place-items:center; margin:0 auto 16px;">
-                  <i data-lucide="shopping-cart" style="color:white;"></i>
-              </div>
-              <h3 style="font-size:20px; font-weight:700; color:white;">Secure Checkout</h3>
-              <p style="color:var(--zinc-500); font-size:13px;">Recharging <span id="retail-checkout-tier" style="color:white; font-weight:700;">--</span></p>
-          </header>
-          <div style="margin-bottom:32px;">
-              <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px; color:var(--zinc-400);">
-                  <span>Individual Credits</span>
-                  <span id="retail-checkout-amount" style="color:white; font-weight:700;">--</span>
-              </div>
-              <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px; color:var(--zinc-500);">
-                  <span>Local Price (BDT)</span>
-                  <span style="color:var(--zinc-300); font-weight:600;">৳<span id="retail-checkout-bdt">--</span></span>
-              </div>
-              <div style="display:flex; justify-content:space-between; padding-top:12px; border-top:1px solid var(--zinc-800);">
-                  <span style="font-weight:700; color:white;">Total (USD)</span>
-                  <span id="retail-checkout-cost" style="font-size:24px; font-weight:700; color:var(--primary-color);">$0.00</span>
-              </div>
-          </div>
-          <button class="btn btn-primary" onclick="completeRetailPurchase()" style="width:100%; justify-content:center; padding:14px; font-size:16px;">Confirm & Pay</button>
-          <button onclick="closeModal('retailCheckoutModal')" style="width:100%; background:none; border:none; color:var(--zinc-500); margin-top:16px; cursor:pointer; font-size:13px;">Cancel</button>
+    <div class="card" style="max-width:400px; width:100%; border-color:var(--zinc-700); background:var(--zinc-950); padding:32px;">
+      <header style="text-align:center; margin-bottom:32px;">
+        <div style="background:var(--primary-color); width:48px; height:48px; border-radius:12px; display:grid; place-items:center; margin:0 auto 16px;">
+          <i data-lucide="shopping-cart" style="color:white;"></i>
+        </div>
+        <h3 style="font-size:20px; font-weight:700; color:white;">Secure Checkout</h3>
+        <p style="color:var(--zinc-500); font-size:13px;">Recharging <span id="retail-checkout-tier" style="color:white; font-weight:700;">--</span></p>
+      </header>
+      <div style="margin-bottom:32px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px; color:var(--zinc-400);">
+          <span>Individual Credits</span>
+          <span id="retail-checkout-amount" style="color:white; font-weight:700;">--</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:12px; font-size:14px; color:var(--zinc-500);">
+          <span>Local Price (BDT)</span>
+          <span style="color:var(--zinc-300); font-weight:600;">৳<span id="retail-checkout-bdt">--</span></span>
+        </div>
+        <div style="display:flex; justify-content:space-between; padding-top:12px; border-top:1px solid var(--zinc-800);">
+          <span style="font-weight:700; color:white;">Total (USD)</span>
+          <span id="retail-checkout-cost" style="font-size:24px; font-weight:700; color:var(--primary-color);">$0.00</span>
+        </div>
       </div>
+      <button class="btn btn-primary" onclick="completeRetailPurchase()" style="width:100%; justify-content:center; padding:14px; font-size:16px;">Confirm &amp; Pay</button>
+      <button onclick="closeModal('retailCheckoutModal')" style="width:100%; background:none; border:none; color:var(--zinc-500); margin-top:16px; cursor:pointer; font-size:13px;">Cancel</button>
+    </div>
   </div>
+
+  <!-- ============================================================
+       PageConfig Bridge — Django template vars exposed to static JS
+       ============================================================ -->
+  <script id="page-config">
+    window.PageConfig = {
+      userInitials:    "{{ user.first_name|default:user.email|slice:':1'|upper }}",
+      siteLogoUrl:     "{{ site_settings.logo.url|default:'' }}",
+      siteName:        "{{ site_settings.site_name|default:'ChatFlow' }}",
+      csrfToken:       "{{ csrf_token }}",
+      sessionId:       "{{ current_session.id|default:'' }}",
+      isCorporate:     '{{ is_corporate|yesno:"true,false" }}' === 'true',
+      usageDataUrl:    "{% url 'saiha:get_usage_data' %}",
+      isAuthenticated: '{{ user.is_authenticated|yesno:"true,false" }}' === 'true',
+      emptyMsg:        "{% if is_corporate %}No credit allocations found yet.{% else %}No credit purchases found yet.{% endif %}"
+    };
+  </script>
+
+  <!-- Feature JS Modules (loaded in dependency order) -->
+  <script src="{% static 'js/upload.js' %}" defer></script>
+  <script src="{% static 'js/modals.js' %}" defer></script>
+  <script src="{% static 'js/usage_dashboard.js' %}" defer></script>
+  <script src="{% static 'js/renderers.js' %}" defer></script>
+  <script src="{% static 'js/chat.js' %}" defer></script>
+  <script src="{% static 'js/websocket.js' %}" defer></script>
+
 </body>
 
 </html>

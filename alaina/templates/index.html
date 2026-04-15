@@ -1253,7 +1253,7 @@
             <div style="text-align: right;">
               {% if is_corporate %}
                 <p style="font-size: 11px; color: var(--zinc-500); margin-bottom: 8px; font-weight: 500;">
-                  <i data-lucide="shield-info" size="12" style="vertical-align: middle;"></i> Corporate Managed
+                  <i data-lucide="info" size="12" style="vertical-align: middle;"></i> Corporate Managed
                 </p>
                 <button class="btn btn-outline" style="padding: 4px 10px; font-size: 11px; border-color: var(--zinc-800);" onclick="requestCorporateCredits()">
                   <i data-lucide="send" size="12"></i> Request Credits
@@ -1913,19 +1913,23 @@
             // 5. Update Rescue Pool & Expiry Notices
             const rescuePool = data.rescue_tokens || 0;
             const rescueEl = document.getElementById('usage-rescue-notice');
-            if (rescuePool > 0) {
-                rescueEl.style.display = 'block';
-                document.getElementById('usage-rescue-amount').innerText = rescuePool.toLocaleString();
-            } else {
-                rescueEl.style.display = 'none';
+            if (rescueEl) {
+                if (rescuePool > 0) {
+                    rescueEl.style.display = 'block';
+                    document.getElementById('usage-rescue-amount').innerText = rescuePool.toLocaleString();
+                } else {
+                    rescueEl.style.display = 'none';
+                }
             }
 
             const expiryEl = document.getElementById('usage-expiry-notice');
-            if (data.expiry_date && !data.is_expired) {
-                expiryEl.style.display = 'block';
-                document.getElementById('usage-expiry-date').innerText = new Date(data.expiry_date).toLocaleDateString();
-            } else {
-                expiryEl.style.display = 'none';
+            if (expiryEl) {
+                if (data.expiry_date && !data.is_expired) {
+                    expiryEl.style.display = 'block';
+                    document.getElementById('usage-expiry-date').innerText = new Date(data.expiry_date).toLocaleDateString();
+                } else {
+                    expiryEl.style.display = 'none';
+                }
             }
 
             // 6. Fetch Full Reporting for Charts

@@ -107,9 +107,31 @@ This file captures the highest-signal bugs, loopholes, and implementation risks 
 - Recommended fix:
   Either create a fresh invoice in `recharge_user` or remove `invoice_id` from the retail top-up response.
 
+### 10. Recharging a user wipes accumulated usage state
+
+- Severity: Medium
+- Files: [saiha/corporate_service.py](/F:/saiha/alaina/saiha/corporate_service.py:430), [saiha/models.py](/F:/saiha/alaina/saiha/models.py:340), [saiha/views.py](/F:/saiha/alaina/saiha/views.py:321)
+- Problem:
+  `recharge_user` resets `quota.current_tokens_used = 0` on every recharge. Elsewhere, `current_tokens_used` is treated as the primary source for quota usage and dashboard totals.
+- Impact:
+  A recharge erases visible consumption history and can under-report total usage/credits used after top-up.
+- Recommended fix:
+  Separate lifetime usage from current-balance consumption, or preserve `current_tokens_used` and track available balance independently.
+
+### 11. Session uniqueness constraint blocks more than one archived session per user/dataset
+
+- Severity: Medium
+- Files: [saiha/models.py](/F:/saiha/alaina/saiha/models.py:124)
+- Problem:
+  `AnalysisSession` declares `unique_together = ['user', 'dataset', 'is_active']`. That allows at most one active session and at most one inactive session for the same user/dataset pair.
+- Impact:
+  If you ever archive/close multiple sessions for the same dataset, the second archived session can fail with an integrity error. It also prevents preserving a real session history over time.
+- Recommended fix:
+  Replace this with a conditional unique constraint that only enforces uniqueness for active sessions.
+
 ## Configuration Risks
 
-### 10. Insecure development defaults are too permissive if reused in production
+### 12. Insecure development defaults are too permissive if reused in production
 
 - Severity: Medium
 - File: [alaina/settings.py](/F:/saiha/alaina/alaina/settings.py:15)
@@ -122,7 +144,7 @@ This file captures the highest-signal bugs, loopholes, and implementation risks 
 
 ## Test Coverage Gaps
 
-### 11. No automated coverage for the riskiest flows
+### 13. No automated coverage for the riskiest flows
 
 - Severity: Medium
 - File: [saiha/tests.py](/F:/saiha/alaina/saiha/tests.py:1)
@@ -137,6 +159,19 @@ This file captures the highest-signal bugs, loopholes, and implementation risks 
   - invitation acceptance rules
   - credit reallocation bounds
   - dataset deletion responses
+
+## UI / Consistency Bugs
+
+### 14. Usage dashboard ignores server KPI fields and shows incorrect values
+
+- Severity: Low
+- Files: [saiha/views.py](/F:/saiha/alaina/saiha/views.py:391), [static/js/usage_dashboard.js](/F:/saiha/alaina/static/js/usage_dashboard.js:99)
+- Problem:
+  The API returns `kpis.today` and `kpis.total`, but the frontend ignores them and computes both cards from `used_tokens`. That makes "Used Today" effectively display total used, not today's usage.
+- Impact:
+  The usage dashboard misleads users and admins about daily consumption.
+- Recommended fix:
+  Render the KPI cards from `data.kpis.today` and `data.kpis.total` directly instead of recalculating them from `used_tokens`.
 
 ## Suggested Fix Order
 

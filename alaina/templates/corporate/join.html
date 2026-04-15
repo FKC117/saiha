@@ -121,11 +121,9 @@
                     </p>
                     <div style="margin-top:20px; display:flex; flex-direction:column; gap:10px;">
                         <a href="{% url 'account_logout' %}?next={{ request.path }}" class="btn-join" style="background:#292524; text-align:center; text-decoration:none;">Switch Account</a>
-                        <form method="POST">
-                            {% csrf_token %}
-                            <input type="hidden" name="action" value="force_link">
-                            <button type="submit" style="background:none; border:none; color:#78716c; font-size:12px; text-decoration:underline; cursor:pointer; width:100%;">Continue as {{ current_email }} anyway</button>
-                        </form>
+                        <p style="font-size:12px; color:#78716c; margin:0;">
+                            Sign in with the invited email address to accept this invitation.
+                        </p>
                     </div>
                 </div>
             {% else %}

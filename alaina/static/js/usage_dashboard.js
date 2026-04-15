@@ -77,7 +77,11 @@ function resendInvoiceEmail(invoiceId) {
   const formData = new FormData();
   formData.append('invoice_id',          invoiceId);
   formData.append('csrfmiddlewaretoken', window.PageConfig.csrfToken);
-  fetch('/api/billing/resend/', { method: 'POST', body: formData })
+  fetch('/api/billing/resend/', {
+    method: 'POST',
+    body: formData,
+    headers: { 'X-CSRFToken': window.PageConfig.csrfToken }
+  })
     .then(r => r.json())
     .then(d => alert(d.message));
 }
@@ -88,7 +92,12 @@ function requestCorporateCredits() {
     const formData = new FormData();
     formData.append('amount',  amount);
     formData.append('message', 'Request from dashboard');
-    fetch('/api/corporate/request-credits/', { method: 'POST', body: formData })
+    formData.append('csrfmiddlewaretoken', window.PageConfig.csrfToken);
+    fetch('/api/corporate/request-credits/', {
+      method: 'POST',
+      body: formData,
+      headers: { 'X-CSRFToken': window.PageConfig.csrfToken }
+    })
       .then(r => r.json())
       .then(d => { alert(d.message); });
   } else if (amount !== null) {
@@ -116,8 +125,8 @@ async function fetchUsageData() {
     document.getElementById('usage-quota-bar').style.width = percent + '%';
 
     // 4. KPI cards
-    document.getElementById('usage-kpi-today').innerText = (data.used_tokens / rate).toFixed(3);
-    document.getElementById('usage-kpi-total').innerText = creditsUsed;
+    document.getElementById('usage-kpi-today').innerText = Number(data.kpis.today || 0).toFixed(3);
+    document.getElementById('usage-kpi-total').innerText = Number(data.kpis.total || 0).toFixed(3);
 
     // 5. Rescue pool notice
     const rescuePool = data.rescue_tokens || 0;

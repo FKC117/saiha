@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Q
 from django.contrib.auth.models import User
 import uuid
 import json
@@ -140,7 +141,13 @@ class AnalysisSession(models.Model):
     
     class Meta:
         ordering = ['-last_activity']
-        unique_together = ['user', 'dataset', 'is_active']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'dataset'],
+                condition=Q(is_active=True),
+                name='unique_active_session_per_user_dataset',
+            )
+        ]
 
     def __str__(self):
         dataset_name = self.dataset.name if self.dataset else "General"
@@ -342,6 +349,11 @@ class UserQuota(models.Model):
         """Calculates credits based on dynamic config rate."""
         rate = AppConfiguration.get_rate()
         return round(self.current_tokens_used / float(rate), 2)
+
+    @property
+    def max_credits(self):
+        rate = AppConfiguration.get_rate()
+        return round(self.max_tokens / float(rate), 2)
 
 class AppConfiguration(models.Model):
     """

@@ -12,7 +12,7 @@ class CustomAccountAdapter(DefaultAccountAdapter):
         
         # Check for Corporate Profile
         profile = getattr(user, 'corp_profile', None)
-        if profile and profile.role == 'ADMIN':
+        if profile and profile.is_active and profile.role == 'ADMIN':
             return reverse("saiha:corporate_dashboard")
             
         return reverse("saiha:index")

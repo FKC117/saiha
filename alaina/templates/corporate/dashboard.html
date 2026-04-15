@@ -607,9 +607,19 @@
 
     <script>
         lucide.createIcons();
+        const csrfToken = '{{ csrf_token }}';
 
         function openModal(id) { document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+        function postForm(url, formData) {
+            formData.append('csrfmiddlewaretoken', csrfToken);
+            return fetch(url, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-CSRFToken': csrfToken }
+            });
+        }
 
         function openAddMemberModal() { openModal('addMemberModal'); }
         function openUpgradeSeatsModal() { openModal('upgradeSeatsModal'); }
@@ -641,7 +651,7 @@
             const formData = new FormData();
             formData.append('package_id', activePackage.id);
             
-            fetch('/corporate/topup/', { method: 'POST', body: formData })
+            postForm('/corporate/topup/', formData)
             .then(r => r.json())
             .then(d => {
                 if (d.status === 'success') {
@@ -665,7 +675,7 @@
             if (confirm(`Confirm purchase of ${count} additional seat(s)? This will instantly deduct ${count * 10} Credits from your unallocated pool.`)) {
                 const formData = new FormData();
                 formData.append('count', count);
-                fetch('/corporate/members/purchase-seats/', { method: 'POST', body: formData })
+                postForm('/corporate/members/purchase-seats/', formData)
                 .then(r => r.json())
                 .then(d => {
                     alert(d.message);
@@ -742,7 +752,7 @@
         function resendInvoiceEmail(invoiceId) {
             const formData = new FormData();
             formData.append('invoice_id', invoiceId);
-            fetch('/api/billing/resend/', { method: 'POST', body: formData })
+            postForm('/api/billing/resend/', formData)
             .then(r => r.json())
             .then(d => alert(d.message));
         }
@@ -751,7 +761,7 @@
             if (confirm("Simulate a top-up of 50 Credits? This will also RESCUE any expired credits in your pool.")) {
                 const formData = new FormData();
                 formData.append('amount', 50);
-                fetch('/corporate/simulate-recharge/', { method: 'POST', body: formData })
+                postForm('/corporate/simulate-recharge/', formData)
                 .then(r => r.json())
                 .then(d => {
                     alert(d.message);
@@ -767,7 +777,7 @@
             formData.append('first_name', document.getElementById('mem_fn').value);
             formData.append('last_name', document.getElementById('mem_ln').value);
 
-            fetch('/corporate/members/add/', { method: 'POST', body: formData })
+            postForm('/corporate/members/add/', formData)
             .then(r => r.json())
             .then(d => {
                 alert(d.message);
@@ -778,7 +788,7 @@
         function resendInvite(inviteId) {
             const formData = new FormData();
             formData.append('invite_id', inviteId);
-            fetch('/corporate/members/resend/', { method: 'POST', body: formData })
+            postForm('/corporate/members/resend/', formData)
             .then(r => r.json())
             .then(d => {
                 alert(d.message);
@@ -790,7 +800,7 @@
             if (confirm(`Are you sure you want to remove ${email} from the organization? Unspent credits will be returned to the corporate pool, but historical usage will remain tracked.`)) {
                 const formData = new FormData();
                 formData.append('user_id', userId);
-                fetch('/corporate/members/remove/', { method: 'POST', body: formData })
+                postForm('/corporate/members/remove/', formData)
                 .then(r => r.json())
                 .then(d => {
                     alert(d.message);
@@ -812,10 +822,7 @@
                 const formData = new FormData();
                 formData.append('user_id', userId);
                 formData.append('credits', newLimit);
-                fetch('/corporate/members/reallocate/', {
-                    method: 'POST',
-                    body: formData
-                })
+                postForm('/corporate/members/reallocate/', formData)
                 .then(r => r.json())
                 .then(d => {
                     alert(d.message);
@@ -828,10 +835,7 @@
             formData.append('request_id', requestId);
             formData.append('action', action);
             
-            fetch('/api/corporate/process-request/', {
-                method: 'POST',
-                body: formData
-            })
+            postForm('/api/corporate/process-request/', formData)
             .then(r => r.json())
             .then(d => {
                 alert(d.message);

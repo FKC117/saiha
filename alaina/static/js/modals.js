@@ -105,7 +105,7 @@ function completeRetailPurchase() {
     .then(r => r.json())
     .then(d => {
       if (d.status === 'success') {
-        if (confirm(d.message + '\n\nWould you like to view the invoice now?')) {
+        if (d.invoice_id && confirm(d.message + '\n\nWould you like to view the invoice now?')) {
           window.open(`/billing/invoice/${d.invoice_id}/`, '_blank');
         }
         location.reload();

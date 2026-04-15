@@ -29,21 +29,38 @@ class GeminiService:
         Internal audit mechanism.
         Logs to file (ai.log) and DB (AIAuditLog).
         Also updates UserQuota.
+
+        File logging: metadata-only by default. Set AI_LOG_RAW_PAYLOADS=True in .env
+        for raw payload capture (local debugging only — never enable in production).
         """
+        from django.conf import settings as django_settings
+
         tokens_in = usage.prompt_token_count if usage else 0
         tokens_out = usage.candidates_token_count if usage else 0
         tokens_total = tokens_in + tokens_out
-        
-        # 1. File Logging
+
+        # 1. File Logging — metadata only (safe for production log aggregators)
         ai_logger.info(
-            f"\n--- PROMPT ---\n{prompt}\n"
-            f"--- RESPONSE ---\n{response_text}\n"
-            f"--- METRICS --- [Model: {self.model_id}] [Tokens: {tokens_in} in / {tokens_out} out]"
+            "[AI Call] model=%s tokens_in=%d tokens_out=%d session=%s user=%s prompt_len=%d",
+            self.model_id,
+            tokens_in,
+            tokens_out,
+            session_id or "none",
+            user.email if user and hasattr(user, 'email') else "anon",
+            len(prompt),
         )
-        
-        # 2. Database Logging
+        # Optional full capture — disabled by default, enable only for local debugging
+        if getattr(django_settings, 'AI_LOG_RAW_PAYLOADS', False):
+            ai_logger.debug(
+                "\n--- PROMPT ---\n%s\n--- RESPONSE ---\n%s",
+                prompt,
+                response_text,
+            )
+
+        # 2. Database Logging (AIAuditLog + UserQuota update)
         try:
             from ..models import AIAuditLog, AnalysisSession, UserQuota
+            max_chars = getattr(django_settings, 'AI_AUDIT_LOG_MAX_CHARS', 2000)
             session = None
             final_user = user
 
@@ -51,19 +68,19 @@ class GeminiService:
                 session = AnalysisSession.objects.filter(id=session_id).first()
                 if session and not final_user:
                     final_user = session.user
-            
+
             # Debugging Output
             if final_user:
-                ai_logger.info(f"[Trace] Attributing log to User: {final_user.email} (Session: {session_id})")
+                ai_logger.info("[Trace] Attributing log to user=%s session=%s", final_user.email, session_id)
             else:
-                ai_logger.warning(f"[Trace] ORPHANED LOG: No user found for Session: {session_id}")
+                ai_logger.warning("[Trace] ORPHANED LOG: no user found for session=%s", session_id)
 
-            # Create Audit Log
+            # Create Audit Log — payloads capped to prevent unbounded storage
             AIAuditLog.objects.create(
                 user=final_user,
                 session=session,
-                prompt=prompt,
-                response=response_text,
+                prompt=prompt[:max_chars],
+                response=response_text[:max_chars],
                 tokens_input=tokens_in,
                 tokens_output=tokens_out,
                 model_id=self.model_id
@@ -76,7 +93,7 @@ class GeminiService:
                 quota.save()
 
         except Exception as e:
-            ai_logger.error(f"Failed to save AIAuditLog or update Quota: {e}")
+            ai_logger.error("Failed to save AIAuditLog or update Quota: %s", e)
 
     def generate_content(self, prompt: str, system_instruction: Optional[str] = None, session_id: Optional[str] = None, user: Optional[Any] = None) -> str:
         """Standard single-turn generation with Audit Trail."""

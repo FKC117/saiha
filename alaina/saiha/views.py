@@ -3,7 +3,6 @@ import json
 import datetime
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse, FileResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
 from django.conf import settings
@@ -25,6 +24,7 @@ from saiha.agents.analysis_agent import get_analysis_agent
 from saiha.reporting.report_builder import ReportBuilder
 from saiha.reporting.pptx_exporter import PPTXExporter
 from saiha.reporting.docx_exporter import DOCXExporter
+from saiha.rate_limits import rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -153,12 +153,14 @@ def upload_dataset(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'}, status=405)
 
 @login_required
+@rate_limit('chat_analysis', '10/m', message='Too many analysis requests. Please wait a moment before trying again.')
 def api_chat_analysis(request):
     """
     The Centralized Analytical Chat API for ChatFlow.
     Dispatched via the AnalysisAgent.
     """
     if request.method == 'POST':
+        session_id = None
         try:
             data = json.loads(request.body)
             message = data.get('message', '')
@@ -168,12 +170,12 @@ def api_chat_analysis(request):
                 return JsonResponse({'status': 'error', 'message': 'Session ID is required.'}, status=400)
 
             # Security Fix #1: Verify session belongs to the requesting user
-            session_obj = AnalysisSession.objects.filter(id=session_id, user=request.user).first()
+            session_obj = AnalysisSession.objects.filter(id=session_id, user=request.user, is_active=True).first()
             if not session_obj:
-                return JsonResponse({'status': 'error', 'message': 'Session not found or access denied.'}, status=403)
+                return JsonResponse({'status': 'error', 'message': 'Session not found or access denied.'}, status=404)
             
             # 1. Initialize the AnalysisAgent
-            agent = get_analysis_agent(session_id)
+            agent = get_analysis_agent(session_obj)
             
             # 2. Process Query (Async Pipeline)
             task_ids = agent.process_query(message)
@@ -235,6 +237,9 @@ def delete_dataset(request, dataset_id):
     """
     Soft-deletes a dataset via HTMX or standard request.
     """
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'POST required'}, status=405)
+
     dataset = get_object_or_404(Dataset, id=dataset_id, user=request.user)
     dataset.is_active = False
     dataset.save()
@@ -242,7 +247,7 @@ def delete_dataset(request, dataset_id):
     if request.headers.get('HX-Request'):
         # Return empty response to remove element via HTMX
         return HttpResponse("")
-    return JsonResponse({'status': 'success', 'message': 'Dataset deleted.'})
+    return JsonResponse({'status': 'success', 'dataset_id': str(dataset.id)})
         
 @login_required
 def dataset_detail(request, dataset_id):
@@ -383,6 +388,10 @@ def get_usage_data(request):
         total=Sum('tokens_input') + Sum('tokens_output')
     )['total'] or 0
 
+    lifetime_total_tokens = AIAuditLog.objects.filter(user=user).aggregate(
+        total=Sum('tokens_input') + Sum('tokens_output')
+    )['total'] or 0
+
     # Get Dynamic Conversion Rate
     rate = float(AppConfiguration.get_rate()) or 10000.0
 
@@ -401,7 +410,7 @@ def get_usage_data(request):
         'is_expired': quota.is_expired,
         'kpis': {
             'today': round(today_total_tokens / rate, 3), 
-            'total': quota.credits_used
+            'total': round(lifetime_total_tokens / rate, 3)
         },
         'charts': {
             'daily_dates': dates,
@@ -411,6 +420,7 @@ def get_usage_data(request):
     })
 
 @login_required
+@rate_limit('user_topup', '5/h', message='Too many recharge attempts. Please wait before trying again.')
 def user_topup(request):
     """
     API to process retail user credit top-ups.
@@ -537,6 +547,7 @@ def corporate_dashboard(request):
     return render(request, 'corporate/dashboard.html', context)
 
 @corporate_admin_required
+@rate_limit('corporate_member_remove', '20/h', message='Too many member removal requests. Please slow down.')
 def corporate_remove_member(request):
     """
     API to discontinue a member.
@@ -553,6 +564,7 @@ def corporate_remove_member(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
 
 @corporate_admin_required
+@rate_limit('corporate_member_resend', '20/h', message='Too many invitation resend requests. Please slow down.')
 def corporate_resend_invite(request):
     """
     API to resend an invitation.
@@ -566,6 +578,7 @@ def corporate_resend_invite(request):
             return JsonResponse({'status': 'error', 'message': str(e)})
 
 @corporate_admin_required
+@rate_limit('corporate_topup', '10/h', message='Too many corporate top-up attempts. Please wait before trying again.')
 def corporate_topup(request):
     """
     API to process credit top-ups using dynamic packages.
@@ -594,6 +607,7 @@ def corporate_topup(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
 
 @corporate_admin_required
+@rate_limit('corporate_purchase_seats', '10/h', message='Too many seat purchase attempts. Please wait before trying again.')
 def corporate_purchase_seats(request):
     """
     API to purchase more seats using corporate credits.
@@ -618,7 +632,7 @@ def simulate_corporate_recharge(request):
     Simulation endpoint for testing ONLY. Restricted to DEBUG mode.
     In production this raises PermissionDenied and cannot be invoked.
     """
-    if not settings.DEBUG:
+    if not settings.DEBUG and not request.user.is_staff:
         raise PermissionDenied("This endpoint is disabled in production.")
     if request.method == 'POST':
         amount = float(request.POST.get('amount', 50))
@@ -641,6 +655,7 @@ def simulate_corporate_recharge(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
 
 @corporate_admin_required
+@rate_limit('corporate_member_add', '20/h', message='Too many member management requests. Please slow down.')
 def corporate_add_member(request):
     """
     API to add a member to the corporate pool.
@@ -673,6 +688,7 @@ def corporate_add_member(request):
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
 
 @corporate_admin_required
+@rate_limit('corporate_member_reallocate', '30/h', message='Too many credit reallocation requests. Please slow down.')
 def corporate_reallocate_credits(request):
     """
     API to change a member's credit limit.
@@ -711,7 +727,7 @@ def corporate_login(request):
     if request.method == "POST" and form.is_valid():
         user = form.user
         # High-security check: Only users with a CorporateProfile allowed here
-        if not getattr(user, 'corp_profile', None):
+        if not getattr(user, 'corp_profile', None) or not user.corp_profile.is_active:
             return render(request, 'corporate/login.html', {
                 'form': form,
                 'error': 'Access Restricted. This portal is for Corporate members only.'
@@ -738,7 +754,7 @@ def invoice_detail(request, invoice_id):
             raise PermissionDenied()
         if invoice.corporate:
             profile = getattr(request.user, 'corp_profile', None)
-            if not profile or profile.corporate != invoice.corporate:
+            if not profile or not profile.is_active or profile.corporate != invoice.corporate:
                 raise PermissionDenied()
 
     business = BusinessInfo.load()
@@ -775,6 +791,7 @@ def api_billing_history(request):
     return JsonResponse({'status': 'success', 'invoices': data})
 
 @login_required
+@rate_limit('billing_resend', '5/h', message='Too many invoice resend attempts. Please wait before trying again.')
 def api_resend_invoice(request):
     """
     Manually triggers the invoice email resend.
@@ -809,7 +826,7 @@ def corporate_join(request, token):
     """
     Landing page for users accepting an invitation to join a corporation.
     """
-    invitation = get_object_or_404(CorporateInvitation, id=token, is_accepted=False)
+    invitation = get_object_or_404(CorporateInvitation, token=str(token), is_accepted=False)
     
     if invitation.expires_at < timezone.now():
         return render(request, 'corporate/join.html', {'error': 'This invitation has expired.'})
@@ -819,21 +836,21 @@ def corporate_join(request, token):
         
         if not request.user.is_authenticated:
             # Store invitation token in session so we can link it after they signup/login
-            request.session['pending_invite_token'] = str(token)
+            request.session['pending_invite_token'] = invitation.token
             return redirect('account_signup')
         
         # Identity Guard: Check if logged-in user matches invitation email
         email_mismatch = request.user.email.lower() != invitation.email.lower()
         
         if email_mismatch:  # Security Fix #3: force_link bypass removed — emails must match
-            # Redirect to render the landing page with mismatch warning
             return render(request, 'corporate/join.html', {
                 'invitation': invitation,
                 'email_mismatch': True,
-                'current_email': request.user.email
+                'current_email': request.user.email,
+                'error': 'This invitation can only be accepted by the invited email address.'
             })
 
-        # If already logged in and (emails match OR user forced link)
+        # If already logged in and emails match
         try:
             CorporateService.add_user_directly(
                 invitation.corporate, 
@@ -845,7 +862,8 @@ def corporate_join(request, token):
             invitation.is_accepted = True
             invitation.status = CorporateInvitation.Status.ACCEPTED
             invitation.save()
-            return redirect('corporate_dashboard')
+            request.session.pop('pending_invite_token', None)
+            return redirect('saiha:corporate_dashboard')
         except Exception as e:
             return render(request, 'corporate/join.html', {'invitation': invitation, 'error': str(e)})
 
@@ -961,6 +979,7 @@ def get_corporate_usage_data(request):
     })
 
 @login_required
+@rate_limit('credit_request_submit', '3/d', message='Too many credit requests submitted. Please wait before sending another.')
 def api_submit_credit_request(request):
     """
     Allows a corporate member to request additional credits from their admin.
@@ -996,6 +1015,7 @@ def api_submit_credit_request(request):
         return JsonResponse({'status': 'error', 'message': str(e)})
 
 @login_required
+@rate_limit('credit_request_process', '20/h', message='Too many credit request actions. Please slow down.')
 def api_process_credit_request(request):
     """
     Allows a Corporate Admin to approve or deny a credit request.

@@ -19,6 +19,12 @@ DEBUG = os.getenv("DEBUG", "True").lower() == "true"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
+if not DEBUG and SECRET_KEY == "django-insecure-et9sx":
+    raise ValueError("SECRET_KEY must be set in production.")
+
+if not DEBUG and not ALLOWED_HOSTS:
+    raise ValueError("ALLOWED_HOSTS must be set in production.")
+
 
 # Application definition
 
@@ -162,6 +168,41 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 USE_I18N = True
 USE_TZ = True
+
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'saiha-default-cache',
+    }
+}
+
+PHASE2_RATE_LIMITS = {
+    'chat_analysis': '10/m',
+    'user_topup': '5/h',
+    'corporate_topup': '10/h',
+    'corporate_purchase_seats': '10/h',
+    'billing_resend': '5/h',
+    'credit_request_submit': '3/d',
+    'credit_request_process': '20/h',
+    'corporate_member_add': '20/h',
+    'corporate_member_resend': '20/h',
+    'corporate_member_remove': '20/h',
+    'corporate_member_reallocate': '30/h',
+}
+
+ANALYSIS_MAX_TOOLS_PER_REQUEST = 3
+ANALYSIS_MAX_ACTIVE_TASKS_PER_SESSION = 5
+ANALYSIS_SESSION_COOLDOWN_SECONDS = 5
+
+# AI Logging and Privacy Controls
+# Set AI_LOG_RAW_PAYLOADS=True in .env only for local debugging.
+# In production this MUST remain False to prevent raw prompts/responses
+# from being written to log files or aggregators.
+AI_LOG_RAW_PAYLOADS = os.getenv("AI_LOG_RAW_PAYLOADS", "False").lower() == "true"
+AI_AUDIT_LOG_MAX_CHARS = int(os.getenv("AI_AUDIT_LOG_MAX_CHARS", "2000"))
 
 
 # Static files (CSS, JavaScript, Images)

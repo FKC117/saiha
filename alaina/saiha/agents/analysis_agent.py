@@ -1,5 +1,7 @@
 import logging
 from typing import List, Dict, Any, Optional
+from django.conf import settings
+from django.core.cache import cache
 from ..models import AnalysisSession, AnalysisResult, Dataset
 from .analysis_planner import analysis_planner
 from .param_corrector import ParamCorrector
@@ -16,14 +18,27 @@ class AnalysisAgent:
     Role: Gathers intent, corrects parameters, and dispatches to Celery.
     Prevents LLM from directly controlling tool execution.
     """
-    def __init__(self, session_id: str):
-        self.session = AnalysisSession.objects.get(id=session_id)
+    def __init__(self, session_or_id):
+        if isinstance(session_or_id, AnalysisSession):
+            self.session = session_or_id
+        else:
+            self.session = AnalysisSession.objects.get(id=session_or_id)
         self.dataset = self.session.dataset
 
     def process_query(self, query: str) -> List[str]:
         """
         Processes a natural language query with context-awareness and real-time status.
         """
+        can_dispatch, guard_message = self._guard_dispatch()
+        if not can_dispatch:
+            logger.warning(f"Dispatch blocked for session {self.session.id}: {guard_message}")
+            send_ws_notification(
+                guard_message,
+                status="error",
+                session_id=str(self.session.id)
+            )
+            return []
+
         # --- Persistence Layer (Bug Fix: Bug 12.4.1) ---
         # Record the user's intent in the persistent chat history.
         # We use get_or_create to prevent duplicates on rapid refreshes or retries.
@@ -68,6 +83,10 @@ class AnalysisAgent:
                 status="error",
                 session_id=str(self.session.id)
             )
+            return []
+
+        intents = self._apply_tool_cap(intents)
+        if not intents:
             return []
 
         # 3. Hybrid Correction Layer
@@ -165,6 +184,42 @@ class AnalysisAgent:
 
         return task_ids
 
+    def _guard_dispatch(self) -> tuple[bool, str | None]:
+        cooldown_seconds = getattr(settings, 'ANALYSIS_SESSION_COOLDOWN_SECONDS', 5)
+        cooldown_key = f"analysis-dispatch-cooldown:{self.session.id}"
+
+        if cache.get(cooldown_key):
+            return False, f"Please wait {cooldown_seconds} seconds before sending another analysis request."
+
+        max_active = getattr(settings, 'ANALYSIS_MAX_ACTIVE_TASKS_PER_SESSION', 5)
+        active_tasks = AnalysisResult.objects.filter(
+            session=self.session,
+            status__in=[AnalysisResult.Status.PENDING, AnalysisResult.Status.RUNNING],
+        ).count()
+        if active_tasks >= max_active:
+            return False, "This session already has too many analyses in progress. Please wait for current tasks to finish."
+
+        cache.set(cooldown_key, True, timeout=cooldown_seconds)
+        return True, None
+
+    def _apply_tool_cap(self, intents: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        max_tools = getattr(settings, 'ANALYSIS_MAX_TOOLS_PER_REQUEST', 3)
+        if len(intents) <= max_tools:
+            return intents
+
+        logger.warning(
+            "Planner returned %s tools for session %s; truncating to %s.",
+            len(intents),
+            self.session.id,
+            max_tools,
+        )
+        send_ws_notification(
+            f"I planned {len(intents)} analyses, but I can only run {max_tools} at a time. Starting the first {max_tools}.",
+            status="warning",
+            session_id=str(self.session.id)
+        )
+        return intents[:max_tools]
+
 # Accessor factory
-def get_analysis_agent(session_id: str):
-    return AnalysisAgent(session_id)
+def get_analysis_agent(session_or_id):
+    return AnalysisAgent(session_or_id)

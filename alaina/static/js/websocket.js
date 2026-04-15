@@ -8,18 +8,31 @@
 
   const protocol  = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const sessionId = window.PageConfig.sessionId;
-  const socketUrl = sessionId
-    ? `${protocol}//${window.location.host}/ws/notifications/${sessionId}/`
-    : `${protocol}//${window.location.host}/ws/notifications/general/`;
+  if (!sessionId) return;
+
+  const socketUrl = `${protocol}//${window.location.host}/ws/notifications/${sessionId}/`;
 
   let socket = null;
-  const reconnectInterval = 5000;
+  const maxReconnectAttempts = 5;
+  const baseReconnectDelayMs = 2000;
+  const maxReconnectDelayMs = 30000;
+  let reconnectAttempts = 0;
 
   function connect() {
     socket = new WebSocket(socketUrl);
-    socket.onopen  = () => console.log('Chat UI WebSocket connected');
+    socket.onopen  = () => {
+      reconnectAttempts = 0;
+      console.log('Chat UI WebSocket connected');
+    };
     socket.onerror = (err) => { console.error('Socket error:', err); socket.close(); };
-    socket.onclose = () => { setTimeout(connect, reconnectInterval); };
+    socket.onclose = (event) => {
+      if (event.code === 4001 || event.code === 4003 || event.code === 4401 || event.code === 4403) return;
+      if (reconnectAttempts >= maxReconnectAttempts) return;
+
+      reconnectAttempts += 1;
+      const delay = Math.min(baseReconnectDelayMs * (2 ** (reconnectAttempts - 1)), maxReconnectDelayMs);
+      setTimeout(connect, delay);
+    };
 
     socket.onmessage = function (e) {
       const data         = JSON.parse(e.data);

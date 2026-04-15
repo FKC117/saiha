@@ -65,7 +65,9 @@ def create_langchain_tool(tool_instance: BaseAnalysisTool, user_id: int, session
             if not hasattr(tool_instance, 'session') or not tool_instance.session:
                 tool_instance.session = AnalysisSession.objects.get(id=session_id)
             if dataset_id and dataset_id != "None" and (not hasattr(tool_instance, 'dataset') or not tool_instance.dataset):
-                tool_instance.dataset = Dataset.objects.get(id=dataset_id)
+                # Ownership guard: pin Dataset lookup to the session owner
+                _session_obj = AnalysisSession.objects.get(id=session_id)
+                tool_instance.dataset = Dataset.objects.get(id=dataset_id, user=_session_obj.user)
             
             query = kwargs.pop('query', f"Run {tool_instance.name}")
             result = tool_instance.run(query=query, **kwargs)

@@ -2,6 +2,11 @@
 
 This file captures the highest-signal bugs, loopholes, and implementation risks found during a code review of the project.
 
+Status note:
+
+- The items below were identified during review and then remediated in the follow-up implementation pass on 2026-04-15.
+- Keep this file as an audit trail of what was found and what was fixed.
+
 ## Critical
 
 ### 1. Cross-account analysis access via unowned session IDs

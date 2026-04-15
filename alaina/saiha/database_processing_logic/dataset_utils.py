@@ -13,18 +13,20 @@ from .dataset_processor import DatasetProcessor
 
 logger = logging.getLogger(__name__)
 
-def load_dataset_data(dataset_id, columns=None):
+def load_dataset_data(dataset_id, columns=None, user=None):
     """
     Load dataset data using Parquet with column projection.
+    Pass `user` to enforce ownership: only that user's dataset is returned.
     """
     try:
-        dataset = Dataset.objects.get(id=dataset_id)
+        qs = Dataset.objects.filter(id=dataset_id)
+        if user is not None:
+            qs = qs.filter(user=user)
+        dataset = qs.get()
         storage_manager = DatasetStorageManager()
-        # Storage manager handles full vs relative path logic internally if needed,
-        # but here we use the user_id from the dataset record.
         return storage_manager.load_processed_file(dataset.user.id, dataset.id, columns=columns)
     except Dataset.DoesNotExist:
-        raise ValueError(f"Dataset {dataset_id} not found")
+        raise ValueError(f"Dataset {dataset_id} not found or access denied.")
     except Exception as e:
         logger.error(f"Error loading dataset: {e}")
         raise

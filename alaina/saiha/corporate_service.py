@@ -108,7 +108,10 @@ class CorporateService:
         Allows Corporate Admin to change a user's credit limit.
         Adjusts Corporate pool accordingly.
         """
-        profile = CorporateProfile.objects.get(user=target_user, corporate=corporate)
+        if new_credit_limit < 0:
+            raise ValueError("Credit limit cannot be negative.")
+
+        profile = CorporateProfile.objects.get(user=target_user, corporate=corporate, is_active=True)
         quota = UserQuota.objects.get(user=target_user)
         
         rate = AppConfiguration.get_rate()
@@ -153,7 +156,7 @@ class CorporateService:
             'corporate_name': invitation.corporate.name,
             'first_name': invitation.first_name,
             'initial_credits': invitation.initial_credits,
-            'join_url': request.build_absolute_uri(f"/corporate/join/{invitation.id}/")
+            'join_url': request.build_absolute_uri(f"/corporate/join/{invitation.token}/")
         }
 
         subject = f"Invitation to join {invitation.corporate.name} on ChatFlow"
@@ -214,7 +217,7 @@ class CorporateService:
         profile.save()
         
         # 4. Reset User Quota to a default "Individual" state (e.g. 0 managed credits)
-        quota.max_tokens = 0 
+        quota.max_tokens = max(quota.current_tokens_used, 0)
         quota.save()
         
         logger.info(f"Discontinued user {user.email} from {corporate.name}. Recovered {rem_credits} credits.")
@@ -456,10 +459,13 @@ class CorporateService:
         quota.expiry_date = timezone.now() + timedelta(days=30)
         quota.save()
 
-        # 7. No email for retail user recharge per request
-        # invoice = CorporateService.create_invoice(user=user, package=package, amount_usd=package.price_usd if package else 0, amount_bdt=package.price_bdt if package else 0)
-        # CorporateService.send_invoice_email(invoice)
-        
+        CorporateService.create_invoice(
+            user=user,
+            package=package,
+            amount_usd=package.price_usd if package else 0,
+            amount_bdt=package.price_bdt if package else 0
+        )
+
         return quota.max_tokens
 
     @staticmethod

@@ -1,10 +1,13 @@
 from django.dispatch import receiver
 from allauth.account.signals import user_signed_up
 from allauth.socialaccount.models import SocialAccount
+import logging
 
 from django.db.models.signals import post_save
 from django.contrib.auth.models import User
 from .models import UserQuota
+
+logger = logging.getLogger(__name__)
 
 @receiver(user_signed_up)
 def handle_user_signed_up(request, user, **kwargs):
@@ -25,8 +28,8 @@ def handle_user_signed_up(request, user, **kwargs):
         try:
             from .models import CorporateInvitation
             from .corporate_service import CorporateService
-            invitation = CorporateInvitation.objects.filter(id=pending_token, is_accepted=False).first()
-            if invitation:
+            invitation = CorporateInvitation.objects.filter(token=pending_token, is_accepted=False).first()
+            if invitation and invitation.email.lower() == user.email.lower():
                 # Add to corp with stored name preferences
                 CorporateService.add_user_directly(
                     invitation.corporate,
@@ -36,12 +39,12 @@ def handle_user_signed_up(request, user, **kwargs):
                     initial_credits=invitation.initial_credits
                 )
                 invitation.is_accepted = True
+                invitation.status = CorporateInvitation.Status.ACCEPTED
                 invitation.save()
                 # Clear session
                 del request.session['pending_invite_token']
         except Exception as e:
-            import logging
-            logging.getLogger(__name__).error(f"Failed to link invited user {user.email}: {e}")
+            logger.error(f"Failed to link invited user {user.email}: {e}")
 
 @receiver(post_save, sender=User)
 def ensure_user_quota(sender, instance, created, **kwargs):

@@ -76,7 +76,6 @@ def index(request):
     }
     return render(request, 'index.html', context)
 
-@csrf_exempt
 @login_required
 def upload_dataset(request):
     """
@@ -153,7 +152,6 @@ def upload_dataset(request):
             
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'}, status=405)
 
-@csrf_exempt
 @login_required
 def api_chat_analysis(request):
     """
@@ -168,6 +166,11 @@ def api_chat_analysis(request):
             
             if not session_id:
                 return JsonResponse({'status': 'error', 'message': 'Session ID is required.'}, status=400)
+
+            # Security Fix #1: Verify session belongs to the requesting user
+            session_obj = AnalysisSession.objects.filter(id=session_id, user=request.user).first()
+            if not session_obj:
+                return JsonResponse({'status': 'error', 'message': 'Session not found or access denied.'}, status=403)
             
             # 1. Initialize the AnalysisAgent
             agent = get_analysis_agent(session_id)
@@ -227,7 +230,6 @@ def dataset_dashboard(request):
     datasets = Dataset.objects.filter(user=request.user, is_active=True).order_by('-upload_date')
     return render(request, 'datasets.html', {'datasets': datasets})
 
-@csrf_exempt
 @login_required
 def delete_dataset(request, dataset_id):
     """
@@ -239,7 +241,8 @@ def delete_dataset(request, dataset_id):
     
     if request.headers.get('HX-Request'):
         # Return empty response to remove element via HTMX
-        return HttpResponse("") 
+        return HttpResponse("")
+    return JsonResponse({'status': 'success', 'message': 'Dataset deleted.'})
         
 @login_required
 def dataset_detail(request, dataset_id):
@@ -407,7 +410,6 @@ def get_usage_data(request):
         }
     })
 
-@csrf_exempt
 @login_required
 def user_topup(request):
     """
@@ -443,7 +445,7 @@ def corporate_admin_required(view_func):
     def _wrapped_view(request, *args, **kwargs):
         # Check if user has a CorporateProfile with Role.ADMIN
         profile = getattr(request.user, 'corp_profile', None)
-        if not profile or profile.role != CorporateProfile.Role.ADMIN:
+        if not profile or not profile.is_active or profile.role != CorporateProfile.Role.ADMIN:
             raise PermissionDenied("Access to Corporate Dashboard is restricted to Administrators.")
         return view_func(request, *args, **kwargs)
     return _wrapped_view
@@ -534,7 +536,6 @@ def corporate_dashboard(request):
     }
     return render(request, 'corporate/dashboard.html', context)
 
-@csrf_exempt
 @corporate_admin_required
 def corporate_remove_member(request):
     """
@@ -551,7 +552,6 @@ def corporate_remove_member(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
-@csrf_exempt
 @corporate_admin_required
 def corporate_resend_invite(request):
     """
@@ -565,7 +565,6 @@ def corporate_resend_invite(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)})
 
-@csrf_exempt
 @corporate_admin_required
 def corporate_topup(request):
     """
@@ -594,7 +593,6 @@ def corporate_topup(request):
             
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
 
-@csrf_exempt
 @corporate_admin_required
 def corporate_purchase_seats(request):
     """
@@ -614,13 +612,14 @@ def corporate_purchase_seats(request):
             
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
 
-@csrf_exempt
 @corporate_admin_required
 def simulate_corporate_recharge(request):
     """
-    Simulation endpoint that skips payment gateways and recharges the corporate account directly.
-    Designed for testing and demonstration.
+    Simulation endpoint for testing ONLY. Restricted to DEBUG mode.
+    In production this raises PermissionDenied and cannot be invoked.
     """
+    if not settings.DEBUG:
+        raise PermissionDenied("This endpoint is disabled in production.")
     if request.method == 'POST':
         amount = float(request.POST.get('amount', 50))
         corporate = request.user.corp_profile.corporate
@@ -641,7 +640,6 @@ def simulate_corporate_recharge(request):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
 
-@csrf_exempt
 @corporate_admin_required
 def corporate_add_member(request):
     """
@@ -674,7 +672,6 @@ def corporate_add_member(request):
 
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
 
-@csrf_exempt
 @corporate_admin_required
 def corporate_reallocate_credits(request):
     """
@@ -682,7 +679,12 @@ def corporate_reallocate_credits(request):
     """
     if request.method == 'POST':
         user_id = request.POST.get('user_id')
-        new_limit = float(request.POST.get('credits', 0))
+        try:
+            new_limit = float(request.POST.get('credits', 0))
+        except (TypeError, ValueError):
+            return JsonResponse({'status': 'error', 'message': 'Invalid credit amount.'}, status=400)
+        if new_limit < 0:
+            return JsonResponse({'status': 'error', 'message': 'Credit limit cannot be negative.'}, status=400)
         corporate = request.user.corp_profile.corporate
         
         try:
@@ -772,7 +774,6 @@ def api_billing_history(request):
         
     return JsonResponse({'status': 'success', 'invoices': data})
 
-@csrf_exempt
 @login_required
 def api_resend_invoice(request):
     """
@@ -824,7 +825,7 @@ def corporate_join(request, token):
         # Identity Guard: Check if logged-in user matches invitation email
         email_mismatch = request.user.email.lower() != invitation.email.lower()
         
-        if email_mismatch and action != 'force_link':
+        if email_mismatch:  # Security Fix #3: force_link bypass removed — emails must match
             # Redirect to render the landing page with mismatch warning
             return render(request, 'corporate/join.html', {
                 'invitation': invitation,
@@ -959,7 +960,6 @@ def get_corporate_usage_data(request):
         }
     })
 
-@csrf_exempt
 @login_required
 def api_submit_credit_request(request):
     """
@@ -995,7 +995,6 @@ def api_submit_credit_request(request):
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
 
-@csrf_exempt
 @login_required
 def api_process_credit_request(request):
     """
@@ -1006,8 +1005,8 @@ def api_process_credit_request(request):
     
     corp_profile = getattr(request.user, 'corp_profile', None)
     from saiha.models import CorporateProfile
-    if not corp_profile or corp_profile.role != CorporateProfile.Role.ADMIN:
-        return JsonResponse({'status': 'error', 'message': 'Admin access required.'})
+    if not corp_profile or not corp_profile.is_active or corp_profile.role != CorporateProfile.Role.ADMIN:
+        return JsonResponse({'status': 'error', 'message': 'Admin access required.'}, status=403)
     
     try:
         request_id = request.POST.get('request_id')

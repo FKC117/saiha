@@ -27,6 +27,15 @@ class GeminiService:
         # Use provided model_id or fetch from .env, defaulting to gemini-2.0-flash
         self.model_id = model_id or os.getenv("DEFAULT_MODEL", "gemini-2.0-flash")
 
+    @staticmethod
+    def _format_audit_payload(kind: str, text: str, store_raw: bool, max_chars: int) -> str:
+        text = text or ""
+        if store_raw:
+            return text[:max_chars]
+
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+        return f"[redacted {kind}] len={len(text)} sha256={digest}"
+
     def _log_interaction(self, prompt: str, response_text: str, usage: Any, session_id: Optional[str] = None, user: Optional[Any] = None, metadata_status: str = "none"):
         """
         Internal audit mechanism.
@@ -66,6 +75,7 @@ class GeminiService:
         try:
             from ..models import AIAuditLog, AnalysisSession, UserQuota
             max_chars = getattr(django_settings, 'AI_AUDIT_LOG_MAX_CHARS', 2000)
+            store_raw_db_content = getattr(django_settings, 'AI_AUDIT_STORE_RAW_CONTENT', False)
             session = None
             final_user = user
             summary_len = 0
@@ -83,8 +93,8 @@ class GeminiService:
             AIAuditLog.objects.create(
                 user=final_user,
                 session=session,
-                prompt=prompt[:max_chars],
-                response=response_text[:max_chars],
+                prompt=self._format_audit_payload('prompt', prompt, store_raw_db_content, max_chars),
+                response=self._format_audit_payload('response', response_text, store_raw_db_content, max_chars),
                 tokens_input=tokens_in,
                 tokens_output=tokens_out,
                 tokens_cached=tokens_cached,

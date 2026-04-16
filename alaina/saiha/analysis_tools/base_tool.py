@@ -146,17 +146,25 @@ class BaseAnalysisTool(abc.ABC):
             final_artifacts.append(self.sanitize_json_data(art))
 
         # 3. Handle Data Tables (Scan for nested legacy structures)
+        # If no artifacts were found in artifacts/sections, try to promote 'data['records']'
         if isinstance(data, dict) and not final_artifacts:
             for key, val in data.items():
                 if isinstance(val, dict) and ('records' in val or 'data' in val):
                     records = val.get('records') or val.get('data') or []
                     headers = val.get('headers')
-                    if not headers and records and isinstance(records[0], dict):
-                        headers = list(records[0].keys())
-                        data_rows = [list(r.values()) for r in records]
-                    else:
-                        data_rows = [list(r) if isinstance(r, (list, tuple)) else [r] for r in records]
                     
+                    if records:
+                        if not headers and isinstance(records[0], dict):
+                            headers = list(records[0].keys())
+                        
+                        norm_art = {
+                            'type': 'table',
+                            'title': f"Data - {key.replace('_', ' ').title()}",
+                            'headers': headers or [],
+                            'data': [list(r.values()) if isinstance(r, dict) else (list(r) if isinstance(r, (list, tuple)) else [r]) for r in records]
+                        }
+                        final_artifacts.append(self.sanitize_json_data(norm_art))
+        
         # 4. Enforce Global Order: Tables -> Texts -> Visualizations
         # This aligns with user preference for seeing hard data first, then insights, then visuals.
         type_priority = {
@@ -169,7 +177,8 @@ class BaseAnalysisTool(abc.ABC):
             'image': 3,
             'timeline': 3
         }
-        final_artifacts.sort(key=lambda x: type_priority.get(x.get('type'), 10))
+        # Stability: Ensure we don't crash if type is None
+        final_artifacts.sort(key=lambda x: type_priority.get(str(x.get('type')).lower(), 10))
 
         return ToolResult(
             status=status,

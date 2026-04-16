@@ -119,6 +119,22 @@ class ToolRegistry:
         except Exception as e:
             logger.error(f"Error getting tool {tool_name}: {e}")
             return None
+
+    def get_tool_metadata(self, tool_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Return lightweight metadata for a registered tool.
+
+        This keeps the agent's whitelist check cheap and avoids having to fully
+        instantiate a tool just to confirm that it is allowed.
+        """
+        tool_class = self._tools.get(tool_name)
+        if not tool_class:
+            return None
+
+        return {
+            'name': tool_name,
+            'class_name': tool_class.__name__,
+        }
     
     def get_tool_by_id(self, tool_id: int, agent=None) -> Optional[BaseAnalysisTool]:
         """

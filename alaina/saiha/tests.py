@@ -14,6 +14,8 @@ from django.utils import timezone
 
 from alaina.asgi import application
 from .agents.analysis_agent import AnalysisAgent
+from .corporate_service import CorporateService
+from .llm_management.gemini_service import GeminiService
 from .models import (
     AIAuditLog,
     AnalysisResult,
@@ -213,6 +215,37 @@ class BillingAndUsageTests(TestCase):
 
         self.assertEqual(payload['kpis']['total'], 2.0)
 
+    def test_user_recharge_preserves_usage_history(self):
+        quota = self.user.quota
+        quota.max_tokens = 10000
+        quota.current_tokens_used = 2500
+        quota.save()
+
+        CorporateService.recharge_user(self.user, 5, package=self.package)
+        quota.refresh_from_db()
+
+        self.assertEqual(quota.current_tokens_used, 2500)
+        self.assertEqual(quota.max_tokens, 60000)
+
+    @override_settings(AI_AUDIT_STORE_RAW_CONTENT=False)
+    def test_ai_audit_logs_redact_raw_content_by_default(self):
+        service = GeminiService.__new__(GeminiService)
+        service.model_id = 'test-model'
+        usage = SimpleNamespace(prompt_token_count=11, candidates_token_count=7, cached_content_token_count=0)
+
+        service._log_interaction(
+            prompt='sensitive prompt body',
+            response_text='sensitive response body',
+            usage=usage,
+            user=self.user,
+        )
+
+        audit = AIAuditLog.objects.latest('timestamp')
+        self.assertIn('[redacted prompt]', audit.prompt)
+        self.assertIn('[redacted response]', audit.response)
+        self.assertNotEqual(audit.prompt, 'sensitive prompt body')
+        self.assertNotEqual(audit.response, 'sensitive response body')
+
 
 class AnalysisSessionConstraintTests(TestCase):
     def setUp(self):
@@ -327,3 +360,72 @@ class AnalysisGuardTests(TestCase):
         self.assertEqual(second, [])
         self.assertEqual(mock_apply_async.call_count, 1)
         self.assertTrue(any('Please wait 60 seconds' in call.args[0] for call in mock_notify.call_args_list if call.args))
+
+
+class InterpretationDeliveryTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user(username='interpuser', email='interp@example.com', password='pw123456')
+        self.dataset = Dataset.objects.create(
+            user=self.user,
+            name='Interpret Dataset',
+            original_filename='interpret.csv',
+            file_type='csv',
+            file_size=100,
+            rows_count=10,
+            columns_count=2,
+            processed_file_path='datasets/interpret/data.csv',
+            metadata_file_path='datasets/interpret/meta.json',
+            is_processed=True,
+        )
+        self.session = AnalysisSession.objects.create(user=self.user, dataset=self.dataset, session_name='Interpret Session')
+        self.result = AnalysisResult.objects.create(
+            session=self.session,
+            tool_used='dataset_overview',
+            query='give me an overview',
+            status=AnalysisResult.Status.SUCCESS,
+            result_data={
+                'data': {'rows': 10, 'columns': 2},
+                'artifacts': [{'type': 'table', 'title': 'Overview', 'headers': ['Metric', 'Value'], 'rows': [['Rows', 10], ['Columns', 2]]}],
+                'message': 'Dataset overview complete.'
+            },
+            dedup_id='interpret-result-1',
+        )
+
+    @patch('saiha.agents.memory_manager.MemoryManager.update_summary', side_effect=NameError("name 'session' is not defined"))
+    @patch('saiha.agents.memory_manager.MemoryManager.update_working_memory')
+    @patch('saiha.agents.memory_manager.MemoryManager.decay_stale_state')
+    @patch('saiha.agents.interpretation_agent.gemini_service.generate_content')
+    @patch('saiha.agents.interpretation_agent.gemini_service.get_or_create_cache')
+    @patch('channels.layers.get_channel_layer')
+    @patch('asgiref.sync.async_to_sync')
+    def test_interpretation_still_persists_and_broadcasts_when_memory_update_fails(
+        self,
+        mock_async_to_sync,
+        mock_get_channel_layer,
+        mock_get_cache,
+        mock_generate_content,
+        _mock_decay,
+        _mock_update_memory,
+        _mock_update_summary,
+    ):
+        from .agents.interpretation_agent import InterpretationAgent
+
+        mock_get_cache.return_value = None
+        mock_generate_content.return_value = (
+            "Key takeaway text.\n\n[METADATA]\n"
+            "type: overview\n"
+            "target: N/A\n"
+            "columns: Order ID|Sales"
+        )
+        group_send = MagicMock()
+        mock_async_to_sync.side_effect = lambda fn: fn
+        mock_get_channel_layer.return_value = SimpleNamespace(group_send=group_send)
+
+        output = InterpretationAgent().interpret_result(str(self.result.id))
+
+        self.assertIn('Key takeaway text.', output)
+        self.result.refresh_from_db()
+        self.assertIn('Key takeaway text.', self.result.ai_interpretation)
+        self.assertTrue(self.session.messages.filter(message_type='ai', content__icontains='Key takeaway text.').exists())
+        self.assertEqual(group_send.call_count, 1)

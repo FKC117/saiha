@@ -1,6 +1,6 @@
 import logging
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from ..llm_management.gemini_service import gemini_service
 from ..models import AnalysisResult, AnalysisSession
 from .context_builder import ContextBuilder
@@ -46,7 +46,7 @@ class InterpretationAgent:
         # Use provided model_id or default to the service's model
         self.model_id = model_id or gemini_service.model_id
 
-    def interpret_result(self, result_id: str) -> str:
+    def interpret_result(self, result_id: str, final_artifacts: List[Dict[str, Any]] = None) -> str:
         """
         Interprets a specific analysis result.
         """
@@ -56,9 +56,12 @@ class InterpretationAgent:
                 return f"Analysis (Status: {result.status}) did not complete successfully; skipped interpretation."
 
             tool_used = result.tool_used
-            data_json = result.result_data
+            data_json = result.result_data or {}
             query = result.query
             session = result.session
+
+            # Use provided artifacts (preferred) or fallback to data_json['artifacts']
+            artifacts = final_artifacts if final_artifacts is not None else data_json.get('artifacts', [])
 
             # 1. Fetch Schema for Cache Consistency
             schema_text = ""
@@ -103,51 +106,52 @@ class InterpretationAgent:
                 cache_name=cache_id,
                 metadata_status="none" 
             )
-            
-            # Update the result record
-            result.ai_interpretation = interpretation
-            result.save()
 
-            # --- Memory Update (v3.1 Elite) ---
+            # Extract metadata, but never let metadata/summarization issues block
+            # delivery of the finished answer to the UI.
             from .memory_manager import MemoryManager
-            
-            # 1. Decay check (Idle timeout)
-            MemoryManager.decay_stale_state(session)
-            
-            # 2. Extract Metadata Footer (Structured line-by-line format)
-            clean_interpretation, metadata = MemoryManager.extract_metadata_footer(interpretation, session=session)
-            
-            # --- Metadata Resilience Fallback (v3.2) ---
-            metadata_status = "success" if metadata else "invalid"
+            try:
+                clean_interpretation, metadata = MemoryManager.extract_metadata_footer(interpretation, session=session)
+            except Exception as metadata_error:
+                logger.error(
+                    "Metadata extraction failed for result %s in session %s: %s",
+                    result_id,
+                    session.id,
+                    metadata_error,
+                    exc_info=True,
+                )
+                clean_interpretation = interpretation
+                metadata = {}
+
             if not metadata:
                 logger.warning(f"Metadata extraction failed for session {session.id}. Applying last_valid_metadata fallback.")
                 metadata = session.last_valid_metadata or {}
-                metadata_status = "fallback" if metadata else "invalid"
 
-            # 3. Add tool context if not extracted
             if 'last_tool' not in metadata:
                 metadata['last_tool'] = tool_used
-            
-            # 4. Update Working Memory & Analysis Chain
-            MemoryManager.update_working_memory(session, metadata=metadata)
-            
-            # 5. Update Rolling Summary
-            MemoryManager.update_summary(session, gemini_service)
-            
+
+            # Persist the final interpretation first so the UI can render it even
+            # if later memory bookkeeping fails.
+            result.ai_interpretation = clean_interpretation
+            result.save(update_fields=['ai_interpretation'])
+
+            # --- HARDENED METADATA FOR WEB SOCKETS (Elite v3.8) ---
+            # Enforce that 'artifacts' is the primary channel for UI rendering.
+            message_metadata = {
+                "id": str(result.id),
+                "tool_used": tool_used,
+                "data": data_json.get('data', {}),
+                "artifacts": artifacts, # PRE-NORMALIZED LIST
+                "query": query
+            }
+
             # --- Persistence Layer (Bug Fix: Bug 12.4.2) ---
             # Record the AI response in the persistent chat history.
-            # We record the CLEAN text (without METADATA footer)
             from ..session_management.session_manager import SessionManager
             SessionManager.add_ai_message(
                 session, 
                 clean_interpretation, 
-                metadata={
-                    "id": str(result.id),
-                    "tool_used": tool_used,
-                    "data": data_json.get('data', {}),
-                    "artifacts": data_json.get('artifacts', []),
-                    "query": query
-                }
+                metadata=message_metadata
             )
             
             # --- BROADCAST FINAL RESULT VIA WEBSOCKET ---
@@ -163,23 +167,32 @@ class InterpretationAgent:
                         "event_type": "agent_message",
                         "message_type": "ai",
                         "content": clean_interpretation,
-                        "metadata": {
-                            "id": str(result.id),
-                            "tool_used": tool_used,
-                            "data": data_json.get('data', {}),
-                            "artifacts": data_json.get('artifacts', []),
-                            "query": query
-                        },
+                        "metadata": message_metadata,
                         "status": "success",
                         "session_id": str(session.id)
                     }
+                )
+
+            # Memory bookkeeping is helpful but non-critical. It should never
+            # prevent the answer from reaching the user.
+            try:
+                MemoryManager.decay_stale_state(session)
+                MemoryManager.update_working_memory(session, metadata=metadata)
+                MemoryManager.update_summary(session, gemini_service)
+            except Exception as memory_error:
+                logger.error(
+                    "Post-interpretation memory update failed for result %s in session %s: %s",
+                    result_id,
+                    session.id,
+                    memory_error,
+                    exc_info=True,
                 )
 
             logger.info(f"Generated, broadcast, and summarized interpretation for Result {result_id}")
             return clean_interpretation
 
         except Exception as e:
-            logger.error(f"Interpretation failed for Result {result_id}: {e}")
+            logger.error(f"Interpretation failed for Result {result_id}: {e}", exc_info=True)
             return f"Interpretation error: {str(e)}"
 
 # Global accessor

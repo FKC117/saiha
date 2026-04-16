@@ -85,25 +85,46 @@ def execute_analysis_task(self, result_id: str, session_id: str, tool_name: str,
         if result_obj.status == "error":
             raise Exception(result_obj.error or "Analysis failed without specific error.")
 
-        # 5. Persist Results (Viz-Ready)
-        # The result_record definitely exists (created by Agent)
+        # 5. Persist Results (Elite v3.8 Synchronization)
+        # The result_record exists (created by Agent)
         result_record = AnalysisResult.objects.get(id=result_id)
 
-        # JSON Hardening: Recursive sanitization to remove NaN/Inf/etc.
-        # This prevents Postgres 'Token NaN is invalid' errors.
+        # 3-Stage Normalization (Sections -> Artifacts -> Fallback Data)
+        # Ensuring the UI always receives its payload in the 'artifacts' key.
+        final_artifacts = result_obj.artifacts or []
+        
+        # A. Section Scan
+        if hasattr(result_obj, 'sections') and result_obj.sections:
+            for section in result_obj.sections:
+                final_artifacts.append(tool.sanitize_json_data(section))
+        elif isinstance(result_obj.data, dict) and 'sections' in result_obj.data:
+             for section in result_obj.data['sections']:
+                final_artifacts.append(tool.sanitize_json_data(section))
+        
+        # B. Data Promotion (Promote tables/records from 'data' if artifacts are still sparse)
+        if not final_artifacts and isinstance(result_obj.data, dict):
+            for key, val in result_obj.data.items():
+                if isinstance(val, dict) and ('records' in val or 'data' in val):
+                    records = val.get('records') or val.get('data') or []
+                    if records:
+                        final_artifacts.append(tool.sanitize_json_data({
+                            "type": "table",
+                            "title": f"Data - {key.replace('_', ' ').title()}",
+                            "data": [list(r.values()) if isinstance(r, dict) else r for r in records],
+                            "headers": list(records[0].keys()) if isinstance(records[0], dict) else []
+                        }))
+
+        # JSON Hardening
         safe_result = tool.sanitize_json_data({
             "data": result_obj.data,
-            "artifacts": result_obj.artifacts,
+            "artifacts": final_artifacts,
             "message": result_obj.message
         })
 
         result_record.result_data = safe_result
-        result_record.summary = result_obj.message # Primary narrative target
+        result_record.summary = result_obj.message 
         result_record.status = AnalysisResult.Status.SUCCESS
-        result_record.save()
-
-        # Update Observability to Success
-        self.complete_observability(result_id)
+        result_record.save() # --- PERSIST BEFORE INTERPRETATION ---
 
         # 6. Notify: Analysis complete, moving to narrative generation
         send_ws_notification(
@@ -114,7 +135,8 @@ def execute_analysis_task(self, result_id: str, session_id: str, tool_name: str,
         )
 
         # 7. Trigger Interpreter (Post-Execution Analysis)
-        interpretation_agent.interpret_result(str(result_record.id))
+        # Pass final_artifacts to avoid redundant DB hits/normalization
+        interpretation_agent.interpret_result(str(result_record.id), final_artifacts=final_artifacts)
 
         # 7. Notify Success
         send_ws_notification(

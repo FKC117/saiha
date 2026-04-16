@@ -450,10 +450,12 @@ class CorporateService:
         # 3. Rescue expired tokens
         rescued = quota.expired_tokens
         quota.expired_tokens = 0
-        
-        # 4. Update Quota
-        quota.max_tokens = int(new_tokens + rescued)
-        quota.current_tokens_used = 0
+
+        # 4. Update Quota without wiping historical usage.
+        # `max_tokens` acts as the running allocation ceiling in the current
+        # model, so we increase it by the newly purchased/rescued balance while
+        # preserving `current_tokens_used`.
+        quota.max_tokens += int(new_tokens + rescued)
         
         # 5. Extend expiry
         quota.expiry_date = timezone.now() + timedelta(days=30)

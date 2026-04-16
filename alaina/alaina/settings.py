@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -172,12 +173,26 @@ USE_TZ = True
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'saiha-default-cache',
+REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
+RUNNING_TESTS = 'test' in sys.argv
+
+if not RUNNING_TESTS and REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+        }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'saiha-default-cache',
+        }
+    }
 
 PHASE2_RATE_LIMITS = {
     'chat_analysis': '10/m',
@@ -202,6 +217,7 @@ ANALYSIS_SESSION_COOLDOWN_SECONDS = 5
 # In production this MUST remain False to prevent raw prompts/responses
 # from being written to log files or aggregators.
 AI_LOG_RAW_PAYLOADS = os.getenv("AI_LOG_RAW_PAYLOADS", "False").lower() == "true"
+AI_AUDIT_STORE_RAW_CONTENT = os.getenv("AI_AUDIT_STORE_RAW_CONTENT", "False").lower() == "true"
 AI_AUDIT_LOG_MAX_CHARS = int(os.getenv("AI_AUDIT_LOG_MAX_CHARS", "2000"))
 
 
@@ -218,8 +234,6 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # ==============================================================================
 # ASYNC INFRASTRUCTURE (CELERY & REDIS STACK)
 # ==============================================================================
-REDIS_URL = os.getenv('REDIS_URL', 'redis://localhost:6379/0')
-
 CELERY_BROKER_URL = REDIS_URL
 CELERY_RESULT_BACKEND = 'django-db' # Use Django DB for persistent results observability
 CELERY_CACHE_BACKEND = 'django-cache'

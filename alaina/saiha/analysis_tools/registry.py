@@ -65,6 +65,26 @@ class ToolRegistry:
             return tool_class()
         return None
 
+    def get_tool_metadata(self, name: str) -> Optional[Dict[str, Any]]:
+        """Returns lightweight metadata for a whitelisted tool."""
+        self.discover_tools()
+        tool_class = self._tools.get(name)
+        if not tool_class:
+            return None
+
+        description = getattr(tool_class, 'description', None)
+        if isinstance(description, property):
+            try:
+                description = tool_class().description
+            except Exception:
+                description = None
+
+        return {
+            "name": str(name),
+            "description": str(description) if description else "No description available.",
+            "is_hardened": getattr(tool_class, 'input_schema', None) is not None,
+        }
+
     def get_all_tool_metadata(self) -> List[Dict[str, Any]]:
         """Exports tool metadata for the Planner. Auto-triggers discovery."""
         self.discover_tools()

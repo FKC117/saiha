@@ -2,7 +2,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from django.conf import settings
 from django.core.cache import cache
-from ..models import AnalysisSession, AnalysisResult, Dataset
+from ..models import AnalysisSession, AnalysisResult, ChatMessage, Dataset
 from .analysis_planner import analysis_planner
 from .param_corrector import ParamCorrector
 from .interpretation_agent import interpretation_agent
@@ -133,11 +133,6 @@ class AnalysisAgent:
                 # (Actual chat responses for saturation are handled before the loop)
                 continue
 
-            # Check Registry for all other tools
-            tool_def = tool_registry.get_tool_metadata(tool_name)
-            if not tool_def:
-                logger.error(f"Tool '{tool_name}' blocked by registry whitelist.")
-                continue
             # We must flatten this into a dictionary: {"col": "Age"}
             if isinstance(raw_params, list):
                 normalized_params = {}
@@ -150,10 +145,20 @@ class AnalysisAgent:
                             normalized_params[p_name] = p_val
                 raw_params = normalized_params
             
-            # A. Whitelist Validation
+            # A. Whitelist Validation (Elite v3.7 Security Layer)
+            if tool_name == 'chat':
+                # Special internal tool for planning signals; skips execution.
+                continue
+
             tool_instance = tool_registry.get_tool(tool_name)
             if not tool_instance:
+                # Security: Block any unverified tools hallucininated by the LLM
                 logger.warning(f"Tool '{tool_name}' blocked by registry whitelist.")
+                send_ws_notification(
+                    f"Security Error: Tool '{tool_name}' is not authorized for this session.",
+                    status="error",
+                    session_id=str(self.session.id)
+                )
                 continue
 
             # B. Schema-Aware Correction (uses tool's own ToolParameterSet contract)

@@ -99,20 +99,48 @@ class ParamCorrector:
             value = corrected.get(name)
 
             # ── STEP 1: Auto-fill missing params from default_value ──────────
+            # ── STEP 1: Auto-fill/Synonym Map missing params ──────────
             if value is None:
-                if param_def.default_value is not None:
-                    corrected[name] = param_def.default_value
-                    logger.debug(
-                        f"[ParamCorrector] '{name}' missing → filled default: "
-                        f"{param_def.default_value}"
-                    )
-                elif param_def.required:
-                    # Required param with no default and no value — record error
-                    # but continue processing other params (fail at end, not mid-loop)
-                    validation_errors.append(
-                        f"Required parameter '{name}' is missing and has no default."
-                    )
-                continue  # Nothing more to correct for a missing/defaulted param
+                # A. Synonym Mapping (Hardened Elite v3.3)
+                # If a required column parameter is missing, search for common hallucinations.
+                # We check both the explicit 'column_source' and the 'parameter_type'.
+                is_column_param = (
+                    param_def.column_source is not None or 
+                    (hasattr(param_def, 'parameter_type') and 
+                     str(param_def.parameter_type.value).endswith('column_select'))
+                )
+                
+                if is_column_param:
+                    aliases = ["column", "col", "variable", "var", "target", "y", "feature", "x", "column_name"]
+                    for alias in aliases:
+                        if alias in params:
+                            raw_val = params[alias]
+                            # Fuzzy correct if it's a string, or a list of strings
+                            if isinstance(raw_val, str):
+                                value = self.correct_column_names([raw_val])[0]
+                            elif isinstance(raw_val, list):
+                                value = self.correct_column_names(raw_val)
+                            else:
+                                value = raw_val
+                                
+                            corrected[name] = value
+                            logger.info(f"[ParamCorrector] Hardened synonym mapped & corrected: '{alias}' → '{name}' for value '{value}'")
+                            break
+                
+                # B. Default Value Fallback
+                if value is None:
+                    if param_def.default_value is not None:
+                        corrected[name] = param_def.default_value
+                        logger.debug(
+                            f"[ParamCorrector] '{name}' missing → filled default: "
+                            f"{param_def.default_value}"
+                        )
+                    elif param_def.required:
+                        # Required param with no default and no value — record error
+                        validation_errors.append(
+                            f"Required parameter '{name}' is missing and has no default."
+                        )
+                    continue  # Nothing more to correct for a missing/defaulted param
 
             # ── STEP 2: Column params — use column_source, not key name ──────
             if param_def.column_source is not None:

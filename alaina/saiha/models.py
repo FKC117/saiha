@@ -138,6 +138,17 @@ class AnalysisSession(models.Model):
     
     # Context management
     llm_cache_id = models.CharField(max_length=255, blank=True, null=True)
+    llm_cache_hash = models.CharField(max_length=64, blank=True, null=True)
+    llm_cache_expiry = models.DateTimeField(null=True, blank=True)
+    
+    # Stateful Memory (Structured Rolling Memory)
+    memory_summary = models.TextField(blank=True, default="")
+    last_summary_at_message = models.IntegerField(default=0)
+    working_memory = models.JSONField(default=dict, blank=True)
+    analysis_chain = models.JSONField(default=list, blank=True)
+    
+    # Authority Layer (Elite Mode v3.2+)
+    last_valid_metadata = models.JSONField(default=dict, blank=True)
     
     class Meta:
         ordering = ['-last_activity']
@@ -296,6 +307,11 @@ class AIAuditLog(models.Model):
     # Cost & Usage metrics
     tokens_input = models.IntegerField(default=0)
     tokens_output = models.IntegerField(default=0)
+    tokens_cached = models.IntegerField(default=0)
+    cache_hit = models.BooleanField(default=False)
+    summary_length = models.IntegerField(default=0)
+    working_memory_snapshot = models.JSONField(default=dict, blank=True)
+    metadata_status = models.CharField(max_length=20, default="none") # none, success, invalid
     model_id = models.CharField(max_length=100)
     
     # Timeline

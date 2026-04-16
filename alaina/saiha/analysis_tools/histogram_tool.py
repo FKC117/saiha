@@ -43,8 +43,10 @@ class HistogramTool(BaseAnalysisTool):
             # Use efficient loading from BaseAnalysisTool
             df = self.load_dataset()
 
-            variable = kwargs.get('variable')
-            bins_str = kwargs.get('bins')
+            # Hardened Param Fetching (Elite v3.3)
+            # Uses 'variable' (schema) with fallbacks for legacy/hallucinated keys.
+            variable = kwargs.get('variable') or kwargs.get('column') or kwargs.get('column_name')
+            bins_str = kwargs.get('bins') or kwargs.get('num_bins')
             bins = 'auto'  # Default to automatic binning
             if bins_str:
                 try:

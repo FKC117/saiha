@@ -3,21 +3,25 @@
     "venvPath": ".",
     "venv": "venv",
     "extraPaths": [
-        "./alaina"
+        "f:/saiha/alaina",
+        "f:/saiha/alaina/saiha",
+        "f:/saiha/scripts",
+        "f:/saiha/alaina/scripts"
     ],
     "include": [
-        "./alaina"
+        "alaina",
+        "scripts",
+        "pyrightconfig.json"
     ],
     "exclude": [
+        "**/__pycache__",
         "venv",
         ".git",
         "staticfiles",
-        "media",
-        "logs",
-        "alaina/__pycache__"
+        "media"
     ],
-    "typeCheckingMode": "basic",
     "reportMissingImports": "warning",
     "reportMissingModuleSource": "none",
-    "reportUndefinedVariable": "warning"
+    "reportGeneralTypeIssues": "none",
+    "typeCheckingMode": "basic"
 }

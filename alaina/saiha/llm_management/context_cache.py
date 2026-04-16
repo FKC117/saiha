@@ -1,6 +1,7 @@
 import hashlib
 import logging
 from datetime import timedelta
+from typing import Any, Dict, List, Optional, Union
 from google import genai
 from google.genai import types
 from django.conf import settings

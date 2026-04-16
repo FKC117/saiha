@@ -9,6 +9,7 @@ from .interpretation_agent import interpretation_agent
 from ..analysis_tools.registry import tool_registry
 from ..celery_tasks.analysis_tasks import execute_analysis_task, send_ws_notification
 from ..session_management.session_manager import SessionManager
+from .memory_manager import MemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -39,18 +40,15 @@ class AnalysisAgent:
             )
             return []
 
-        # --- Persistence Layer (Bug Fix: Bug 12.4.1) ---
+        # --- Persistence Layer ---
         # Record the user's intent in the persistent chat history.
-        # We use get_or_create to prevent duplicates on rapid refreshes or retries.
         if not self.session.messages.filter(message_type='user', content=query).exists():
             SessionManager.add_user_message(self.session, query)
 
-        # 0. Fetch Context (Last 10 messages for stateful analysis)
-        history = list(self.session.messages.all().order_by('-created_at')[:10])
-        history_data = [
-            {"role": "user" if m.message_type == "user" else "assistant", "content": m.content}
-            for m in reversed(history)
-        ]
+        # 0. Memory Check (Auto-summarize if count threshold reached)
+        if MemoryManager.should_update_summary(self.session):
+            from ..llm_management.gemini_service import gemini_service
+            MemoryManager.update_summary(self.session, gemini_service)
 
         # Notify UI: Planning Stage
         send_ws_notification(
@@ -74,13 +72,36 @@ class AnalysisAgent:
         schema_text = "\n".join([f"- {c.column_name} ({c.data_type})" for c in columns_meta])
         column_names = [c.column_name for c in columns_meta]
 
-        # 2. Planning (LLM Intent Detection with History)
-        intents = analysis_planner.create_plan(query, schema_text, session_id=str(self.session.id), user=self.session.user, history=history_data)
+        # 2. Planning (LLM Intent Detection via ContextBuilder/Caching)
+        intents = analysis_planner.create_plan(
+            query=query, 
+            schema_text=schema_text, 
+            session_id=str(self.session.id), 
+            user=self.session.user
+        )
         if not intents:
             logger.warning(f"No intents generated for query: '{query}'")
+            # --- Saturation Check (Elite v3.5) ---
+            # If history exists, we assume the LLM found the query satisfied by Rule 1.
+            if ChatMessage.objects.filter(session=self.session).exists():
+                send_ws_notification(
+                    "I've already analyzed that for you! Check the history above or let me know if you want to perform a different analysis.",
+                    status="success",
+                    session_id=str(self.session.id)
+                )
+            else:
+                send_ws_notification(
+                    "I'm here to help, but I couldn't determine a plan. Try rephrasing or asking for a specific column.",
+                    status="error",
+                    session_id=str(self.session.id)
+                )
+            return []
+
+        # --- explicit Saturation Signal (Elite v3.5) ---
+        if len(intents) == 1 and intents[0].get('tool') == 'chat' and intents[0].get('params', {}).get('message') == "ALREADY_DONE":
             send_ws_notification(
-                "I couldn't determine a plan. Please try rephrasing your request.",
-                status="error",
+                "I've already analyzed that for you in our history. What else would you like me to look at?",
+                status="success",
                 session_id=str(self.session.id)
             )
             return []
@@ -105,8 +126,18 @@ class AnalysisAgent:
             tool_name = intent.get('tool') or intent.get('name')
             raw_params = intent.get('params') or intent.get('parameters') or {}
             
-            # --- PARAMETER NORMALIZATION LAYER ---
-            # LLM sometimes returns parameters as a list: [{"name": "col", "value": "Age"}]
+            # --- SECURITY & REGISTRY WHITELIST (Elite v3.6) ---
+            # Bypass registry for internal 'chat' tool used for planning notifications.
+            if tool_name == 'chat':
+                # For chat intents, we just skip execution and move to next intent
+                # (Actual chat responses for saturation are handled before the loop)
+                continue
+
+            # Check Registry for all other tools
+            tool_def = tool_registry.get_tool_metadata(tool_name)
+            if not tool_def:
+                logger.error(f"Tool '{tool_name}' blocked by registry whitelist.")
+                continue
             # We must flatten this into a dictionary: {"col": "Age"}
             if isinstance(raw_params, list):
                 normalized_params = {}

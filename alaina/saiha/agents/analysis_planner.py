@@ -3,6 +3,8 @@ import json
 from typing import List, Dict, Any, Optional
 from ..llm_management.gemini_service import gemini_service
 from ..analysis_tools.registry import tool_registry
+from ..models import AnalysisSession
+from .context_builder import ContextBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -10,15 +12,130 @@ logger = logging.getLogger(__name__)
 class AnalysisPlanner:
     """
     The orchestrator that maps User Query → Tool Intents.
+    """
 
+    # ── ELITE MODE v3.2 PROTECTIONS ──────────────────────────────────────────
+    _FOLLOW_UP_PROMPTS = [
+        "it", "this", "that", "those", "them", "they", "its", 
+        "why", "how", "weird", "explain", "meaning", "insight",
+        "continue", "more", "next", "again"
+    ]
+    _OVERRIDE_KEYWORDS = ["no", "instead", "not", "change", "use", "replace"]
+
+    def _normalize(self, text: str) -> str:
+        """Standardizes text for fuzzy matching (Elite v3.3)."""
+        if not text: return ""
+        return text.lower().replace("_", " ").strip()
+
+    def _get_dataset_columns(self, session: AnalysisSession) -> List[str]:
+        """Atomic fetch of all column names for the current dataset."""
+        if not session.dataset: return []
+        return list(session.dataset.columns.values_list('column_name', flat=True))
+
+    def _query_has_new_signal(self, query: str, session: AnalysisSession) -> bool:
+        """
+        Detects if the user is mentioning a column NOT currently in focus (Pivoting).
+        Optimized v3.3: Pre-computes normalized maps to avoid nested loop hangs.
+        """
+        query_norm = self._normalize(query)
+        columns = self._get_dataset_columns(session)
+        if not columns: return False
+
+        # Get currently active columns for comparison
+        wm = session.working_memory or {}
+        active = {self._normalize(c) for c in wm.get("active_columns", [])}
+        
+        # 1. Full Match Detection (O(N))
+        # Checks if any column name is found in the query text.
+        for col in columns:
+            col_norm = self._normalize(col)
+            if col_norm in query_norm and col_norm not in active:
+                return True
+        
+        # 2. Sub-token Matching (O(T * N))
+        # Only check tokens > 3 chars to avoid noise like 'the', 'and'.
+        query_tokens = [t for t in query_norm.split() if len(t) > 3]
+        if not query_tokens: return False
+
+        for col in columns:
+            col_norm = self._normalize(col)
+            if col_norm in active: continue
+            if any(t in col_norm for t in query_tokens):
+                return True
+                
+        return False
+
+    def _is_override(self, query: str, session: AnalysisSession) -> bool:
+        """
+        Context-Aware Override Detection (Elite v3.3).
+        Only triggers if an override keyword is used alongside a dataset entity.
+        Optimized performance with early exits.
+        """
+        query_norm = self._normalize(query)
+        words = query_norm.split()
+        
+        has_keyword = any(kw in words for kw in self._OVERRIDE_KEYWORDS)
+        if not has_keyword: return False
+        
+        # Check for entity reference (column name) using pre-normalized signal detection logic
+        # Reuses the same logic as _query_has_new_signal but ignores 'active' state
+        columns = self._get_dataset_columns(session)
+        
+        # Exact match anywhere in query
+        for col in columns:
+            col_norm = self._normalize(col)
+            if col_norm in query_norm:
+                return True
+        
+        # Token-based match
+        significant_tokens = [t for t in words if len(t) > 3]
+        for col in columns:
+            col_norm = self._normalize(col)
+            if any(t in col_norm for t in significant_tokens):
+                return True
+        
+        return False
+
+    def _is_follow_up(self, query: str, session: AnalysisSession) -> bool:
+        """
+        Hybrid Intent Detection (Elite v3.3).
+        Combines linguistic signals, query length, state presence, and pivot detection.
+        Priority: Pivot Detection > Linguistic Signal > Brevity.
+        """
+        # 1. Pivot Detection (Elite v3.3) - PRIORITY
+        # If user mentions a NEW column, it's a fresh query branch, not a follow-up,
+        # regardless of how short the query is.
+        if self._query_has_new_signal(query, session):
+            logger.info("New signal detected in query; treating as fresh branch.")
+            return False
+
+        query_low = query.lower()
+        words = query_low.split()
+
+        # 2. Linguistic Signals (Pronouns/Demonstratives)
+        if any(word in self._FOLLOW_UP_PROMPTS for word in words):
+            return True
+            
+        # 3. Query Length (Human-style brevity usually implies context)
+        if len(words) < 5:
+            return True
+        
+        # 4. State Presence (Fallback)
+        wm = session.working_memory or {}
+        if wm.get("active_columns") or wm.get("last_tool"):
+            return True
+            
+        return False
+
+    """
     Architecture (3 layers):
-      Layer 0 — Deterministic Pre-Router:
+      Layer 0 - Deterministic Pre-Router:
                 Intercepts obvious intents via keyword matching.
                 Zero LLM calls, ~0ms latency.
-      Layer 1 — Smart Tool Filter:
+      Layer 1 - Smart Tool Filter:
                 Classifies query into a category, sends only
-                10–20 relevant tools to LLM instead of all 80+.
-      Layer 2 — Gemini Planner:
+                10-20 relevant tools to LLM instead of all 80+.
+      Layer 2 - Gemini Planner:
                 Handles fuzzy / compound / ambiguous queries.
     """
 
@@ -172,7 +289,6 @@ class AnalysisPlanner:
              "overall summary", "analysis summary"],
             "Generate Session Summary", {}
         ),
-        # Recommendations
         (
             ["recommendations", "what should i do next",
              "smart recommendations", "suggest next steps",
@@ -180,6 +296,31 @@ class AnalysisPlanner:
             "Smart Recommendations", {}
         ),
     ]
+
+    _SYSTEM_INSTRUCTION_STATIC = """
+    You are an expert data analyst planner for the ChatFlow system.
+    Your task is to identify which analysis tools are needed to satisfy the user's query.
+
+    PLANNING RULES (STRICT):
+    1. **PARAM-AWARE SATURATION**: If the User Query is already satisfied by a SUCCESSFUL tool execution in the HISTORY with the SAME parameters, return `{"tool": "chat", "params": {"message": "ALREADY_DONE"}}`. Do NOT return an empty array if the intent is clear but finished.
+    2. **LEGITIMATE SEQUENTIAL ANALYSIS**: If the user asks for a DIFFERENT column (e.g., 'Now do Income' after 'Do Age'), you SHOULD run the appropriate tool again with the NEW parameters.
+    3. **STRICT PARAMETERS**: Use ONLY the parameter names listed in the tool list below.
+    4. **VIZ-READY**: If the user mentions 'graph', 'chart', or 'plot', you MUST select a tool that produces visualizations (e.g. outlier_detection, box_plot, histogram).
+    5. **OUTLIERS + GRAPHS**: If outliers are requested, prioritize 'outlier_detection'.
+    6. **TOOL MAPPING GUIDELINES**:
+       - **Correlation Matrix / Heatmap / Pairwise / Collinearity**: Always use `correlation_matrix`.
+       - **Descriptive Statistics (numeric deep-dive)**: Use `descriptive_statistics` for skewness, kurtosis, percentiles, or full numeric summaries.
+       - **Column Profiling / Mixed/Categorical Columns**: Use `column_analysis` for frequency tables, missing values, or mixed-type exploration.
+       - **Data Quality / Cleaning Checks**: Use `data_quality_assessment`.
+       - **Hypothesis Testing (t-test, ANOVA, chi-square etc.)**: Use the specific test tool. Do NOT use `statistical_analysis` for these.
+       - **Specific Plots (Hist, Box, Scatter)**: Use the dedicated plot tools.
+    7. **FORMAT**: Return ONLY a JSON array.
+    8. **STRICT KEY NAMES**: Use `"tool"` for the tool name and `"params"` for parameters.
+    9. **FLAT JSON PARAMS**: `"params"` must be a flat JSON object `{}`.
+    10. **JSON EXAMPLE**: [{"tool": "histogram", "params": {"column_name": "Age"}}]
+    11. **DONE SIGNAL**: If you determine that NO new analysis is required (it's already done), you MUST return: [{"tool": "chat", "params": {"message": "ALREADY_DONE"}}]
+    12. **MANDATORY ARRAY**: You must ALWAYS return a valid JSON array `[]`, even if it is empty.
+    """
 
     def __init__(self, model_id: Optional[str] = None):
         self.model_id = model_id or gemini_service.model_id
@@ -231,6 +372,7 @@ class AnalysisPlanner:
             "Smart Recommendations",
         ])
 
+        relevant_names = sorted(list(relevant_names))
         filtered = [
             tool_name_to_meta[n]
             for n in relevant_names
@@ -273,53 +415,58 @@ class AnalysisPlanner:
         tools_description = json.dumps(filtered_tools, indent=2)
 
         # ── LAYER 2: GEMINI PLANNER ─────────────────────────────────────────
-        # Format history
-        history_text = "No previous context."
-        if history:
-            history_text = "\n".join(
-                [f"{m['role'].upper()}: {m['content']}" for m in history]
-            )
+        # 1. Fetch Session object for context & caching
+        session = None
+        if session_id:
+            session = AnalysisSession.objects.filter(id=session_id).first()
 
-        system_instruction = f"""
-        You are an expert data analyst planner for the ChatFlow system.
-        Your task is to identify which analysis tools are needed to satisfy the user's query.
+        if not session:
+            logger.error(f"Cannot create plan: Session {session_id} not found.")
+            return []
 
-        CONVERSATION HISTORY (Last 10 messages):
-        {history_text}
-
-        DATASET SCHEMA (Columns & Types):
-        {schema_text}
-
-        AVAILABLE TOOLS (WITH PARAMETERS):
-        {tools_description}
-
-        PLANNING RULES (STRICT):
-        1. **PARAM-AWARE SATURATION**: If the User Query is already satisfied by a SUCCESSFUL tool execution in the HISTORY with the SAME parameters, you MUST return an empty array `[]`. Do NOT re-run the same tool on the same column.
-        2. **LEGITIMATE SEQUENTIAL ANALYSIS**: If the user asks for a DIFFERENT column (e.g., 'Now do Income' after 'Do Age'), you SHOULD run the appropriate tool again with the NEW parameters.
-        3. **STRICT PARAMETERS**: Use ONLY the parameter names listed in the tool list above.
-        4. **VIZ-READY**: If the user mentions 'graph', 'chart', or 'plot', you MUST select a tool that produces visualizations (e.g. outlier_detection, box_plot, histogram).
-        5. **OUTLIERS + GRAPHS**: If outliers are requested, prioritize 'outlier_detection'.
-        6. **TOOL MAPPING GUIDELINES**:
-           - **Correlation Matrix / Heatmap / Pairwise / Collinearity**: Always use `correlation_matrix`.
-           - **Descriptive Statistics (numeric deep-dive)**: Use `descriptive_statistics` for skewness, kurtosis, percentiles, or full numeric summaries.
-           - **Column Profiling / Mixed/Categorical Columns**: Use `column_analysis` for frequency tables, missing values, or mixed-type exploration.
-           - **Data Quality / Cleaning Checks**: Use `data_quality_assessment`.
-           - **Hypothesis Testing (t-test, ANOVA, chi-square etc.)**: Use the specific test tool. Do NOT use `statistical_analysis` for these.
-           - **Specific Plots (Hist, Box, Scatter)**: Use the dedicated plot tools.
-        7. **FORMAT**: Return ONLY a JSON array.
-        8. **STRICT KEY NAMES**: Use `"tool"` for the tool name and `"params"` for parameters.
-        9. **FLAT JSON PARAMS**: `"params"` must be a flat JSON object `{{}}`.
-        10. **JSON EXAMPLE**: `[{{"tool": "histogram", "params": {{"column_name": "Age"}}}}]`
-        11. **DONE SIGNAL**: If the analysis is already complete or no tool fits, return `[]`.
-        """
-
-        prompt = (
-            f"User Query: '{query}'\n"
-            f"Analyze the query vs history and schema. Determine if a NEW tool execution is required."
+        # 2. Build Static Context (FOR CACHING)
+        static_context = ContextBuilder.build_static_context(
+            self._SYSTEM_INSTRUCTION_STATIC,
+            schema_text,
+            tools_description
         )
 
+        # 3. Get or Create Gemini Context Cache (Deterministic v3)
+        cache_id = gemini_service.get_or_create_cache(
+            session=session,
+            static_context_str=static_context,
+            system_instruction=self._SYSTEM_INSTRUCTION_STATIC
+        )
+
+        # 4. Intent & Override Processing (Elite v3.3)
+        from .memory_manager import MemoryManager
+        
+        # A. Check for Contextual Override (KW + Entity)
+        if self._is_override(query, session):
+            logger.info(f"Intent Override detected for session {session.id}. Performing fresh reset.")
+            MemoryManager.decay_stale_state(session, force=True)
+            include_summary = False
+        else:
+            # B. Normal Gating
+            include_summary = self._is_follow_up(query, session)
+            
+            # C. Freshness Guard: If metadata was failed/empty, blocking stale fallback if a new signal is present
+            if session.last_valid_metadata == {} and self._query_has_new_signal(query, session):
+                logger.debug("Blocking stale metadata fallback due to new signal detection.")
+                include_summary = False
+
+        # 5. Build Dynamic Prompt (Rolling Memory + Query)
+        dynamic_prompt = ContextBuilder.build_planner_context(session, query, include_summary=include_summary)
+
         try:
-            intents = gemini_service.get_intent_json(prompt, system_instruction, session_id=session_id)
+            # Call Gemini with Cache support
+            intents = gemini_service.get_intent_json(
+                prompt=dynamic_prompt,
+                system_instruction=self._SYSTEM_INSTRUCTION_STATIC,
+                session_id=session_id,
+                user=user,
+                cache_name=cache_id
+            )
 
             # Robustness: handle single dict or nested lists
             if isinstance(intents, dict):
@@ -337,6 +484,19 @@ class AnalysisPlanner:
             if not isinstance(intents, list):
                 logger.error(f"Invalid intent format returned: {intents}")
                 return []
+
+            # --- Vague / Ambiguous Query Fallback (v3.2) ---
+            # If the LLM didn't find specific tools and returned 'chat', but we have no context,
+            # we should suggest a clarification fallback.
+            if len(intents) == 1 and intents[0].get('tool') == 'chat' and not include_summary:
+                # If they just said "hey" or something short with no context, ask what to analyze.
+                if len(query.split()) < 4:
+                    return [{
+                        "tool": "chat",
+                        "parameters": {
+                            "message": "I'm ready to help! What specific columns or relationships would you like me to analyze?"
+                        }
+                    }]
 
             logger.info(f"[LLM PLANNER] Query '{query}' → {intents}")
             return intents
